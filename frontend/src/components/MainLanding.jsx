@@ -5,7 +5,7 @@ const GAMES = [
     id: 'connect-four',
     title: 'Connect 4',
     description: 'Drop discs and connect four in a row to win.',
-    image: '/api/placeholder/400/300', // Placeholder image path
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder image path
     path: '/games/connect-four',
     available: true,
     accent: 'hover:border-gray-300/40 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]',
@@ -14,7 +14,7 @@ const GAMES = [
     id: 'snake-and-ladder',
     title: 'Snake & Ladder',
     description: 'Roll the dice, climb ladders, dodge snakes.',
-    image: '/api/placeholder/400/300',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder image path
     path: '/games/snake-and-ladder',
     available: false,
     accent: 'hover:border-gray-500/20',
@@ -23,7 +23,7 @@ const GAMES = [
     id: 'ludo',
     title: 'Ludo',
     description: 'Race your tokens home in this classic board game.',
-    image: '/api/placeholder/400/300',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder image path
     path: '/games/ludo',
     available: false,
     accent: 'hover:border-gray-500/20',
@@ -32,7 +32,7 @@ const GAMES = [
     id: 'tambola',
     title: 'Tambola',
     description: 'Mark numbers on your ticket and claim prizes.',
-    image: '/api/placeholder/400/300',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder image path
     path: '/games/tambola',
     available: false,
     accent: 'hover:border-gray-500/20',
