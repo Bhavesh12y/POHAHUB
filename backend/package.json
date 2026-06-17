@@ -1,0 +1,16 @@
+{
+  "name": "pohahub-backend",
+  "version": "1.0.0",
+  "description": "POHAHUB authoritative game server",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
