@@ -5,69 +5,66 @@ const GAMES = [
     id: 'connect-four',
     title: 'Connect 4',
     description: 'Drop discs and connect four in a row to win.',
-    icon: '🔴',
+    image: '/api/placeholder/400/300', // Placeholder image path
     path: '/games/connect-four',
     available: true,
-    gradient: 'from-red-500/20 to-yellow-500/20',
-    accent: 'border-red-500/40 hover:border-red-400',
+    accent: 'hover:border-gray-300/40 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]',
   },
   {
     id: 'snake-and-ladder',
     title: 'Snake & Ladder',
     description: 'Roll the dice, climb ladders, dodge snakes.',
-    icon: '🐍',
+    image: '/api/placeholder/400/300',
     path: '/games/snake-and-ladder',
     available: false,
-    gradient: 'from-green-500/20 to-emerald-500/20',
-    accent: 'border-green-500/40',
+    accent: 'hover:border-gray-500/20',
   },
   {
     id: 'ludo',
     title: 'Ludo',
     description: 'Race your tokens home in this classic board game.',
-    icon: '🎲',
+    image: '/api/placeholder/400/300',
     path: '/games/ludo',
     available: false,
-    gradient: 'from-blue-500/20 to-cyan-500/20',
-    accent: 'border-blue-500/40',
+    accent: 'hover:border-gray-500/20',
   },
   {
     id: 'tambola',
     title: 'Tambola',
     description: 'Mark numbers on your ticket and claim prizes.',
-    icon: '🎱',
+    image: '/api/placeholder/400/300',
     path: '/games/tambola',
     available: false,
-    gradient: 'from-purple-500/20 to-pink-500/20',
-    accent: 'border-purple-500/40',
+    accent: 'hover:border-gray-500/20',
   },
 ];
 
 export default function MainLanding() {
   return (
-    <div className="relative overflow-hidden">
+    <div className="relative min-h-screen bg-[#050505] text-gray-200 overflow-hidden font-sans selection:bg-gray-300 selection:text-black">
+      {/* Ambient Platinum Glow Effects */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-hub-accent/10 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-hub-glow/10 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.02] rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-gray-400/[0.03] rounded-full blur-[100px]" />
       </div>
 
-      <div className="relative max-w-6xl mx-auto px-4 py-16">
-        <section className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-hub-card border border-hub-border text-sm text-hub-muted mb-6">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+      <div className="relative max-w-6xl mx-auto px-6 py-24">
+        <section className="text-center mb-20">
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-xs font-medium text-gray-400 mb-8 backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse" />
             Live multiplayer · Server-authoritative
           </div>
 
-          <h2 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight">
+          <h2 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tighter text-white">
             Play Together,
-            <span className="block bg-gradient-to-r from-hub-accent via-hub-glow to-pink-400 bg-clip-text text-transparent">
-              Anywhere
+            <span className="block mt-2 bg-gradient-to-r from-gray-100 via-gray-400 to-gray-600 bg-clip-text text-transparent pb-2">
+              Anywhere.
             </span>
           </h2>
 
-          <p className="text-lg text-hub-muted max-w-2xl mx-auto">
+          <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed font-light">
             Choose a game, create a room, share the code with friends, and jump into real-time
-            matches. The server validates every move — no cheating, just fun.
+            matches. The server validates every move — absolute fairness, zero compromise.
           </p>
         </section>
 
@@ -79,27 +76,51 @@ export default function MainLanding() {
               <CardWrapper
                 key={game.id}
                 to={game.available ? game.path : undefined}
-                className={`glass-card p-6 flex flex-col transition-all duration-300 border ${game.accent} ${
+                className={`group relative flex flex-col bg-[#0a0a0c] border border-white/[0.05] rounded-2xl overflow-hidden transition-all duration-500 ease-out ${
+                  game.accent
+                } ${
                   game.available
-                    ? 'hover:scale-[1.03] hover:shadow-glow cursor-pointer'
-                    : 'opacity-60 cursor-not-allowed'
+                    ? 'hover:-translate-y-2 cursor-pointer'
+                    : 'opacity-60 cursor-not-allowed grayscale'
                 }`}
               >
-                <div
-                  className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${game.gradient} flex items-center justify-center text-2xl mb-4`}
-                >
-                  {game.icon}
+                {/* Image Section */}
+                <div className="relative h-48 w-full overflow-hidden bg-[#111]">
+                  {/* Vignette Gradient to blend image into background */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-[#0a0a0c]/20 to-transparent z-10" />
+                  
+                  <img 
+                    src={game.image} 
+                    alt={`${game.title} preview`}
+                    className={`w-full h-full object-cover transition-transform duration-700 ease-out z-0 ${
+                      game.available ? 'group-hover:scale-110' : ''
+                    }`}
+                  />
                 </div>
 
-                <h3 className="text-lg font-bold mb-2">{game.title}</h3>
-                <p className="text-sm text-hub-muted flex-1">{game.description}</p>
+                {/* Content Section */}
+                <div className="relative z-20 p-6 flex flex-col flex-1 -mt-4">
+                  <h3 className="text-xl font-bold mb-2 text-gray-100 tracking-wide">{game.title}</h3>
+                  <p className="text-sm text-gray-500 flex-1 leading-relaxed font-light">
+                    {game.description}
+                  </p>
 
-                <div className="mt-4 pt-4 border-t border-hub-border">
-                  {game.available ? (
-                    <span className="text-sm font-semibold text-hub-accent">Play Now →</span>
-                  ) : (
-                    <span className="text-sm text-hub-muted">Coming Soon</span>
-                  )}
+                  <div className="mt-6 pt-5 border-t border-white/[0.05] flex items-center justify-between">
+                    {game.available ? (
+                      <>
+                        <span className="text-sm font-semibold text-gray-300 group-hover:text-white transition-colors duration-300">
+                          Play Now
+                        </span>
+                        <span className="text-gray-500 group-hover:text-white transition-all duration-300 group-hover:translate-x-1">
+                          →
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs font-semibold tracking-widest uppercase text-gray-600">
+                        Coming Soon
+                      </span>
+                    )}
+                  </div>
                 </div>
               </CardWrapper>
             );

@@ -4,30 +4,36 @@
 
 @layer base {
   body {
-    @apply bg-hub-bg text-hub-text font-display antialiased min-h-screen;
+    /* Set default to true black to match the premium feel */
+    @apply bg-[#050505] text-gray-200 antialiased min-h-screen;
   }
 }
 
 @layer components {
+  /* Platinum / White accents for primary buttons */
   .btn-primary {
-    @apply px-6 py-3 rounded-xl bg-hub-accent hover:bg-hub-accentHover text-white font-semibold
-           transition-all duration-200 shadow-glow hover:scale-[1.02] active:scale-[0.98]
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+    @apply px-6 py-3 rounded-xl bg-gray-100 hover:bg-white text-black font-bold tracking-wide
+           transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] 
+           hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none;
   }
 
+  /* Deep dark styling for secondary buttons */
   .btn-secondary {
-    @apply px-6 py-3 rounded-xl bg-hub-card border border-hub-border hover:border-hub-accent
-           text-hub-text font-semibold transition-all duration-200
+    @apply px-6 py-3 rounded-xl bg-[#0a0a0c] border border-white/[0.08] hover:border-white/[0.2]
+           text-gray-300 font-semibold transition-all duration-300 hover:text-white
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* Sleek, barely-there borders for inputs */
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl bg-hub-surface border border-hub-border
-           text-hub-text placeholder-hub-muted focus:outline-none focus:border-hub-accent
-           focus:ring-1 focus:ring-hub-accent transition-colors;
+    @apply w-full px-4 py-3 rounded-xl bg-[#0a0a0c] border border-white/[0.08]
+           text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-400
+           focus:ring-1 focus:ring-gray-400 transition-colors shadow-inner;
   }
 
+  /* Premium glass card look using very low opacity whites instead of heavy blurring */
   .glass-card {
-    @apply bg-hub-card/80 backdrop-blur-xl border border-hub-border rounded-2xl shadow-card;
+    @apply bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-2xl;
   }
 }
