@@ -17,8 +17,8 @@ export default function App() {
         <Route index element={<MainLanding />} />
         <Route path="games/connect-four" element={<ConnectFourLanding />} />
         <Route path="games/connect-four/room/:roomCode" element={<ConnectFourBoard />} />
-        <Route path="games/tictactoe" element={<TicTacToeLanding />} />
-        <Route path="games/tictactoe/room/:roomCode" element={<TicTacToeBoard />} />
+        <Route path="games/tic-tac-toe" element={<TicTacToeLanding />} />
+        <Route path="games/tic-tac-toe/room/:roomCode" element={<TicTacToeBoard />} />
         <Route path="games/snake-and-ladder" element={<SnakeLadderLanding />} />
         <Route path="games/ludo" element={<LudoLanding />} />
         <Route path="games/tambola" element={<TambolaLanding />} />
