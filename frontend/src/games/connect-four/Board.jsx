@@ -201,6 +201,14 @@ export default function ConnectFourBoard() {
     await emitWithAck('chat:message', { message });
   };
 
+  const handlePlayAgain = async () => {
+    setError('');
+    const result = await emitWithAck('game:reset', {});
+    if (!result.ok) {
+      setError(result.error || 'Failed to restart the game');
+    }
+  };
+
   if (!room) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24 text-center">
@@ -297,13 +305,21 @@ export default function ConnectFourBoard() {
               )}
               
               <div className="w-full h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent mb-8" />
-              
-              <Link 
-                to="/games/connect-four" 
-                className="btn-primary w-full block py-4 text-sm font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-white text-[#050505] transition-all duration-300 rounded-xl"
-              >
-                Return to Hub
-              </Link>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={handlePlayAgain}
+                  className="btn-primary w-full block py-4 text-sm font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-white text-[#050505] transition-all duration-300 rounded-xl"
+                >
+                  Play Again
+                </button>
+                <Link 
+                  to="/games/connect-four" 
+                  className="btn-secondary w-full block py-4 text-sm font-bold tracking-widest uppercase text-white text-center hover:border-white/[0.3] transition-all duration-300 rounded-xl"
+                >
+                  Return to Hub
+                </Link>
+              </div>
             </div>
           </div>
         </div>
