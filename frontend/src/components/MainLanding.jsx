@@ -15,7 +15,7 @@ const GAMES = [
     title: 'Tic Tac Toe',
     description: 'Outsmart your opponent in this classic 3x3 grid.',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Replace with actual preview image later
-    path: '/games/tic-tac-toe',
+    path: '/games/tictactoe',
     available: true, // Set to false if it is under development
     accent: 'hover:border-gray-300/40 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]',
   },
