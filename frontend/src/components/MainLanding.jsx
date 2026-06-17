@@ -5,7 +5,7 @@ const GAMES = [
     id: 'connect-four',
     title: 'Connect 4',
     description: 'Drop discs and connect four in a row to win.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder image path
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
     path: '/games/connect-four',
     available: true,
     accent: 'hover:border-gray-300/40 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]',
@@ -14,7 +14,7 @@ const GAMES = [
     id: 'snake-and-ladder',
     title: 'Snake & Ladder',
     description: 'Roll the dice, climb ladders, dodge snakes.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder image path
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
     path: '/games/snake-and-ladder',
     available: false,
     accent: 'hover:border-gray-500/20',
@@ -23,7 +23,7 @@ const GAMES = [
     id: 'ludo',
     title: 'Ludo',
     description: 'Race your tokens home in this classic board game.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder image path
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
     path: '/games/ludo',
     available: false,
     accent: 'hover:border-gray-500/20',
@@ -32,7 +32,7 @@ const GAMES = [
     id: 'tambola',
     title: 'Tambola',
     description: 'Mark numbers on your ticket and claim prizes.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder image path
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
     path: '/games/tambola',
     available: false,
     accent: 'hover:border-gray-500/20',
@@ -41,21 +41,17 @@ const GAMES = [
 
 export default function MainLanding() {
   return (
-    <div className="relative min-h-screen bg-[#050505] text-gray-200 overflow-hidden font-sans selection:bg-gray-300 selection:text-black">
-      {/* Ambient Platinum Glow Effects */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.02] rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-gray-400/[0.03] rounded-full blur-[100px]" />
-      </div>
-
-      <div className="relative max-w-6xl mx-auto px-6 py-24">
+    // Removed the solid bg and static glow divs so the Layout's dynamic bg comes through
+    <div className="relative min-h-screen text-gray-200 overflow-hidden font-sans">
+      <div className="relative max-w-6xl mx-auto px-6 py-24 z-10">
+        
         <section className="text-center mb-20">
-          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-xs font-medium text-gray-400 mb-8 backdrop-blur-md">
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-xs font-medium text-gray-400 mb-8 backdrop-blur-md shadow-xl">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse" />
-            Live multiplayer · Server-authoritative
+            Feel Free To RageBait, We Won't Judge!
           </div>
 
-          <h2 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tighter text-white">
+          <h2 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tighter text-white drop-shadow-2xl">
             Play Together,
             <span className="block mt-2 bg-gradient-to-r from-gray-100 via-gray-400 to-gray-600 bg-clip-text text-transparent pb-2">
               Anywhere.
@@ -64,7 +60,7 @@ export default function MainLanding() {
 
           <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed font-light">
             Choose a game, create a room, share the code with friends, and jump into real-time
-            matches. The server validates every move — absolute fairness, zero compromise.
+            matches.
           </p>
         </section>
 
@@ -76,7 +72,7 @@ export default function MainLanding() {
               <CardWrapper
                 key={game.id}
                 to={game.available ? game.path : undefined}
-                className={`group relative flex flex-col bg-[#0a0a0c] border border-white/[0.05] rounded-2xl overflow-hidden transition-all duration-500 ease-out ${
+                className={`group relative flex flex-col bg-[#0a0a0c]/80 backdrop-blur-md border border-white/[0.05] rounded-2xl overflow-hidden transition-all duration-500 ease-out ${
                   game.accent
                 } ${
                   game.available
