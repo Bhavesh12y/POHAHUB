@@ -66,14 +66,28 @@ export default function ConnectFourLanding() {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-12">
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500/30 to-yellow-500/30 text-3xl mb-4">
-          🔴
-        </div>
-        <h2 className="text-3xl font-bold mb-2">Connect 4</h2>
-        <p className="text-hub-muted">Create a room or join with a friend&apos;s code.</p>
-      </div>
+    <div className="max-w-xl mx-auto px-6 py-12">
+  <div className="text-center mb-12">
+    
+    {/* Premium Image Placeholder Container */}
+    <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#0a0a0c] border border-white/[0.08] shadow-[0_0_20px_rgba(255,255,255,0.03)] mb-6 overflow-hidden group">
+      {/* Subtle hover shine */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none" />
+      
+      <img 
+        src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png" 
+        alt="Connect 4 Preview" 
+        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+      />
+    </div>
+
+    <h2 className="text-4xl font-extrabold mb-3 tracking-tighter text-gray-100">
+      Connect 4
+    </h2>
+    <p className="text-gray-500 font-light tracking-wide">
+      Create a room or join with a friend&apos;s code.
+    </p>
+  </div>
 
       <div className="glass-card p-8 space-y-6">
         <div>
