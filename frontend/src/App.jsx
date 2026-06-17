@@ -3,6 +3,8 @@ import Layout from './components/Layout.jsx';
 import MainLanding from './components/MainLanding.jsx';
 import ConnectFourLanding from './games/connect-four/Landing.jsx';
 import ConnectFourBoard from './games/connect-four/Board.jsx';
+import TicTacToeLanding from './games/tictactoe/Landing.jsx';
+import TicTacToeBoard from './games/tictactoe/TicTacToeBoard.jsx';
 import SnakeLadderLanding from './games/snake-and-ladder/Landing.jsx';
 import LudoLanding from './games/ludo/Landing.jsx';
 import TambolaLanding from './games/tambola/Landing.jsx';
@@ -15,6 +17,8 @@ export default function App() {
         <Route index element={<MainLanding />} />
         <Route path="games/connect-four" element={<ConnectFourLanding />} />
         <Route path="games/connect-four/room/:roomCode" element={<ConnectFourBoard />} />
+        <Route path="games/tictactoe" element={<TicTacToeLanding />} />
+        <Route path="games/tictactoe/room/:roomCode" element={<TicTacToeBoard />} />
         <Route path="games/snake-and-ladder" element={<SnakeLadderLanding />} />
         <Route path="games/ludo" element={<LudoLanding />} />
         <Route path="games/tambola" element={<TambolaLanding />} />
