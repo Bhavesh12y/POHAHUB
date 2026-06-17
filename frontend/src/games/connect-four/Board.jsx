@@ -388,7 +388,7 @@ export default function ConnectFourBoard() {
                     <button
                       key={col}
                       type="button"
-                      className="aspect-square rounded-xl hover:bg-white/[0.05] transition-all disabled:opacity-0 cursor-pointer text-gray-600 hover:text-white"
+                      className="aspect-square rounded-xl border border-white/[0.08] bg-[#0c131b] text-gray-400 transition-all hover:bg-white/[0.08] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
                       onClick={() => handleDrop(col)}
                       disabled={
                         !isPlaying ||
@@ -398,7 +398,7 @@ export default function ConnectFourBoard() {
                       }
                       aria-label={`Drop in column ${col + 1}`}
                     >
-                      <span className="opacity-0 hover:opacity-100 transition-opacity">↓</span>
+                      <span className="text-xl">↓</span>
                     </button>
                   ))}
                 </div>
