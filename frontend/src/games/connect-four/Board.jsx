@@ -11,12 +11,12 @@ function Disc({ color, isWinning, animate }) {
       ? 'bg-gradient-to-br from-red-500 to-red-800 shadow-[0_0_15px_rgba(239,68,68,0.5)] border border-red-400/50'
       : color === 'yellow'
         ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(250,204,21,0.5)] border border-yellow-300/50'
-        : 'bg-[#11141d] shadow-inner border border-white/[0.08]';
+        : 'bg-[#0a0a0c] shadow-inner border border-white/[0.05]';
 
   return (
     <div
-      className={`w-full aspect-square rounded-full transition-all duration-300 ${
-        colorClass
+      className={`aspect-square rounded-full transition-all duration-300 ${
+        color ? colorClass : ''
       } ${isWinning ? 'ring-2 ring-white ring-offset-4 ring-offset-[#050505] scale-110 z-10' : ''} ${
         animate ? 'animate-drop' : ''
       }`}
@@ -100,7 +100,7 @@ export default function ConnectFourBoard() {
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username');
+    const username = sessionStorage.getItem('pohahub_username');
 
     const syncRoom = async () => {
       if (!username || !roomCode) return;
@@ -191,14 +191,6 @@ export default function ConnectFourBoard() {
 
   const handleChat = async (message) => {
     await emitWithAck('chat:message', { message });
-  };
-
-  const handlePlayAgain = async () => {
-    setError('');
-    const result = await emitWithAck('game:reset', {});
-    if (!result.ok) {
-      setError(result.error || 'Failed to start a new game');
-    }
   };
 
   if (!room) {
@@ -298,20 +290,12 @@ export default function ConnectFourBoard() {
               
               <div className="w-full h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent mb-8" />
               
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={handlePlayAgain}
-                  className="btn-primary w-full block py-4 text-sm font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-white text-[#050505] transition-all duration-300 rounded-xl"
-                >
-                  Play Again
-                </button>
-                <Link 
-                  to="/games/connect-four" 
-                  className="btn-secondary w-full block py-4 text-sm font-bold tracking-widest uppercase text-white text-center hover:border-white/[0.3] transition-all duration-300 rounded-xl"
-                >
-                  Return to Hub
-                </Link>
-              </div>
+              <Link 
+                to="/games/connect-four" 
+                className="btn-primary w-full block py-4 text-sm font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-white text-[#050505] transition-all duration-300 rounded-xl"
+              >
+                Return to Hub
+              </Link>
             </div>
           </div>
         </div>
