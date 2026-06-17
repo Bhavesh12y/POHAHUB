@@ -3,8 +3,14 @@ import {
   dropDisc,
   serializeConnectFourState,
 } from '../games/connectFour.js';
+import {
+  createTicTacToeState,
+  playMove,
+  serializeTicTacToeState,
+} from '../games/tictactoe.js';
 
 const PLAYER_COLORS = ['red', 'yellow'];
+const PLAYER_SYMBOLS = ['X', 'O'];
 
 class RoomManager {
   constructor() {
@@ -165,6 +171,13 @@ class RoomManager {
         color: PLAYER_COLORS[i],
       }));
       room.gameState = createConnectFourState(players);
+    } else if (room.gameType === 'tic-tac-toe') {
+      const players = room.players.map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        symbol: PLAYER_SYMBOLS[i],
+      }));
+      room.gameState = createTicTacToeState(players);
     }
 
     room.status = 'playing';
@@ -179,6 +192,12 @@ class RoomManager {
 
     if (room.gameType === 'connect-four') {
       const result = dropDisc(room.gameState, payload.column, playerId);
+      if (!result.ok) {
+        return result;
+      }
+      return { ok: true, room };
+    } else if (room.gameType === 'tic-tac-toe') {
+      const result = playMove(room.gameState, payload.index, playerId);
       if (!result.ok) {
         return result;
       }
@@ -202,6 +221,8 @@ class RoomManager {
 
     if (room.gameState && room.gameType === 'connect-four') {
       payload.gameState = serializeConnectFourState(room.gameState);
+    } else if (room.gameState && room.gameType === 'tic-tac-toe') {
+      payload.gameState = serializeTicTacToeState(room.gameState);
     }
 
     return payload;
