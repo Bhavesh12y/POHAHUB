@@ -41,11 +41,30 @@ const GAMES = [
 
 export default function MainLanding() {
   return (
-    // Removed the solid bg and static glow divs so the Layout's dynamic bg comes through
     <div className="relative min-h-screen text-gray-200 overflow-hidden font-sans">
+      
+      {/* --- INJECTED CSS FOR ENTRANCE ANIMATIONS --- */}
+      <style>{`
+        @keyframes float-in {
+          0% {
+            opacity: 0;
+            transform: translateY(40px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-float-in {
+          animation: float-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          opacity: 0; /* Keeps it hidden until the animation starts */
+        }
+      `}</style>
+
       <div className="relative max-w-6xl mx-auto px-6 py-24 z-10">
         
-        <section className="text-center mb-20">
+        {/* Hero Section - Floats in first */}
+        <section className="text-center mb-20 animate-float-in">
           <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-xs font-medium text-gray-400 mb-8 backdrop-blur-md shadow-xl">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse" />
             Feel Free To RageBait, We Won't Judge!
@@ -64,15 +83,20 @@ export default function MainLanding() {
           </p>
         </section>
 
+        {/* Cards Section - Staggered floating entrance */}
         <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {GAMES.map((game) => {
+          {GAMES.map((game, index) => {
             const CardWrapper = game.available ? Link : 'div';
+            
+            // Calculate a staggered delay for each card (e.g., 150ms, 300ms, 450ms...)
+            const delay = `${(index + 1) * 150}ms`;
 
             return (
               <CardWrapper
                 key={game.id}
                 to={game.available ? game.path : undefined}
-                className={`group relative flex flex-col bg-[#0a0a0c]/80 backdrop-blur-md border border-white/[0.05] rounded-2xl overflow-hidden transition-all duration-500 ease-out ${
+                style={{ animationDelay: delay }}
+                className={`group animate-float-in relative flex flex-col bg-[#0a0a0c]/80 backdrop-blur-md border border-white/[0.05] rounded-2xl overflow-hidden transition-all duration-500 ease-out ${
                   game.accent
                 } ${
                   game.available
