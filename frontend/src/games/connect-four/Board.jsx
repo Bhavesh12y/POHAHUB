@@ -11,15 +11,13 @@ function Disc({ color, isWinning, animate }) {
       ? 'bg-gradient-to-br from-red-500 to-red-800 shadow-[0_0_15px_rgba(239,68,68,0.5)] border border-red-400/50'
       : color === 'yellow'
         ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(250,204,21,0.5)] border border-yellow-300/50'
-        : 'bg-[#0a0a0c] shadow-inner border border-white/[0.05]';
+        : 'bg-[#131823] shadow-inner border border-white/[0.18] ring-1 ring-white/10';
 
   return (
     <div
-      className={`aspect-square rounded-full transition-all duration-300 ${
-        color ? colorClass : ''
-      } ${isWinning ? 'ring-2 ring-white ring-offset-4 ring-offset-[#050505] scale-110 z-10' : ''} ${
-        animate ? 'animate-drop' : ''
-      }`}
+      className={`w-full aspect-square rounded-full transition-all duration-300 ${colorClass} ${
+        isWinning ? 'ring-2 ring-white ring-offset-4 ring-offset-[#050505] scale-110 z-10' : ''
+      } ${animate ? 'animate-drop' : ''}`}
     />
   );
 }
@@ -99,8 +97,18 @@ export default function ConnectFourBoard() {
   );
 
   useEffect(() => {
+    if (gameState) {
+      if (gameState.board) {
+        console.log('ConnectFourBoard gameState.board:', gameState.board);
+      } else {
+        console.warn('ConnectFourBoard received gameState without board:', gameState);
+      }
+    }
+  }, [gameState]);
+
+  useEffect(() => {
     const socket = connectSocket();
-    const username = sessionStorage.getItem('pohahub_username');
+    const username = localStorage.getItem('pohahub_username');
 
     const syncRoom = async () => {
       if (!username || !roomCode) return;
@@ -400,23 +408,30 @@ export default function ConnectFourBoard() {
                   className="p-4 rounded-3xl bg-[#1a1c23] shadow-2xl border border-white/[0.05]"
                   style={{ boxShadow: 'inset 0 10px 30px rgba(0,0,0,0.8)' }}
                 >
-                  <div className="grid grid-cols-7 gap-2">
-                    {gameState.board.map((row, rowIndex) =>
-                      row.map((cell, colIndex) => {
-                        const isLastMove =
-                          gameState.lastMove?.row === rowIndex &&
-                          gameState.lastMove?.column === colIndex;
-                        return (
-                          <Disc
-                            key={`${rowIndex}-${colIndex}`}
-                            color={cell}
-                            isWinning={winningSet.has(`${rowIndex}-${colIndex}`)}
-                            animate={isLastMove}
-                          />
-                        );
-                      }),
-                    )}
-                  </div>
+                  {gameState.board ? (
+                    <div className="grid grid-cols-7 gap-2">
+                      {gameState.board.map((row, rowIndex) =>
+                        row.map((cell, colIndex) => {
+                          const isLastMove =
+                            gameState.lastMove?.row === rowIndex &&
+                            gameState.lastMove?.column === colIndex;
+                          return (
+                            <Disc
+                              key={`${rowIndex}-${colIndex}`}
+                              color={cell}
+                              isWinning={winningSet.has(`${rowIndex}-${colIndex}`)}
+                              animate={isLastMove}
+                            />
+                          );
+                        }),
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-3xl border border-dashed border-white/[0.08] bg-black/20 p-12 text-center text-gray-400">
+                      <p className="text-sm font-medium">Waiting for board data...</p>
+                      <p className="text-xs mt-2">If this persists, the backend may not be serializing the board.</p>
+                    </div>
+                  )}
                 </div>
 
                 {myColor && (
