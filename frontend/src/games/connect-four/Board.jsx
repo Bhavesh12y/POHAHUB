@@ -11,12 +11,12 @@ function Disc({ color, isWinning, animate }) {
       ? 'bg-gradient-to-br from-red-500 to-red-800 shadow-[0_0_15px_rgba(239,68,68,0.5)] border border-red-400/50'
       : color === 'yellow'
         ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(250,204,21,0.5)] border border-yellow-300/50'
-        : 'bg-[#0a0a0c] shadow-inner border border-white/[0.05]';
+        : 'bg-[#11141d] shadow-inner border border-white/[0.08]';
 
   return (
     <div
-      className={`aspect-square rounded-full transition-all duration-300 ${
-        color ? colorClass : ''
+      className={`w-full aspect-square rounded-full transition-all duration-300 ${
+        colorClass
       } ${isWinning ? 'ring-2 ring-white ring-offset-4 ring-offset-[#050505] scale-110 z-10' : ''} ${
         animate ? 'animate-drop' : ''
       }`}
