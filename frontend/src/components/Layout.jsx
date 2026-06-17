@@ -45,21 +45,8 @@ export default function Layout() {
         }
       `}</style>
 
-      {/* --- DYNAMIC BACKGROUND LAYER --- */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Panning Tech Grid */}
-        <div className="absolute inset-[-100%] bg-grid-pattern" />
-        
-        {/* Sweeping Platinum Orbs */}
-        <div className="absolute top-[10%] left-[10%] w-[45vw] h-[45vw] rounded-full bg-white/[0.025] blur-[120px] animate-sweep-1" />
-        <div className="absolute bottom-[10%] right-[10%] w-[50vw] h-[50vw] rounded-full bg-gray-400/[0.03] blur-[130px] animate-sweep-2" />
-        
-        {/* Breathing Core Highlight */}
-        <div className="absolute top-[50%] left-[50%] w-[30vw] h-[30vw] rounded-full bg-gray-100 blur-[100px] animate-pulse-core" />
-      </div>
-
-      {/* Premium Glass Header */}
-      <header className="border-b border-white/[0.05] bg-[#050505]/60 backdrop-blur-2xl sticky top-0 z-50">
+      {/* Premium Transparent Header */}
+      <header className="border-b border-white/[0.05] bg-transparent sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
           
           {/* Logo Section */}
