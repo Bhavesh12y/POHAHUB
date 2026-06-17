@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { connectSocket, emitWithAck } from '../../lib/socket.js'; // Adjust path as needed
+import { connectSocket, emitWithAck } from '../../lib/socket.js';
 
 export default function TicTacToeLanding() {
   const navigate = useNavigate();
@@ -8,6 +8,14 @@ export default function TicTacToeLanding() {
   const [roomCode, setRoomCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Load username from localStorage on mount
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('pohahub_username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+    }
+  }, []);
 
   const handleCreate = async () => {
     if (!username.trim()) {
@@ -18,7 +26,6 @@ export default function TicTacToeLanding() {
     setError('');
     connectSocket();
     
-    // Make sure your backend expects 'tic-tac-toe' as the gameType
     const result = await emitWithAck('room:create', {
       gameType: 'tic-tac-toe',
       playerName: username.trim(),
@@ -29,7 +36,7 @@ export default function TicTacToeLanding() {
       setError(result.error || 'Failed to create room');
       return;
     }
-    sessionStorage.setItem('pohahub_username', username.trim());
+    localStorage.setItem('pohahub_username', username.trim());
     navigate(`/games/tic-tac-toe/room/${result.room.code}`, { state: { room: result.room } });
   };
 
@@ -56,7 +63,7 @@ export default function TicTacToeLanding() {
       setError(result.error || 'Failed to join room');
       return;
     }
-    sessionStorage.setItem('pohahub_username', username.trim());
+    localStorage.setItem('pohahub_username', username.trim());
     navigate(`/games/tic-tac-toe/room/${result.room.code}`, { state: { room: result.room } });
   };
 

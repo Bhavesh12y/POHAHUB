@@ -107,6 +107,34 @@ io.on('connection', (socket) => {
     emitRoomUpdate(result.room);
   });
 
+  socket.on('game:reset', (_payload, callback) => {
+    if (!currentRoom || !playerId) {
+      callback?.({ ok: false, error: 'Not in a room' });
+      return;
+    }
+
+    const room = roomManager.getRoom(currentRoom);
+    if (!room) {
+      callback?.({ ok: false, error: 'Room not found' });
+      return;
+    }
+
+    // Only the host can restart the game
+    if (room.hostId !== playerId) {
+      callback?.({ ok: false, error: 'Only the host can restart the game' });
+      return;
+    }
+
+    const result = roomManager.resetGame(currentRoom);
+    if (!result.ok) {
+      callback?.({ ok: false, error: result.error });
+      return;
+    }
+
+    callback?.({ ok: true });
+    emitRoomUpdate(result.room);
+  });
+
   socket.on('chat:message', ({ message }, callback) => {
     if (!currentRoom || !playerId) {
       callback?.({ ok: false, error: 'Not in a room' });

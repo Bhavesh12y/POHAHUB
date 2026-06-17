@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 
@@ -8,6 +8,14 @@ export default function ConnectFourLanding() {
   const [roomCode, setRoomCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Load username from localStorage on mount
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('pohahub_username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+    }
+  }, []);
 
   const handleCreate = async () => {
     if (!username.trim()) {
@@ -31,7 +39,7 @@ export default function ConnectFourLanding() {
       return;
     }
 
-    sessionStorage.setItem('pohahub_username', username.trim());
+    localStorage.setItem('pohahub_username', username.trim());
     navigate(`/games/connect-four/room/${result.room.code}`, { state: { room: result.room } });
   };
 
@@ -61,7 +69,7 @@ export default function ConnectFourLanding() {
       return;
     }
 
-    sessionStorage.setItem('pohahub_username', username.trim());
+    localStorage.setItem('pohahub_username', username.trim());
     navigate(`/games/connect-four/room/${result.room.code}`, { state: { room: result.room } });
   };
 

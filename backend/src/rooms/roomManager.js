@@ -207,6 +207,37 @@ class RoomManager {
     return { ok: false, error: 'Unsupported game type' };
   }
 
+  resetGame(roomCode) {
+    const room = this.getRoom(roomCode);
+    if (!room) {
+      return { ok: false, error: 'Room not found' };
+    }
+
+    if (room.status !== 'playing' && room.status !== 'won' && room.status !== 'draw') {
+      return { ok: false, error: 'No active game to reset' };
+    }
+
+    // Reinitialize game state with the same players
+    if (room.gameType === 'connect-four') {
+      const players = room.players.map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        color: PLAYER_COLORS[i],
+      }));
+      room.gameState = createConnectFourState(players);
+    } else if (room.gameType === 'tic-tac-toe') {
+      const players = room.players.map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        symbol: PLAYER_SYMBOLS[i],
+      }));
+      room.gameState = createTicTacToeState(players);
+    }
+
+    room.status = 'playing';
+    return { ok: true, room };
+  }
+
   serializeRoom(room, viewerId) {
     const payload = {
       code: room.code,
