@@ -149,10 +149,15 @@ export default function ScribbleBoard() {
 
     // Drawing Sync Listeners
     socket.on('draw:line', ({ x0, y0, x1, y1, color, size }) => drawLine(x0, y0, x1, y1, color, size, false));
-    socket.on('draw:fill', ({ x, y, color }) => {
-      const ctx = canvasRef.current?.getContext('2d');
-      if (ctx) performFloodFill(ctx, x, y, color);
-    });
+    // Inside your useEffect where you listen for socket events:
+        socket.on('draw:fill', ({ color }) => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
     socket.on('draw:clear', () => {
       const ctx = canvasRef.current?.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, 800, 600);

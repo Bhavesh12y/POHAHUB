@@ -99,15 +99,22 @@ io.on('connection', (socket) => {
     socket.to(currentRoom).emit('draw:line', payload);
   });
 
+  });
+
   // Add this right below socket.on('draw:line', ...)
 socket.on('draw:fill', (data, callback) => {
   const room = roomManager.getRoomByPlayerId(socket.id);
   if (!room) return callback({ error: 'Not in a room' });
+
   
-  // Forward the fill coordinates and color to everyone else in the room
-  socket.to(room.code).emit('draw:fill', data);
-  if (callback) callback({ ok: true });
-});
+
+
+  // Listen for the fill bucket tool being used
+  socket.on('draw:fill', (data) => {
+    if (currentRoom) {
+      // Broadcast the fill action to everyone else in the room
+      socket.to(currentRoom).emit('draw:fill', data);
+    }
 
   socket.on('draw:clear', () => {
     if (!currentRoom) return;

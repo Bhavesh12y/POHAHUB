@@ -103,7 +103,7 @@ class RoomManager {
     return room;
   }
 
- addChatMessage(roomCode, { playerId, playerName, message }) {
+addChatMessage(roomCode, { playerId, playerName, message }) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
 
@@ -137,11 +137,18 @@ class RoomManager {
           const remaining = Math.max(0, state.timeLimit - elapsed);
           const score = Math.floor(100 + (100 * (remaining / state.timeLimit))); 
           
+          // 1. Give points to the Guesser
           const player = state.players.find((p) => p.id === playerId);
           if (player) player.score += score;
           
+          // 2. TRADITIONAL RULES: Give scaled points to the Drawer
+          // The drawer gets a fair, balanced fraction of the guesser's score!
           const drawer = state.players.find((p) => p.id === state.drawerId);
-          if (drawer) drawer.score += 50; 
+          if (drawer) {
+            const totalGuessers = Math.max(1, state.players.length - 1);
+            const drawerBonus = Math.floor(score / totalGuessers);
+            drawer.score += drawerBonus; 
+          }
 
           finalMessage = `🎉 Guessed the word! (+${score} pts)`;
 
