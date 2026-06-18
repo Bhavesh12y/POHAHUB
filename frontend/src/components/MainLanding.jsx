@@ -34,7 +34,7 @@ const GAMES = [
     description: 'Roll the dice, climb ladders, dodge snakes.',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
     path: '/games/snake-and-ladder',
-    available: false,
+    available: true,
     accent: 'hover:border-gray-500/20',
   },
   {

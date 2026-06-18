@@ -1,6 +1,8 @@
 import { createConnectFourState, dropDisc, serializeConnectFourState } from '../games/connectFour.js';
 import { createTicTacToeState, playMove, serializeTicTacToeState } from '../games/tictactoe.js';
 import { createScribbleState, serializeScribbleState } from '../games/scribble.js';
+import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } from '../games/snakeAndLadder.js';
+
 
 const PLAYER_COLORS = ['red', 'yellow'];
 const PLAYER_SYMBOLS = ['X', 'O'];
@@ -191,6 +193,8 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
       room.gameState = createTicTacToeState(room.players.map((p, i) => ({ ...p, symbol: PLAYER_SYMBOLS[i] })));
     } else if (room.gameType === 'scribble') {
       room.gameState = createScribbleState(room.players.map((p) => ({ id: p.id, name: p.name })));
+    }else if (room.gameType === 'snake-and-ladder') {
+      room.gameState = createSnakeAndLadderState(room.players.map((p) => ({ id: p.id, name: p.name })));
     }
 
     room.status = 'playing';
@@ -203,6 +207,11 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
 
     if (room.gameType === 'connect-four') return dropDisc(room.gameState, payload.column, playerId).ok ? { ok: true, room } : { ok: false };
     if (room.gameType === 'tic-tac-toe') return playMove(room.gameState, payload.index, playerId).ok ? { ok: true, room } : { ok: false };
+    if (room.gameType === 'snake-and-ladder') {
+      if (payload.action === 'roll') {
+        return rollDice(room.gameState, playerId).ok ? { ok: true, room } : { ok: false };
+      }
+    }
     return { ok: false, error: 'Unsupported game type' };
   }
 
@@ -220,6 +229,7 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     if (room.gameState && room.gameType === 'connect-four') payload.gameState = serializeConnectFourState(room.gameState);
     else if (room.gameState && room.gameType === 'tic-tac-toe') payload.gameState = serializeTicTacToeState(room.gameState);
     else if (room.gameState && room.gameType === 'scribble') payload.gameState = serializeScribbleState(room.gameState, viewerId);
+    else if (room.gameState && room.gameType === 'snake-and-ladder') payload.gameState = serializeSnakeAndLadderState(room.gameState);
 
     return payload;
   }
