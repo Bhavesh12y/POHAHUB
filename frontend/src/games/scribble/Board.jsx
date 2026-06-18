@@ -320,8 +320,8 @@ export default function ScribbleBoard() {
                {isHost ? <button className="btn-primary w-[80%] sm:w-auto" onClick={handleStart} disabled={room.players.length < 2}>Start Game</button> : <p className="text-gray-500 animate-pulse uppercase tracking-widest text-xs sm:text-sm">Waiting for host...</p>}
              </div>
           ) : (
-            // <>
-            //   RESPONSIVE TOOLS PANEL
+            <>
+              {/* RESPONSIVE TOOLS PANEL */}
               {/* Professional Tool Panel */}
             <div className={`flex flex-col md:flex-row justify-between items-center p-3 sm:p-4 glass-card bg-[#111] border-white/[0.05] rounded-2xl gap-3 transition-opacity ${(!isMyTurn || gameState?.turnState !== 'drawing') && 'opacity-50 pointer-events-none'}`}>
             
@@ -331,7 +331,7 @@ export default function ScribbleBoard() {
                 <button onClick={() => setActiveTool('fill')} className={`px-4 py-1.5 rounded-lg text-sm transition-all ${activeTool === 'fill' ? 'bg-white/10 text-white' : 'text-gray-500'}`}>🪣 Fill</button>
             </div>
 
-            {/* Color Grid + Advanced Dropper */}
+            {/* Colors - Grid View */}
                 <div className="flex items-center gap-4 bg-[#0a0a0c] p-2 rounded-xl border border-white/[0.05]">
                   {/* The 2x5 Grid */}
                   <div className="grid grid-cols-5 gap-1.5">
