@@ -417,7 +417,9 @@ export default function ScribbleBoard() {
                         <span className="text-[10px] sm:text-sm font-medium text-gray-300 truncate">
                           {player.name} {isDrawer && '✏️'} {hasGuessed && '✔️'}
                         </span>
-                        <span className="text-[9px] sm:text-xs text-gray-500 font-mono">{player.score} pts</span>
+                        <span className="text-[9px] sm:text-xs text-gray-500 font-mono">
+                          {player.score ?? 0} pts
+                        </span>
                       </div>
                     </div>
                   );
