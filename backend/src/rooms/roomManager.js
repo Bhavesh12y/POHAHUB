@@ -67,6 +67,15 @@ class RoomManager {
 
     room.players.push({ id: playerId, name: playerName, socketId: null });
     if (room.gameType === 'scribble' && room.gameState) room.gameState.players.push({ id: playerId, name: playerName, score: 0 });
+    const joinMessage = {
+      id: `${Date.now()}-join-${playerId}`,
+      playerId: 'SYSTEM',
+      playerName: 'System',
+      message: `👋 ${playerName} joined the room!`,
+      timestamp: Date.now()
+    };
+    room.chat.push(joinMessage);
+    if (room.chat.length > 100) room.chat.shift(); // Keeps chat from getting too long
     
     return { ok: true, room };
   }

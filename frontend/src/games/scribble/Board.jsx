@@ -22,15 +22,24 @@ function ChatPanel({ messages, onSend, disabled }) {
       <div className="px-4 py-3 sm:py-4 border-b border-white/[0.05] font-bold tracking-widest text-xs uppercase text-gray-400">
         Guesses & Chat
       </div>
-      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-800">
-        {messages.map((msg) => (
-          <div key={msg.id} className="break-words">
-            <span className="font-semibold text-gray-300">{msg.playerName}: </span>
-            <span className={`font-light ${msg.message.includes('🎉') ? 'text-emerald-400 font-bold tracking-wide' : 'text-gray-400'}`}>
-              {msg.message}
-            </span>
-          </div>
-        ))}
+        <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-800">
+                {messages.map((msg) => (
+                <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-2' : ''}`}>
+                    {/* Only show the Player Name and colon if it's NOT a system message */}
+                    {msg.playerId !== 'SYSTEM' && (
+                    <span className="font-semibold text-gray-300">{msg.playerName}: </span>
+                    )}
+                    
+                    {/* Style the text differently if it's a System message, a Winner message, or regular chat */}
+                    <span className={
+                    msg.playerId === 'SYSTEM' ? 'text-gray-500 italic text-[11px] uppercase tracking-wider' :
+                    msg.message.includes('🎉') ? 'text-emerald-400 font-bold tracking-wide' : 
+                    'text-gray-400 font-light'
+                    }>
+                    {msg.message}
+                    </span>
+                </div>
+                ))}
       </div>
       <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t border-white/[0.05] flex gap-2">
         <input
