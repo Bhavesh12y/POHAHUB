@@ -130,24 +130,59 @@ class RoomManager {
     return room;
   }
 
-  addChatMessage(roomCode, { playerId, playerName, message }) {
+addChatMessage(roomCode, { playerId, playerName, message }) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
+
+    let finalMessage = message.trim().slice(0, 500);
+    let isCorrectGuess = false;
+    let turnEndedEarly = false;
+
+    // --- SCRIBBLE GUESS & POINT LOGIC ---
+    if (room.gameType === 'scribble' && room.status === 'playing' && room.gameState?.turnState === 'drawing') {
+      const state = room.gameState;
+      
+      // If NOT the drawer and hasn't already guessed correctly
+      if (playerId !== state.drawerId && !state.guessedPlayers.includes(playerId)) {
+        if (finalMessage.toLowerCase() === state.currentWord.toLowerCase()) {
+          isCorrectGuess = true;
+          state.guessedPlayers.push(playerId);
+          
+          // Calculate Dynamic Points based on Time Left
+          const elapsed = (Date.now() - state.startTime) / 1000;
+          const remaining = Math.max(0, state.timeLimit - elapsed);
+          // Base 100 pts + up to 100 bonus pts for speed
+          const score = Math.floor(100 + (100 * (remaining / state.timeLimit)));
+          
+          const player = state.players.find((p) => p.id === playerId);
+          if (player) player.score += score;
+          
+          // Drawer gets flat 50 pts per person who guesses their art
+          const drawer = state.players.find((p) => p.id === state.drawerId);
+          if (drawer) drawer.score += 50;
+
+          finalMessage = `Guessed the word! (+${score} pts)`;
+
+          // If everyone (except the drawer) has guessed, end the turn instantly
+          if (state.guessedPlayers.length >= state.players.length - 1) {
+            turnEndedEarly = true;
+          }
+        }
+      }
+    }
 
     const entry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       playerId,
       playerName,
-      message: message.trim().slice(0, 500),
+      message: finalMessage,
       timestamp: Date.now(),
     };
 
     room.chat.push(entry);
-    if (room.chat.length > 100) {
-      room.chat.shift();
-    }
+    if (room.chat.length > 100) room.chat.shift();
 
-    return entry;
+    return { entry, roomUpdated: isCorrectGuess, turnEndedEarly, room }; 
   }
 
   startGame(roomCode, playerId) {
