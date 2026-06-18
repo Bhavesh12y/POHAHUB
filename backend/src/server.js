@@ -99,6 +99,16 @@ io.on('connection', (socket) => {
     socket.to(currentRoom).emit('draw:line', payload);
   });
 
+  // Add this right below socket.on('draw:line', ...)
+socket.on('draw:fill', (data, callback) => {
+  const room = roomManager.getRoomByPlayerId(socket.id);
+  if (!room) return callback({ error: 'Not in a room' });
+  
+  // Forward the fill coordinates and color to everyone else in the room
+  socket.to(room.code).emit('draw:fill', data);
+  if (callback) callback({ ok: true });
+});
+
   socket.on('draw:clear', () => {
     if (!currentRoom) return;
     socket.to(currentRoom).emit('draw:clear');
@@ -141,6 +151,7 @@ io.on('connection', (socket) => {
     if (result.deleted) io.to(currentRoom).emit('room:closed', { reason: 'All players left' });
     else emitRoomUpdate(result.room);
   });
+  
 });
 
 // --- GLOBAL GAME LOOP TIMER ---
