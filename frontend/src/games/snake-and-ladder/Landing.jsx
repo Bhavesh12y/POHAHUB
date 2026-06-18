@@ -64,11 +64,7 @@ export default function SnakeAndLadderLanding() {
       <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
 
       <div className="relative z-10 text-center mb-10">
-        <img 
-        src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/sal.png" 
-        alt="Snake & Ladder Preview" 
-        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-      />
+        <div className="text-5xl mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] animate-bounce">🐍</div>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tighter text-white mb-2">Snake & Ladder</h1>
         <p className="text-sm font-light tracking-widest uppercase text-gray-400">Multiplayer Edition</p>
       </div>
