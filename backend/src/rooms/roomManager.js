@@ -92,7 +92,7 @@ class RoomManager {
     return room;
   }
 
-  addChatMessage(roomCode, { playerId, playerName, message }) {
+ addChatMessage(roomCode, { playerId, playerName, message }) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
 
@@ -100,26 +100,37 @@ class RoomManager {
     let isCorrectGuess = false;
     let turnEndedEarly = false;
 
-    // --- DYNAMIC SCRIBBLE SCORING ---
+    // --- DYNAMIC SCRIBBLE SCORING & SPOILER PREVENTION ---
     if (room.gameType === 'scribble' && room.status === 'playing' && room.gameState?.turnState === 'drawing') {
       const state = room.gameState;
+      const isDrawer = playerId === state.drawerId;
+      const hasGuessed = state.guessedPlayers.includes(playerId);
       
-      // If NOT the drawer and hasn't already guessed
-      if (playerId !== state.drawerId && !state.guessedPlayers.includes(playerId)) {
-        if (finalMessage.toLowerCase() === state.currentWord.toLowerCase()) {
+      // Check if the chat message matches the secret word
+      const isMatch = finalMessage.toLowerCase() === state.currentWord.toLowerCase();
+
+      if (isMatch) {
+        if (isDrawer) {
+          // Prevent the Drawer from giving away the answer
+          finalMessage = "🤐 I tried to give away the word!";
+        } else if (hasGuessed) {
+          // Prevent winners from spoiling it for others
+          finalMessage = "🤐 I tried to spoil the word!";
+        } else {
+          // A valid guess from someone who hasn't guessed yet!
           isCorrectGuess = true;
           state.guessedPlayers.push(playerId);
           
-          // Calculate Dynamic Points
+          // Calculate Dynamic Points based on time
           const elapsed = (Date.now() - state.startTime) / 1000;
           const remaining = Math.max(0, state.timeLimit - elapsed);
-          const score = Math.floor(100 + (100 * (remaining / state.timeLimit))); // Up to 200 pts for fast guesses
+          const score = Math.floor(100 + (100 * (remaining / state.timeLimit))); 
           
           const player = state.players.find((p) => p.id === playerId);
           if (player) player.score += score;
           
           const drawer = state.players.find((p) => p.id === state.drawerId);
-          if (drawer) drawer.score += 50; // Drawer bonus
+          if (drawer) drawer.score += 50; 
 
           finalMessage = `🎉 Guessed the word! (+${score} pts)`;
 
@@ -128,7 +139,14 @@ class RoomManager {
       }
     }
 
-    const entry = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, playerId, playerName, message: finalMessage, timestamp: Date.now() };
+    const entry = { 
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, 
+      playerId, 
+      playerName, 
+      message: finalMessage, 
+      timestamp: Date.now() 
+    };
+    
     room.chat.push(entry);
     if (room.chat.length > 100) room.chat.shift();
 

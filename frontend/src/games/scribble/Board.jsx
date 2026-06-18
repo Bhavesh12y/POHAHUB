@@ -402,8 +402,12 @@ export default function ScribbleBoard() {
 
         {/* CHAT / GUESS PANEL */}
         <div className="lg:w-80 h-[300px] lg:h-auto mt-4 lg:mt-0">
-          <ChatPanel messages={room.chat ?? []} onSend={handleChat} disabled={!room || isMyTurn || gameState?.guessedPlayers?.includes(myPlayerId)} />
-        </div>
+            <ChatPanel 
+                messages={room.chat ?? []} 
+                onSend={handleChat} 
+                disabled={!room} 
+            />
+            </div>
       </div>
     </div>
   );
