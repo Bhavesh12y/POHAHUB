@@ -273,9 +273,20 @@ export default function ScribbleBoard() {
                   </div>
                 )}
 
-                <canvas ref={canvasRef} width={800} height={600} className="w-full h-full relative z-10"
-                  onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseOut={onMouseUp}
-                  onTouchStart={onMouseDown} onTouchMove={onMouseMove} onTouchEnd={onMouseUp} />
+                <canvas 
+                    ref={canvasRef} 
+                    width={800} 
+                    height={600} 
+                    className="w-full h-full relative z-10 touch-none" 
+                    onMouseDown={onMouseDown} 
+                    onMouseMove={onMouseMove} 
+                    onMouseUp={onMouseUp} 
+                    onMouseOut={onMouseUp}
+                    onTouchStart={onMouseDown} 
+                    onTouchMove={onMouseMove} 
+                    onTouchEnd={onMouseUp} 
+                    />
+                    
               </div>
               
               {/* Leaderboard */}
