@@ -290,7 +290,7 @@ export default function SnakeAndLadderBoard() {
                  isHost={isHost} 
                  playerCount={room.players.length} 
                  onStart={handleStart} 
-                 gamePath="snake-and-ladder/room" 
+                 gamePath="snakeAndLadder/room" 
              />
           ) : (
             <div className="relative w-full max-w-[600px] mx-auto aspect-square glass-card bg-[#111] border-white/10 rounded-2xl p-3">
