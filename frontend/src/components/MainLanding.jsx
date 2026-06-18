@@ -23,7 +23,7 @@ const GAMES = [
     id: 'scribble',
     title: 'Scribble',
     description: 'Draw, guess, and score points in real-time.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/scribble.png', // Placeholder
     path: '/games/scribble',
     available: true,
     accent: 'hover:border-purple-500/30 hover:shadow-[0_0_30px_rgba(168,85,247,0.05)]',
