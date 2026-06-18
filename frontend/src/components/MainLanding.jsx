@@ -20,6 +20,15 @@ const GAMES = [
     accent: 'hover:border-gray-300/40 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]',
   },
   {
+    id: 'scribble',
+    title: 'Scribble',
+    description: 'Draw, guess, and score points in real-time.',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Placeholder
+    path: '/games/scribble',
+    available: true,
+    accent: 'hover:border-purple-500/30 hover:shadow-[0_0_30px_rgba(168,85,247,0.05)]',
+  },
+  {
     id: 'snake-and-ladder',
     title: 'Snake & Ladder',
     description: 'Roll the dice, climb ladders, dodge snakes.',

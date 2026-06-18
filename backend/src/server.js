@@ -170,6 +170,23 @@ io.on('connection', (socket) => {
       emitRoomUpdate(result.room);
     }
   });
+
+  // ----------------------------------------------------
+  // SCRIBBLE SPECIFIC EVENTS (High frequency, low payload)
+  // ----------------------------------------------------
+  
+  socket.on('draw:line', (payload) => {
+    if (!currentRoom) return;
+    
+    // Broadcast the raw drawing data to everyone in the room EXCEPT the sender.
+    // We don't save this to roomManager state to save memory/bandwidth.
+    socket.to(currentRoom).emit('draw:line', payload);
+  });
+
+  socket.on('draw:clear', () => {
+    if (!currentRoom) return;
+    socket.to(currentRoom).emit('draw:clear');
+  });
 });
 
 httpServer.listen(PORT, () => {

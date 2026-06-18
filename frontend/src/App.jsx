@@ -9,6 +9,8 @@ import SnakeLadderLanding from './games/snake-and-ladder/Landing.jsx';
 import LudoLanding from './games/ludo/Landing.jsx';
 import TambolaLanding from './games/tambola/Landing.jsx';
 import ComingSoon from './components/ComingSoon.jsx';
+import ScribbleLanding from './games/scribble/Landing.jsx';
+import ScribbleBoard from './games/scribble/Board.jsx';
 
 export default function App() {
   return (
@@ -22,6 +24,9 @@ export default function App() {
         <Route path="games/snake-and-ladder" element={<SnakeLadderLanding />} />
         <Route path="games/ludo" element={<LudoLanding />} />
         <Route path="games/tambola" element={<TambolaLanding />} />
+        <Route path="games/scribble" element={<ScribbleLanding />} />
+        <Route path="games/scribble/room/:roomCode" element={<ScribbleBoard />} />
+        
         <Route path="*" element={<ComingSoon title="Page Not Found" subtitle="This route does not exist." />} />
       </Route>
     </Routes>
