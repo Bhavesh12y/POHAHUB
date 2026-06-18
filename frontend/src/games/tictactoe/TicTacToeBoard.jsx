@@ -291,7 +291,7 @@ export default function TicTacToeBoard() {
                 isHost={isHost}
                 playerCount={room.players.length}
                 onStart={handleStart}
-                gamePath="tic-tac-toe"
+                gamePath="tic-tac-toe/room"
               />
             )}
 

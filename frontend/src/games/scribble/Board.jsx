@@ -330,7 +330,7 @@ export default function ScribbleBoard() {
       isHost={isHost} 
       playerCount={room.players.length} 
       onStart={handleStart} 
-      gamePath="scribble" 
+      gamePath="scribble/room" 
   />
           ) : (
             <>

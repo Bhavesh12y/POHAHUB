@@ -27,7 +27,9 @@ export default function App() {
         <Route path="games/tambola" element={<TambolaLanding />} />
         <Route path="games/scribble" element={<ScribbleLanding />} />
         <Route path="games/scribble/room/:roomCode" element={<ScribbleBoard />} />
-        <Route path="games/snake-and-ladder/:roomCode" element={<SnakeAndLadderBoard />} />
+    
+        <Route path="games/snake-and-ladder" element={<SnakeLadderLanding />} />
+        <Route path="games/snake-and-ladder/room/:roomCode" element={<SnakeAndLadderBoard />} />  {/* ← change this */}
         
         <Route path="*" element={<ComingSoon title="Page Not Found" subtitle="This route does not exist." />} />
       </Route>

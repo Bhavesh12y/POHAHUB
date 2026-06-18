@@ -388,7 +388,7 @@ export default function ConnectFourBoard() {
       isHost={isHost} 
       playerCount={room.players.length} 
       onStart={handleStart} 
-      gamePath="connect-four" 
+      gamePath="connect-four/room" 
   />
             )}
 
