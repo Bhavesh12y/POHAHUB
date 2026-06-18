@@ -84,6 +84,17 @@ class RoomManager {
     return { deleted: false, room };
   }
 
+  getRoomByPlayerId(playerId) {
+    // We check all active rooms to find which one this player is currently in
+    for (const roomCode in this.rooms) {
+      const room = this.rooms[roomCode];
+      if (room.players && room.players.some(p => p.id === playerId)) {
+        return room;
+      }
+    }
+    return null;
+  }
+
   bindSocket(roomCode, playerId, socketId) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
