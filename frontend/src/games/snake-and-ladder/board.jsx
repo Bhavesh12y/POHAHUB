@@ -119,7 +119,7 @@ export default function SnakeAndLadderBoard() {
     const socket = connectSocket();
     const username = sessionStorage.getItem('pohahub_username');
     if (!username) {
-      navigate(`/games/snake-and-ladder?join=${roomCode}`);
+      navigate(`/games/snake-and-ladder/room/${roomCode}`);
       return;
     }
 

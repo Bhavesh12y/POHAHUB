@@ -27,7 +27,7 @@ export default function SnakeAndLadderLanding() {
 
     setIsLoading(false);
     if (res.ok) {
-      navigate(`/games/snake-and-ladder/${res.room.code}`, { state: { room: res.room } });
+      navigate(`/games/snake-and-ladder/room/${res.room.code}`, { state: { room: res.room } });
     } else {
       setError(res.error || 'Failed to create room');
     }
@@ -51,7 +51,7 @@ export default function SnakeAndLadderLanding() {
 
     setIsLoading(false);
     if (res.ok) {
-      navigate(`/games/snake-and-ladder/${res.room.code}`, { state: { room: res.room } });
+      navigate(`/games/snake-and-ladder/room/${res.room.code}`, { state: { room: res.room } });
     } else {
       setError(res.error || 'Failed to join room');
     }
