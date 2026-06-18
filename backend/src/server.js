@@ -89,7 +89,7 @@ io.on('connection', (socket) => {
         room.gameState.turnState = 'drawing';
         room.gameState.currentWord = word;
         room.gameState.startTime = Date.now();
-        emitRoomUpdate(room); // Fixed Viewer ID bug here
+        emitRoomUpdate(room); 
         callback?.({ ok: true });
     }
   });
@@ -99,14 +99,13 @@ io.on('connection', (socket) => {
     socket.to(currentRoom).emit('draw:line', payload);
   });
 
-  });
-
   // Listen for the fill bucket tool being used
   socket.on('draw:fill', (data) => {
     if (currentRoom) {
       // Broadcast the fill action to everyone else in the room
       socket.to(currentRoom).emit('draw:fill', data);
     }
+  }); // <--- ADDED MISSING BRACKETS HERE!
 
   socket.on('draw:clear', () => {
     if (!currentRoom) return;
@@ -129,7 +128,6 @@ io.on('connection', (socket) => {
     const player = room?.players.find((p) => p.id === playerId);
     if (!room || !player) return callback?.({ ok: false, error: 'Player not found' });
 
-    // This calls the exact addChatMessage function you just pasted!
     const result = roomManager.addChatMessage(currentRoom, { 
       playerId, 
       playerName: player.name, 
@@ -193,7 +191,6 @@ setInterval(() => {
         needsSync = true;
       }
 
-      // Fixed Viewer ID bug here
       if (needsSync) emitRoomUpdate(room); 
     }
   });
