@@ -320,38 +320,47 @@ export default function ScribbleBoard() {
                {isHost ? <button className="btn-primary w-[80%] sm:w-auto" onClick={handleStart} disabled={room.players.length < 2}>Start Game</button> : <p className="text-gray-500 animate-pulse uppercase tracking-widest text-xs sm:text-sm">Waiting for host...</p>}
              </div>
           ) : (
-            <>
-              {/* RESPONSIVE TOOLS PANEL */}
-              <div className={`flex flex-col md:flex-row justify-between items-center p-3 sm:p-4 glass-card bg-[#111] border-white/[0.05] rounded-2xl gap-3 sm:gap-4 transition-opacity ${(!isMyTurn || gameState?.turnState !== 'drawing') && 'opacity-50 pointer-events-none'}`}>
-                
-                {/* Tools Selector */}
-                <div className="flex bg-[#0a0a0c] p-1 rounded-xl border border-white/[0.05]">
-                  <button onClick={() => setActiveTool('brush')} className={`px-4 py-1.5 rounded-lg text-sm transition-all ${activeTool === 'brush' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}>
-                    ✏️ Brush
-                  </button>
-                  <button onClick={() => setActiveTool('fill')} className={`px-4 py-1.5 rounded-lg text-sm transition-all ${activeTool === 'fill' ? 'bg-white/10 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}>
-                    🪣 Fill
-                  </button>
+            // <>
+            //   RESPONSIVE TOOLS PANEL
+              {/* Professional Tool Panel */}
+            <div className={`flex flex-col md:flex-row justify-between items-center p-3 sm:p-4 glass-card bg-[#111] border-white/[0.05] rounded-2xl gap-3 transition-opacity ${(!isMyTurn || gameState?.turnState !== 'drawing') && 'opacity-50 pointer-events-none'}`}>
+            
+            {/* Tool Toggles */}
+            <div className="flex bg-[#0a0a0c] p-1 rounded-xl border border-white/[0.05]">
+                <button onClick={() => setActiveTool('brush')} className={`px-4 py-1.5 rounded-lg text-sm transition-all ${activeTool === 'brush' ? 'bg-white/10 text-white' : 'text-gray-500'}`}>✏️ Brush</button>
+                <button onClick={() => setActiveTool('fill')} className={`px-4 py-1.5 rounded-lg text-sm transition-all ${activeTool === 'fill' ? 'bg-white/10 text-white' : 'text-gray-500'}`}>🪣 Fill</button>
+            </div>
+
+            {/* Color Grid + Advanced Dropper */}
+                <div className="flex items-center gap-4 bg-[#0a0a0c] p-2 rounded-xl border border-white/[0.05]">
+                  {/* The 2x5 Grid */}
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {COLORS.slice(0, 10).map(c => (
+                      <button 
+                        key={c} 
+                        onClick={() => setColor(c)} 
+                        className={`w-6 h-6 rounded-md border ${color === c ? 'border-white scale-110 shadow-lg' : 'border-white/10'}`} 
+                        style={{ backgroundColor: c }} 
+                      />
+                    ))}
+                  </div>
+
+                  {/* Advanced Dropper Icon */}
+                  <div className="relative group border-l border-white/10 pl-3">
+                    <label className="cursor-pointer flex flex-col items-center">
+                      <span className="text-lg">💧</span>
+                      <input 
+                        type="color" 
+                        value={color} 
+                        onChange={(e) => setColor(e.target.value)}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                    </label>
+                  </div>
                 </div>
 
-                {/* Colors */}
-                <div className="flex flex-wrap justify-center gap-2 sm:gap-2 w-full sm:w-auto">
-                  {COLORS.map(c => (
-                    <button key={c} onClick={() => setColor(c)} className={`w-8 h-8 sm:w-8 sm:h-8 rounded-full border-2 ${color === c ? 'border-gray-400 scale-110' : 'border-white/[0.1]'}`} style={{ backgroundColor: c }}>
-                      {c === '#0a0a0c' && <span className="text-[8px] sm:text-[9px] text-gray-500 font-bold tracking-tighter">ERASE</span>}
-                    </button>
-                  ))}
-                </div>
-                
-                {/* Size & Clear */}
-                <div className="flex items-center justify-between w-full md:w-auto gap-4 sm:gap-6 border-t border-white/[0.05] md:border-0 pt-3 md:pt-0">
-                  <div className={`flex items-center gap-2 transition-opacity ${activeTool === 'fill' ? 'opacity-30 pointer-events-none' : ''}`}>
-                    <span className="text-xs text-gray-500 font-medium">SIZE</span>
-                    <input type="range" min="2" max="20" value={brushSize} onChange={(e) => setBrushSize(parseInt(e.target.value))} className="w-24 sm:w-24" />
-                  </div>
-                  <button onClick={clearCanvas} className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-red-400 hover:text-red-300">Clear</button>
-                </div>
-              </div>
+            <button onClick={clearCanvas} className="text-xs font-bold uppercase tracking-widest text-red-400 hover:text-red-300">Clear</button>
+</div>
 
               {/* THE CANVAS */}
               <div className={`relative w-full aspect-[4/3] sm:aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0a0a0c] border border-white/[0.1] shadow-[inset_0_0_30px_rgba(0,0,0,0.8)] ${(isMyTurn && gameState?.turnState === 'drawing') ? (activeTool === 'fill' ? 'cursor-cell' : 'cursor-crosshair') : 'cursor-default'}`}>
