@@ -64,10 +64,19 @@ export default function SnakeAndLadderBoard() {
       if (updatedRoom.code === roomCode?.toUpperCase()) setRoom(updatedRoom);
     });
 
+    socket.on('chat:message', (msg) => {
+      setRoom((prev) => prev ? { ...prev, chat: [...(prev.chat ?? []), msg] } : prev);
+    });
+
+
     if (socket.connected) syncRoom();
     else socket.connect();
 
-    return () => { socket.off('connect'); socket.off('room:update'); };
+    return () => { 
+      socket.off('connect'); 
+      socket.off('room:update'); 
+      socket.off('chat:message'); 
+    };
   }, [roomCode, navigate]);
 
   const gameState = room?.gameState;
