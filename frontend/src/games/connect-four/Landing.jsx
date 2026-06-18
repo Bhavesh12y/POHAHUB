@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 
 export default function ConnectFourLanding() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
-  const [roomCode, setRoomCode] = useState('');
+  const [roomCode, setRoomCode] = useState(searchParams.get('join')?.toUpperCase() || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+ 
 
   // Load username from localStorage on mount
   useEffect(() => {

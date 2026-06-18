@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
+import WaitingLobby from '../../components/WaitingLobby';
 
 // --- CHAT PANEL ---
 function ChatPanel({ messages, onSend }) {
@@ -117,7 +118,10 @@ export default function SnakeAndLadderBoard() {
   useEffect(() => {
     const socket = connectSocket();
     const username = sessionStorage.getItem('pohahub_username');
-    if (!username) return navigate('/');
+    if (!username) {
+      navigate(`/games/snake-and-ladder?join=${roomCode}`);
+      return;
+    }
 
     const syncRoom = async () => {
       const res = await emitWithAck('room:join', { roomCode: roomCode.toUpperCase(), playerName: username });
@@ -281,10 +285,13 @@ export default function SnakeAndLadderBoard() {
         {/* GAME BOARD & CONTROLS */}
         <div className="flex-1 flex flex-col gap-4">
           {room.status === 'waiting' ? (
-             <div className="text-center py-20 border border-dashed border-white/[0.1] rounded-3xl bg-[#0a0a0c]/50 flex flex-col items-center justify-center">
-               <p className="text-base text-gray-400 mb-6 font-light">Share code: <strong className="text-white font-mono">{room.code}</strong><br/>Need at least 2 players.</p>
-               {isHost ? <button className="btn-primary" onClick={handleStart} disabled={room.players.length < 2}>Start Game</button> : <p className="text-gray-500 animate-pulse">Waiting for host...</p>}
-             </div>
+             <WaitingLobby 
+                 roomCode={room.code} 
+                 isHost={isHost} 
+                 playerCount={room.players.length} 
+                 onStart={handleStart} 
+                 gamePath="snake-and-ladder" 
+             />
           ) : (
             <div className="relative w-full max-w-[600px] mx-auto aspect-square glass-card bg-[#111] border-white/10 rounded-2xl p-3">
               

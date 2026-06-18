@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
+import WaitingLobby from '../../components/WaitingLobby';
 
 function ChatPanel({ messages, onSend, disabled }) {
   const [text, setText] = useState('');
@@ -141,7 +142,10 @@ export default function ScribbleBoard() {
   useEffect(() => {
     const socket = connectSocket();
     const username = sessionStorage.getItem('pohahub_username');
-    if (!username) return navigate('/');
+    if (!username) {
+      navigate(`/games/scribble?join=${roomCode}`);
+      return;
+    }
 
     const syncRoom = async () => {
       const res = await emitWithAck('room:join', { roomCode: roomCode.toUpperCase(), playerName: username });
@@ -321,13 +325,13 @@ export default function ScribbleBoard() {
         <div className="flex-1 flex flex-col gap-3 sm:gap-4">
           
           {room.status === 'waiting' ? (
-             <div className="text-center py-12 sm:py-20 border border-dashed border-white/[0.1] rounded-3xl bg-[#0a0a0c]/50 h-full flex flex-col items-center justify-center">
-               <p className="text-sm sm:text-base text-gray-400 mb-6 font-light max-w-sm px-4">
-                 Share code: <strong className="text-white font-mono block sm:inline mt-2 sm:mt-0 text-xl sm:text-base">{room.code}</strong>
-                 <br className="hidden sm:block"/>Need at least 2 players to start.
-               </p>
-               {isHost ? <button className="btn-primary w-[80%] sm:w-auto" onClick={handleStart} disabled={room.players.length < 2}>Start Game</button> : <p className="text-gray-500 animate-pulse uppercase tracking-widest text-xs sm:text-sm">Waiting for host...</p>}
-             </div>
+             <WaitingLobby 
+      roomCode={room.code} 
+      isHost={isHost} 
+      playerCount={room.players.length} 
+      onStart={handleStart} 
+      gamePath="scribble" 
+  />
           ) : (
             <>
               {/* RESPONSIVE TOOLS PANEL */}

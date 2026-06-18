@@ -32,7 +32,7 @@ const GAMES = [
     id: 'snake-and-ladder',
     title: 'Snake & Ladder',
     description: 'Roll the dice, climb ladders, dodge snakes.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/sal.png',
     path: '/games/snake-and-ladder',
     available: true,
     accent: 'hover:border-gray-500/20',

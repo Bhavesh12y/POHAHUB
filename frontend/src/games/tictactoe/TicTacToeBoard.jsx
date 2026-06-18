@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
+import WaitingLobby from '../../components/WaitingLobby';
 
 // Reusable Chat Panel (Same as Connect 4)
 function ChatPanel({ messages, onSend, disabled }) {
@@ -77,6 +78,11 @@ export default function TicTacToeBoard() {
   useEffect(() => {
     const socket = connectSocket();
     const username = localStorage.getItem('pohahub_username');
+
+    if (!username) {
+      navigate(`/games/tic-tac-toe?join=${roomCode}`);
+      return;
+    }
 
     const syncRoom = async () => {
       if (!username || !roomCode) return;
@@ -280,16 +286,13 @@ export default function TicTacToeBoard() {
             )}
 
             {room.status === 'waiting' && (
-              <div className="text-center py-10 border border-dashed border-white/[0.1] rounded-2xl mb-6 bg-white/[0.01]">
-                <p className="text-gray-400 mb-6 font-light">Share the room code with a friend. Start when both are here.</p>
-                {isHost ? (
-                  <button type="button" className="btn-primary" onClick={handleStart} disabled={room.players.length < 2}>
-                    Initiate Match
-                  </button>
-                ) : (
-                  <p className="text-sm text-gray-500 tracking-widest uppercase animate-pulse">Waiting for host...</p>
-                )}
-              </div>
+              <WaitingLobby
+                roomCode={room.code}
+                isHost={isHost}
+                playerCount={room.players.length}
+                onStart={handleStart}
+                gamePath="tic-tac-toe"
+              />
             )}
 
             {/* THE TIC TAC TOE BOARD */}
