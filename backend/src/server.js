@@ -101,14 +101,6 @@ io.on('connection', (socket) => {
 
   });
 
-  // Add this right below socket.on('draw:line', ...)
-socket.on('draw:fill', (data, callback) => {
-  const room = roomManager.getRoomByPlayerId(socket.id);
-  if (!room) return callback({ error: 'Not in a room' });
-
-  
-
-
   // Listen for the fill bucket tool being used
   socket.on('draw:fill', (data) => {
     if (currentRoom) {
