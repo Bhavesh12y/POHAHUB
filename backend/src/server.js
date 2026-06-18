@@ -125,20 +125,33 @@ socket.on('draw:fill', (data, callback) => {
 
   socket.on('chat:message', ({ message }, callback) => {
     if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
+    
     const room = roomManager.getRoom(currentRoom);
     const player = room?.players.find((p) => p.id === playerId);
     if (!room || !player) return callback?.({ ok: false, error: 'Player not found' });
 
-    const result = roomManager.addChatMessage(currentRoom, { playerId, playerName: player.name, message });
+    // This calls the exact addChatMessage function you just pasted!
+    const result = roomManager.addChatMessage(currentRoom, { 
+      playerId, 
+      playerName: player.name, 
+      message 
+    });
+
+    // 1. Immediately send the chat message to everyone so it shows up in the box!
     io.to(currentRoom).emit('chat:message', result.entry);
 
+    // 2. Update everyone's screen if scores changed or the turn ended early
     if (result.turnEndedEarly) {
-      io.to(currentRoom).emit('chat:message', { id: Date.now().toString(), playerName: 'System', message: `✨ Everyone guessed it! The word was: ${room.gameState.currentWord}` });
+      io.to(currentRoom).emit('chat:message', { 
+        id: Date.now().toString(), 
+        playerName: 'System', 
+        message: `✨ Everyone guessed it! The word was: ${room.gameState.currentWord}` 
+      });
       endScribbleTurn(room.gameState);
       io.to(currentRoom).emit('draw:clear');
-      emitRoomUpdate(room);
+      emitRoomUpdate(room); // Sends the new turn & new scores!
     } else if (result.roomUpdated) {
-      emitRoomUpdate(room);
+      emitRoomUpdate(room); // Syncs the new points for the person who guessed correctly!
     }
 
     callback?.({ ok: true });
