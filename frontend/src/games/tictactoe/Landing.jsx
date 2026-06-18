@@ -77,7 +77,7 @@ export default function TicTacToeLanding() {
           <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none" />
           
           <img 
-            src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png" 
+            src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/original-c03c34a74dba4bb1c8010bec8c06e719.png" 
             alt="Tic Tac Toe Preview" 
             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           />

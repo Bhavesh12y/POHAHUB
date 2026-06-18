@@ -34,7 +34,7 @@ export default function ScribbleLanding() {
       <div className="text-center mb-12">
         <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#0a0a0c] border border-white/[0.08] shadow-[0_0_20px_rgba(255,255,255,0.03)] mb-6 overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none" />
-          <img src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png" alt="Scribble Preview" className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
+          <img src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/scribble.png" alt="Scribble Preview" className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
         </div>
         <h2 className="text-4xl font-extrabold mb-3 tracking-tighter text-gray-100">Scribble</h2>
         <p className="text-gray-500 font-light tracking-wide">Draw your word, guess the art.</p>

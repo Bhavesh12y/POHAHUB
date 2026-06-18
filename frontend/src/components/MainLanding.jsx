@@ -84,7 +84,6 @@ export default function MainLanding() {
         {/* Hero Section - Floats in first */}
         <section className="text-center mb-20 animate-float-in">
           <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-xs font-medium text-gray-400 mb-8 backdrop-blur-md shadow-xl">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse" />
             Feel Free To RageBait, We Won't Judge!
           </div>
 
