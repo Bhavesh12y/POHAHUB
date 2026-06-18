@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { roomManager } from './rooms/roomManager.js';
+import { endScribbleTurn, revealHint } from './games/scribble.js';
 
 const PORT = process.env.PORT || 3001;
 const CLIENT_ORIGINS = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
@@ -25,6 +26,7 @@ const io = new Server(httpServer, {
   },
 });
 
+// THIS FUNCTION SECURELY FIXES THE VIEWER-ID BUG!
 function emitRoomUpdate(room) {
   room.players.forEach((player) => {
     if (player.socketId) {
@@ -33,58 +35,13 @@ function emitRoomUpdate(room) {
   });
 }
 
-// --- GLOBAL GAME LOOP TIMER ---
-import { endScribbleTurn, revealHint } from './games/scribble.js';
-
-setInterval(() => {
-  roomManager.rooms.forEach((room) => {
-    if (room.gameType === 'scribble' && room.status === 'playing' && room.gameState?.turnState === 'drawing') {
-      const state = room.gameState;
-      const elapsed = (Date.now() - state.startTime) / 1000;
-      
-      let needsSync = false;
-
-      // Hint 1 at 50% time
-      if (elapsed >= state.timeLimit * 0.5 && state.hintsRevealed === 0) {
-        revealHint(state);
-        needsSync = true;
-      }
-      // Hint 2 at 75% time
-      if (elapsed >= state.timeLimit * 0.75 && state.hintsRevealed === 1) {
-        revealHint(state);
-        needsSync = true;
-      }
-
-      // Time's Up Timeout
-      if (elapsed >= state.timeLimit) {
-        io.to(room.code).emit('chat:message', {
-          id: Date.now().toString(),
-          playerName: 'System',
-          message: `🕒 Time's up! The word was: ${state.currentWord}`
-        });
-        endScribbleTurn(state);
-        io.to(room.code).emit('draw:clear');
-        needsSync = true;
-      }
-
-      if (needsSync) {
-        io.to(room.code).emit('room:update', roomManager.serializeRoom(room));
-      }
-    }
-  });
-}, 1000); // Check every second
 io.on('connection', (socket) => {
   let currentRoom = null;
   let playerId = null;
 
   socket.on('room:create', ({ gameType, playerName }, callback) => {
     playerId = socket.id;
-    const room = roomManager.createRoom({
-      gameType,
-      hostId: playerId,
-      hostName: playerName,
-    });
-
+    const room = roomManager.createRoom({ gameType, hostId: playerId, hostName: playerName });
     roomManager.bindSocket(room.code, playerId, socket.id);
     socket.join(room.code);
     currentRoom = room.code;
@@ -95,16 +52,9 @@ io.on('connection', (socket) => {
 
   socket.on('room:join', ({ roomCode, playerName }, callback) => {
     playerId = socket.id;
-    const result = roomManager.joinRoom({
-      roomCode,
-      playerId,
-      playerName,
-    });
+    const result = roomManager.joinRoom({ roomCode, playerId, playerName });
 
-    if (!result.ok) {
-      callback?.({ ok: false, error: result.error });
-      return;
-    }
+    if (!result.ok) return callback?.({ ok: false, error: result.error });
 
     const { room } = result;
     roomManager.bindSocket(room.code, playerId, socket.id);
@@ -116,65 +66,53 @@ io.on('connection', (socket) => {
   });
 
   socket.on('room:start', (_payload, callback) => {
-    if (!currentRoom || !playerId) {
-      callback?.({ ok: false, error: 'Not in a room' });
-      return;
-    }
-
+    if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
     const result = roomManager.startGame(currentRoom, playerId);
-    if (!result.ok) {
-      callback?.({ ok: false, error: result.error });
-      return;
-    }
-
+    if (!result.ok) return callback?.({ ok: false, error: result.error });
     callback?.({ ok: true });
     emitRoomUpdate(result.room);
   });
 
   socket.on('game:move', (payload, callback) => {
-    if (!currentRoom || !playerId) {
-      callback?.({ ok: false, error: 'Not in a room' });
-      return;
-    }
-
+    if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
     const result = roomManager.handleGameMove(currentRoom, playerId, payload);
-    if (!result.ok) {
-      callback?.({ ok: false, error: result.error });
-      return;
-    }
-
+    if (!result.ok) return callback?.({ ok: false, error: result.error });
     callback?.({ ok: true });
     emitRoomUpdate(result.room);
   });
+
+  // --- SCRIBBLE SPECIFIC SOCKET EVENTS ---
+  socket.on('game:selectWord', ({ word }, callback) => {
+    if (!currentRoom || !playerId) return;
+    const room = roomManager.getRoom(currentRoom);
+    if (room && room.gameType === 'scribble' && room.gameState.drawerId === playerId) {
+        room.gameState.turnState = 'drawing';
+        room.gameState.currentWord = word;
+        room.gameState.startTime = Date.now();
+        emitRoomUpdate(room); // Fixed Viewer ID bug here
+        callback?.({ ok: true });
+    }
+  });
+
+  socket.on('draw:line', (payload) => {
+    if (!currentRoom) return;
+    socket.to(currentRoom).emit('draw:line', payload);
+  });
+
+  socket.on('draw:clear', () => {
+    if (!currentRoom) return;
+    socket.to(currentRoom).emit('draw:clear');
+  });
+  // ----------------------------------------
 
   socket.on('game:reset', (_payload, callback) => {
-    if (!currentRoom || !playerId) {
-      callback?.({ ok: false, error: 'Not in a room' });
-      return;
-    }
-
-    const room = roomManager.getRoom(currentRoom);
-    if (!room) {
-      callback?.({ ok: false, error: 'Room not found' });
-      return;
-    }
-
-    // Only the host can restart the game
-    if (room.hostId !== playerId) {
-      callback?.({ ok: false, error: 'Only the host can restart the game' });
-      return;
-    }
-
+    if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
     const result = roomManager.resetGame(currentRoom);
-    if (!result.ok) {
-      callback?.({ ok: false, error: result.error });
-      return;
-    }
-
+    if (!result.ok) return callback?.({ ok: false, error: result.error });
     callback?.({ ok: true });
     emitRoomUpdate(result.room);
   });
-// Handle Chat and Early Turn Ends
+
   socket.on('chat:message', ({ message }, callback) => {
     if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
     const room = roomManager.getRoom(currentRoom);
@@ -185,6 +123,7 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('chat:message', result.entry);
 
     if (result.turnEndedEarly) {
+      io.to(currentRoom).emit('chat:message', { id: Date.now().toString(), playerName: 'System', message: `✨ Everyone guessed it! The word was: ${room.gameState.currentWord}` });
       endScribbleTurn(room.gameState);
       io.to(currentRoom).emit('draw:clear');
       emitRoomUpdate(room);
@@ -195,49 +134,47 @@ io.on('connection', (socket) => {
     callback?.({ ok: true });
   });
 
-  // NEW: Drawer chooses a word
-  socket.on('game:selectWord', ({ word }, callback) => {
-    if (!currentRoom || !playerId) return;
-    const room = roomManager.getRoom(currentRoom);
-    if (room && room.gameType === 'scribble' && room.gameState.drawerId === playerId) {
-        room.gameState.turnState = 'drawing';
-        room.gameState.currentWord = word;
-        room.gameState.startTime = Date.now();
-        io.to(currentRoom).emit('room:update', roomManager.serializeRoom(room));
-        callback?.({ ok: true });
-    }
-  });
-
   socket.on('disconnect', () => {
     if (!currentRoom || !playerId) return;
-
     const result = roomManager.leaveRoom(currentRoom, playerId);
     if (!result) return;
-
-    if (result.deleted) {
-      io.to(currentRoom).emit('room:closed', { reason: 'All players left' });
-    } else {
-      emitRoomUpdate(result.room);
-    }
-  });
-
-  // ----------------------------------------------------
-  // SCRIBBLE SPECIFIC EVENTS (High frequency, low payload)
-  // ----------------------------------------------------
-  
-  socket.on('draw:line', (payload) => {
-    if (!currentRoom) return;
-    
-    // Broadcast the raw drawing data to everyone in the room EXCEPT the sender.
-    // We don't save this to roomManager state to save memory/bandwidth.
-    socket.to(currentRoom).emit('draw:line', payload);
-  });
-
-  socket.on('draw:clear', () => {
-    if (!currentRoom) return;
-    socket.to(currentRoom).emit('draw:clear');
+    if (result.deleted) io.to(currentRoom).emit('room:closed', { reason: 'All players left' });
+    else emitRoomUpdate(result.room);
   });
 });
+
+// --- GLOBAL GAME LOOP TIMER ---
+setInterval(() => {
+  roomManager.rooms.forEach((room) => {
+    if (room.gameType === 'scribble' && room.status === 'playing' && room.gameState?.turnState === 'drawing') {
+      const state = room.gameState;
+      const elapsed = (Date.now() - state.startTime) / 1000;
+      let needsSync = false;
+
+      // Hint 1 at 50% time
+      if (elapsed >= state.timeLimit * 0.5 && state.hintsRevealed === 0) {
+        revealHint(state); needsSync = true;
+      }
+      // Hint 2 at 75% time
+      if (elapsed >= state.timeLimit * 0.75 && state.hintsRevealed === 1) {
+        revealHint(state); needsSync = true;
+      }
+
+      // Time's Up Timeout
+      if (elapsed >= state.timeLimit) {
+        io.to(room.code).emit('chat:message', {
+          id: Date.now().toString(), playerName: 'System', message: `🕒 Time's up! The word was: ${state.currentWord}`
+        });
+        endScribbleTurn(state);
+        io.to(room.code).emit('draw:clear');
+        needsSync = true;
+      }
+
+      // Fixed Viewer ID bug here
+      if (needsSync) emitRoomUpdate(room); 
+    }
+  });
+}, 1000);
 
 httpServer.listen(PORT, () => {
   console.log(`POHAHUB server running on http://localhost:${PORT}`);

@@ -45,7 +45,6 @@ export function createScribbleState(players) {
 
 export function revealHint(state) {
   const wordLen = state.currentWord.length;
-  // Find indices that haven't been revealed yet
   const unrevealed = [];
   for (let i = 0; i < wordLen; i++) {
     if (state.currentWord[i] !== ' ' && !state.hints.includes(i)) unrevealed.push(i);
