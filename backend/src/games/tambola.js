@@ -7,11 +7,8 @@ function shuffle(array) {
   return arr;
 }
 
-// Generates a boolean structure of the ticket ensuring rows have exactly 5 numbers,
-// and columns have 1 to 3 numbers.
 function generateTicketStructure() {
   while (true) {
-    // 1. Distribute 15 numbers across 9 columns (min 1, max 3 per col)
     const cols = Array(9).fill(1);
     let remaining = 6;
     while (remaining > 0) {
@@ -22,7 +19,6 @@ function generateTicketStructure() {
       }
     }
 
-    // 2. Assign rows for each column
     const grid = [Array(9).fill(false), Array(9).fill(false), Array(9).fill(false)];
     for (let c = 0; c < 9; c++) {
       const rows = shuffle([0, 1, 2]);
@@ -31,7 +27,6 @@ function generateTicketStructure() {
       }
     }
 
-    // 3. Validate every row has exactly 5 numbers
     if (grid.every((row) => row.filter(Boolean).length === 5)) {
       return grid;
     }
@@ -49,17 +44,13 @@ function generateTicket() {
   ];
 
   for (let c = 0; c < 9; c++) {
-    // Determine how many numbers this column needs
     const needed = structure.reduce((acc, row) => acc + (row[c] ? 1 : 0), 0);
     
-    // Generate the pool for this column's range
     let pool = [];
     for (let i = ranges[c].min; i <= ranges[c].max; i++) pool.push(i);
     
-    // Pick the needed amount of numbers and sort them ascending (top to bottom)
     const selected = shuffle(pool).slice(0, needed).sort((a, b) => a - b);
 
-    // Place them into the valid spots in the ticket
     let selIdx = 0;
     for (let r = 0; r < 3; r++) {
       if (structure[r][c]) {
@@ -84,6 +75,11 @@ export function createTambolaState(players, hostId) {
       middleLine: null,
       bottomLine: null,
       fourCorners: null,
+      ladoo: null,          // NEW
+      kingCorner: null,     // NEW
+      queenCorner: null,    // NEW
+      smallest3: null,      // NEW
+      largest3: null,       // NEW
       fullHouse: null,
     },
     players: players.map((p) => ({
@@ -131,6 +127,7 @@ export function claimPattern(state, playerId, patternName) {
   const row1 = getRowNumbers(1);
   const row2 = getRowNumbers(2);
   const allNumbers = [...row0, ...row1, ...row2];
+  const allSorted = [...allNumbers].sort((a, b) => a - b);
 
   let isValid = false;
 
@@ -150,6 +147,26 @@ export function claimPattern(state, playerId, patternName) {
     case 'fourCorners':
       const corners = [row0[0], row0[row0.length - 1], row2[0], row2[row2.length - 1]];
       isValid = corners.every((n) => drawnSet.has(n));
+      break;
+    case 'ladoo':
+      // The exact middle number of the middle row (3rd out of 5 numbers)
+      isValid = row1.length >= 3 && drawnSet.has(row1[2]);
+      break;
+    case 'kingCorner':
+      // Top-Left and Bottom-Right bounds
+      isValid = row0.length > 0 && row2.length > 0 && drawnSet.has(row0[0]) && drawnSet.has(row2[row2.length - 1]);
+      break;
+    case 'queenCorner':
+      // Top-Right and Bottom-Left bounds
+      isValid = row0.length > 0 && row2.length > 0 && drawnSet.has(row0[row0.length - 1]) && drawnSet.has(row2[0]);
+      break;
+    case 'smallest3':
+      // The lowest 3 numbers on the ticket
+      isValid = allSorted.slice(0, 3).every((n) => drawnSet.has(n));
+      break;
+    case 'largest3':
+      // The highest 3 numbers on the ticket
+      isValid = allSorted.slice(-3).every((n) => drawnSet.has(n));
       break;
     case 'fullHouse':
       isValid = allNumbers.every((n) => drawnSet.has(n));
