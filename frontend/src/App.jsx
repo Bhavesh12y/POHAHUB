@@ -12,7 +12,7 @@ import ComingSoon from './components/ComingSoon.jsx';
 import ScribbleLanding from './games/scribble/Landing.jsx';
 import ScribbleBoard from './games/scribble/Board.jsx';
 import SnakeAndLadderBoard from './games/snake-and-ladder/board.jsx';
-import TambolaBoard from './games/tambola/TambolaBoard.jsx';
+import TambolaBoard from './games/tambola/board.jsx';
 
 export default function App() {
   return (
