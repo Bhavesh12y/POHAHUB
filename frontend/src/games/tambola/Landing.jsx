@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { socket } from '../../lib/socket.js';
+import socket from '../../lib/socket.js';
 
 export default function TambolaLanding() {
   const [name, setName] = useState(sessionStorage.getItem('playerName') || '');

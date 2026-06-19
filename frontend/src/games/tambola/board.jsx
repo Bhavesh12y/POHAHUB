@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { socket } from '../../lib/socket.js';
+import socket from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby.jsx';
 
 const CLAIMS = [
