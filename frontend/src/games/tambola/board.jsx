@@ -1,3 +1,17 @@
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { connectSocket } from '../../lib/socket.js';
+import WaitingLobby from '../../components/WaitingLobby';
+
+const CLAIMS = [
+  { id: 'early5', label: 'Early 5' },
+  { id: 'topLine', label: 'Top Line' },
+  { id: 'middleLine', label: 'Middle Line' },
+  { id: 'bottomLine', label: 'Bottom Line' },
+  { id: 'fourCorners', label: '4 Corners' },
+  { id: 'fullHouse', label: 'Full House' },
+];
+
 export default function TambolaBoard() {
   const { roomCode } = useParams();
   const socket = connectSocket();
@@ -37,14 +51,16 @@ export default function TambolaBoard() {
   if (room.status === 'waiting') {
     return (
       <WaitingLobby
-        room={room}
+        roomCode={room.code}
         isHost={isHost}
+        playerCount={room.players.length}
         onStart={() => socket.emit('room:start', {}, (result) => {
           if (!result.ok) {
             setErrorToast(result.error || 'Failed to start game');
             setTimeout(() => setErrorToast(''), 3000);
           }
         })}
+        gamePath="tambola/room"
       />
     );
   }
