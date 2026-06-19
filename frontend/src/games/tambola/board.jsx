@@ -372,12 +372,12 @@ export default function TambolaBoard() {
                         const isDrawn = num !== null && gameState.drawnNumbers.includes(num);
                         const isMarked = num !== null && markedNumbers.has(num);
                         
-                       let cellStyle = "bg-transparent";
+let cellStyle = "bg-slate-900/90 text-white/70 border border-white/10 shadow-inner";
                         if (num !== null) {
                           if (isMarked) {
-                            cellStyle = "bg-white/5 text-gray-400 shadow-inner";
+                            cellStyle = "bg-blue-600/25 text-white shadow-[inset_0_0_15px_rgba(37,99,235,0.25)] border border-blue-300/30";
                           } else {
-                            cellStyle = "bg-white/10 hover:bg-white/20 text-white cursor-pointer shadow-sm border border-white/10";
+                            cellStyle = "bg-slate-800/95 text-white hover:bg-slate-700/95 cursor-pointer shadow-sm border border-white/15";
                           }
                         }
 

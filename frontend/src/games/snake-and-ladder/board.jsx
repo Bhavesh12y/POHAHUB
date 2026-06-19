@@ -315,8 +315,8 @@ export default function SnakeAndLadderBoard() {
                     const row = Math.floor(i / 10);
                     const displayNum = row % 2 === 0 ? number : 100 - (row * 10) - (9 - (i % 10));
                     return (
-                      <div key={displayNum} className="border border-white/5 flex items-center justify-center relative bg-white/[0.01]">
-                        <span className="text-[9px] md:text-xs font-bold text-gray-700/50 absolute top-1 left-1">{displayNum}</span>
+                      <div key={displayNum} className="border border-white/10 flex items-center justify-center relative bg-slate-900/80 shadow-inner">
+                        <span className="text-[9px] md:text-xs font-bold text-white/70 absolute top-1 left-1">{displayNum}</span>
                       </div>
                     );
                   })}
