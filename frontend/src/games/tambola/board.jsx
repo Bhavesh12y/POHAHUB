@@ -1,55 +1,50 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { connectSocket } from '../../lib/socket.js';
-import WaitingLobby from '../../components/WaitingLobby.jsx';
-
-const CLAIMS = [
-  { id: 'early5', label: 'Early 5' },
-  { id: 'topLine', label: 'Top Line' },
-  { id: 'middleLine', label: 'Middle Line' },
-  { id: 'bottomLine', label: 'Bottom Line' },
-  { id: 'fourCorners', label: 'Four Corners' },
-  { id: 'fullHouse', label: 'Full House' },
-];
-
 export default function TambolaBoard() {
   const { roomCode } = useParams();
   const socket = connectSocket();
   const [room, setRoom] = useState(null);
   const [markedNumbers, setMarkedNumbers] = useState(new Set());
   const [errorToast, setErrorToast] = useState('');
-  
-  const playerId = sessionStorage.getItem('playerId');
 
   useEffect(() => {
-    const pName = sessionStorage.getItem('playerName') || 'Player';
-    socket.emit('join_room', { roomCode, playerId, playerName: pName });
+    const pName = sessionStorage.getItem('playerName')
+      || localStorage.getItem('pohahub_username')
+      || 'Player';
+
+    // Joins (or re-joins/reconnects to) the room over the existing socket.
+    socket.emit('room:join', { roomCode, playerName: pName }, (result) => {
+      if (!result.ok) {
+        setErrorToast(result.error || 'Failed to join room');
+        setTimeout(() => setErrorToast(''), 3000);
+        return;
+      }
+      setRoom(result.room);
+    });
 
     const handleRoomUpdate = (updatedRoom) => setRoom(updatedRoom);
-    const handleError = (msg) => {
-      setErrorToast(msg);
-      setTimeout(() => setErrorToast(''), 3000);
-    };
-
-    socket.on('room_updated', handleRoomUpdate);
-    socket.on('error', handleError);
+    socket.on('room:update', handleRoomUpdate);
 
     return () => {
-      socket.off('room_updated', handleRoomUpdate);
-      socket.off('error', handleError);
+      socket.off('room:update', handleRoomUpdate);
     };
-  }, [roomCode, playerId]);
+  }, [roomCode]);
 
   if (!room) return <div className="min-h-screen flex items-center justify-center text-white">Connecting...</div>;
 
+  // viewerId is sent by the server per-socket, so it's always correct — even after reconnects.
+  const playerId = room.viewerId;
   const isHost = room.hostId === playerId;
 
   if (room.status === 'waiting') {
     return (
-      <WaitingLobby 
-        room={room} 
-        isHost={isHost} 
-        onStart={() => socket.emit('start_game', { roomCode, playerId })} 
+      <WaitingLobby
+        room={room}
+        isHost={isHost}
+        onStart={() => socket.emit('room:start', {}, (result) => {
+          if (!result.ok) {
+            setErrorToast(result.error || 'Failed to start game');
+            setTimeout(() => setErrorToast(''), 3000);
+          }
+        })}
       />
     );
   }
@@ -58,11 +53,21 @@ export default function TambolaBoard() {
   const me = gameState.players.find((p) => p.id === playerId);
 
   const handleDraw = () => {
-    socket.emit('game_move', { roomCode, playerId, payload: { action: 'draw' } });
+    socket.emit('game:move', { action: 'draw' }, (result) => {
+      if (!result.ok) {
+        setErrorToast(result.error || 'Could not draw');
+        setTimeout(() => setErrorToast(''), 3000);
+      }
+    });
   };
 
   const handleClaim = (pattern) => {
-    socket.emit('game_move', { roomCode, playerId, payload: { action: 'claim', pattern } });
+    socket.emit('game:move', { action: 'claim', pattern }, (result) => {
+      if (!result.ok) {
+        setErrorToast(result.error || 'Invalid claim');
+        setTimeout(() => setErrorToast(''), 3000);
+      }
+    });
   };
 
   const toggleMark = (num) => {
