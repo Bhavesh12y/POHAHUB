@@ -246,18 +246,7 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     else if (room.gameState && room.gameType === 'tic-tac-toe') payload.gameState = serializeTicTacToeState(room.gameState);
     else if (room.gameState && room.gameType === 'scribble') payload.gameState = serializeScribbleState(room.gameState, viewerId);
     else if (room.gameState && room.gameType === 'snake-and-ladder') payload.gameState = serializeSnakeAndLadderState(room.gameState);
-    serializeRoom(room, viewerId) {
-    // ... payload construction ...
-
-    if (room.gameState && room.gameType === 'connect-four') payload.gameState = serializeConnectFourState(room.gameState);
-    else if (room.gameState && room.gameType === 'tic-tac-toe') payload.gameState = serializeTicTacToeState(room.gameState);
-    else if (room.gameState && room.gameType === 'scribble') payload.gameState = serializeScribbleState(room.gameState, viewerId);
-    else if (room.gameState && room.gameType === 'snake-and-ladder') payload.gameState = serializeSnakeAndLadderState(room.gameState);
-    // NEW: Tambola Serialization
     else if (room.gameState && room.gameType === 'tambola') payload.gameState = serializeTambolaState(room.gameState);
-
-    return payload;
-  }
 
     return payload;
   }
