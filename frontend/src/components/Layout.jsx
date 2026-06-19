@@ -144,7 +144,7 @@ export default function Layout() {
           <div className="flex items-center gap-3 text-xs font-light tracking-widest text-gray-600 uppercase">
             <span>Having Fun ?</span>
             <span className="w-1 h-1 rounded-full bg-gray-700" />
-            <span>Send me a Maggie</span>
+            <span> <a href="https://www.instagram.com/bhavesh12z" target="_blank" rel="noopener noreferrer">Send me a Maggie</a></span>
           </div>
         </div>
       </footer>
