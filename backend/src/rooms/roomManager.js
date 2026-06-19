@@ -24,8 +24,12 @@ class RoomManager {
     return this.rooms.get(roomCode.toUpperCase()) ?? null;
   }
 
-  createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
-    const limit = gameType === 'scribble' ? 8 : maxPlayers;
+createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
+    // Dynamically set limits based on the game type
+    let limit = maxPlayers;
+    if (gameType === 'scribble') limit = 8;
+    if (gameType === 'tambola') limit = 50; // Tambola gets a massive lobby!
+
     const host = { id: hostId, name: hostName, socketId: null };
     const room = {
       code: this.generateRoomCode(),
