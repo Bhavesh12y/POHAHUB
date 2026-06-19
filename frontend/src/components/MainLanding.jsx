@@ -41,7 +41,7 @@ const GAMES = [
     id: 'tambola',
     title: 'Tambola',
     description: 'Mark numbers on your ticket and claim prizes.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/tambols.png',
     path: '/games/tambola',
     available: true,
     accent: 'hover:border-gray-500/20',
