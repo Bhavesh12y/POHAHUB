@@ -2,6 +2,7 @@ import { createConnectFourState, dropDisc, serializeConnectFourState } from '../
 import { createTicTacToeState, playMove, serializeTicTacToeState } from '../games/tictactoe.js';
 import { createScribbleState, serializeScribbleState } from '../games/scribble.js';
 import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } from '../games/snakeAndLadder.js';
+import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } from '../games/tambola.js';
 
 
 const PLAYER_COLORS = ['red', 'yellow'];
@@ -195,6 +196,11 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
       room.gameState = createScribbleState(room.players.map((p) => ({ id: p.id, name: p.name })));
     }else if (room.gameType === 'snake-and-ladder') {
       room.gameState = createSnakeAndLadderState(room.players.map((p) => ({ id: p.id, name: p.name })));
+    }else if (room.gameType === 'tambola') {
+      room.gameState = createTambolaState(
+        room.players.map((p) => ({ id: p.id, name: p.name })),
+        room.hostId
+      );
     }
 
     room.status = 'playing';
@@ -210,6 +216,16 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     if (room.gameType === 'snake-and-ladder') {
       if (payload.action === 'roll') {
         return rollDice(room.gameState, playerId).ok ? { ok: true, room } : { ok: false };
+      }
+    }
+    if (room.gameType === 'tambola') {
+      if (payload.action === 'draw') {
+        const result = drawNumber(room.gameState, playerId);
+        return result.ok ? { ok: true, room } : { ok: false, error: result.error };
+      }
+      if (payload.action === 'claim') {
+        const result = claimPattern(room.gameState, playerId, payload.pattern);
+        return result.ok ? { ok: true, room } : { ok: false, error: result.error };
       }
     }
     return { ok: false, error: 'Unsupported game type' };
@@ -230,6 +246,18 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     else if (room.gameState && room.gameType === 'tic-tac-toe') payload.gameState = serializeTicTacToeState(room.gameState);
     else if (room.gameState && room.gameType === 'scribble') payload.gameState = serializeScribbleState(room.gameState, viewerId);
     else if (room.gameState && room.gameType === 'snake-and-ladder') payload.gameState = serializeSnakeAndLadderState(room.gameState);
+    serializeRoom(room, viewerId) {
+    // ... payload construction ...
+
+    if (room.gameState && room.gameType === 'connect-four') payload.gameState = serializeConnectFourState(room.gameState);
+    else if (room.gameState && room.gameType === 'tic-tac-toe') payload.gameState = serializeTicTacToeState(room.gameState);
+    else if (room.gameState && room.gameType === 'scribble') payload.gameState = serializeScribbleState(room.gameState, viewerId);
+    else if (room.gameState && room.gameType === 'snake-and-ladder') payload.gameState = serializeSnakeAndLadderState(room.gameState);
+    // NEW: Tambola Serialization
+    else if (room.gameState && room.gameType === 'tambola') payload.gameState = serializeTambolaState(room.gameState);
+
+    return payload;
+  }
 
     return payload;
   }

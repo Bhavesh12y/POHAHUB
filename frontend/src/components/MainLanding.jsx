@@ -38,6 +38,15 @@ const GAMES = [
     accent: 'hover:border-gray-500/20',
   },
   {
+    id: 'tambola',
+    title: 'Tambola',
+    description: 'Mark numbers on your ticket and claim prizes.',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
+    path: '/games/tambola',
+    available: true,
+    accent: 'hover:border-gray-500/20',
+  },
+  {
     id: 'ludo',
     title: 'Ludo',
     description: 'Race your tokens home in this classic board game.',
@@ -46,15 +55,7 @@ const GAMES = [
     available: false,
     accent: 'hover:border-gray-500/20',
   },
-  {
-    id: 'tambola',
-    title: 'Tambola',
-    description: 'Mark numbers on your ticket and claim prizes.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
-    path: '/games/tambola',
-    available: false,
-    accent: 'hover:border-gray-500/20',
-  },
+
 ];
 
 export default function MainLanding() {

@@ -12,6 +12,7 @@ import ComingSoon from './components/ComingSoon.jsx';
 import ScribbleLanding from './games/scribble/Landing.jsx';
 import ScribbleBoard from './games/scribble/Board.jsx';
 import SnakeAndLadderBoard from './games/snake-and-ladder/board.jsx';
+import TambolaBoard from './games/tambola/TambolaBoard.jsx';
 
 export default function App() {
   return (
@@ -29,6 +30,8 @@ export default function App() {
         <Route path="games/scribble" element={<ScribbleLanding />} />
         <Route path="games/scribble/room/:roomCode" element={<ScribbleBoard />} />
         <Route path="*" element={<ComingSoon title="Page Not Found" subtitle="This route does not exist." />} />
+        <Route path="games/tambola" element={<TambolaLanding />} />
+        <Route path="games/tambola/room/:roomCode" element={<TambolaBoard />} />
       </Route>
     </Routes>
   );
