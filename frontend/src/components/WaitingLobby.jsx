@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function WaitingLobby({ roomCode, isHost, playerCount, onStart, gamePath }) {
+export default function WaitingLobby({ roomCode, isHost, playerCount, players = [], onStart, gamePath }) {
   const [copied, setCopied] = useState(false);
 
   const copyLink = () => {
@@ -11,7 +11,7 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, onStart, g
   };
 
   return (
-    <div className="text-center py-12 sm:py-20 border border-dashed border-white/[0.1] rounded-3xl bg-[#0a0a0c]/50 flex flex-col items-center justify-center">
+    <div className="text-center py-12 sm:py-20 border border-dashed border-white/[0.1] rounded-3xl bg-[#0a0a0c]/50 flex flex-col items-center justify-center max-w-2xl mx-auto">
       <div className="mb-6 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] text-4xl">🔗</div>
       <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Invite Friends</h2>
       <p className="text-sm text-gray-400 mb-6 font-light px-4">Share this link to let friends join directly.</p>
@@ -28,6 +28,26 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, onStart, g
             {copied ? '✅ Copied' : 'Copy Link'}
         </button>
       </div>
+
+      {/* NEW: Players Joined Section */}
+      {players.length > 0 && (
+        <div className="w-full max-w-md px-4 mb-8">
+          <h3 className="text-xs text-gray-500 uppercase tracking-widest mb-3 font-bold">
+            Players in Lobby ({players.length})
+          </h3>
+          <div className="flex flex-wrap justify-center gap-2">
+            {players.map((player, idx) => (
+              <div 
+                key={player.id || idx} 
+                className="bg-white/10 border border-white/20 px-3 py-1.5 rounded-full text-sm text-gray-200 flex items-center gap-2 shadow-md transition-all animate-[popIn_0.3s_ease-out]"
+              >
+                <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
+                {player.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {isHost ? (
         <button className="btn-primary w-[80%] sm:w-auto px-10" onClick={onStart} disabled={playerCount < 2}>

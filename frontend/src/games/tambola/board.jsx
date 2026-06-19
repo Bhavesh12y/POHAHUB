@@ -72,10 +72,34 @@ export default function TambolaBoard() {
   const [markedNumbers, setMarkedNumbers] = useState(new Set());
   const [errorToast, setErrorToast] = useState('');
   
-  // Host Auto-Draw State
+  // Host Auto-Draw & Sound State
   const [isAutoDrawing, setIsAutoDrawing] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(false);
+  const prevDrawnLength = useRef(0);
   const DRAW_SPEED_MS = 3500; // 3.5 seconds per draw
 
+  // Number Announcer Effect (Text-to-Speech)
+  useEffect(() => {
+    if (!room?.gameState?.drawnNumbers) return;
+    
+    const currentLength = room.gameState.drawnNumbers.length;
+    
+    // Only speak if a NEW number was added
+    if (currentLength > prevDrawnLength.current) {
+      const newDrawn = room.gameState.drawnNumbers[currentLength - 1];
+      
+      if (isSoundEnabled && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop current speech
+        const utterance = new SpeechSynthesisUtterance(newDrawn.toString());
+        utterance.rate = 0.9; // Slightly slower for clarity
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+    
+    prevDrawnLength.current = currentLength;
+  }, [room?.gameState?.drawnNumbers, isSoundEnabled]);
+
+  // Socket Connection Effect
   useEffect(() => {
     const pName = sessionStorage.getItem('playerName')
       || localStorage.getItem('pohahub_username')
@@ -135,6 +159,7 @@ export default function TambolaBoard() {
         roomCode={room.code}
         isHost={isHost}
         playerCount={room.players.length}
+        players={room.players}
         onStart={() => socket.emit('room:start', {}, (result) => {
           if (!result.ok) {
             setErrorToast(result.error || 'Failed to start game');
@@ -216,7 +241,19 @@ export default function TambolaBoard() {
         {/* LEFT COLUMN: Caller Console & Drawn Board */}
         <div className="w-full lg:w-1/4 flex flex-col gap-4 sm:gap-6 order-1">
           <div className="bg-[#111]/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 text-center shadow-xl w-full">
-            <h3 className="text-xs sm:text-sm text-gray-400 uppercase tracking-widest font-semibold mb-2">Last Drawn</h3>
+            
+            {/* Header with Sound Toggle */}
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-xs sm:text-sm text-gray-400 uppercase tracking-widest font-semibold flex-1">Last Drawn</h3>
+              <button 
+                onClick={() => setIsSoundEnabled(!isSoundEnabled)}
+                className={`p-2 rounded-full transition-colors flex items-center justify-center ${isSoundEnabled ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                title="Toggle Announcer"
+              >
+                {isSoundEnabled ? '🔊' : '🔇'}
+              </button>
+            </div>
+
             <div className="text-6xl sm:text-7xl xl:text-8xl font-black text-blue-400 my-2 sm:my-4 drop-shadow-[0_0_20px_rgba(96,165,250,0.4)]">
               {lastDrawn}
             </div>
@@ -268,14 +305,14 @@ export default function TambolaBoard() {
         {/* MIDDLE COLUMN: Player Ticket & Claims */}
         <div className="w-full lg:w-2/4 flex flex-col gap-4 sm:gap-6 order-2">
           
-          {/* Ticket UI */}
-          <div className="bg-[#111]/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl w-full">
+          {/* Ticket UI - Now 100% Fluid */}
+          <div className="bg-[#111]/80 backdrop-blur-md border border-white/10 rounded-2xl p-3 sm:p-6 shadow-xl w-full">
             <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-200">Your Ticket</h2>
             {me ? (
-              <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700 pb-2">
-                <div className="flex flex-col gap-1.5 sm:gap-2 min-w-[360px] sm:min-w-[450px]">
+              <div className="w-full pb-2">
+                <div className="flex flex-col gap-1 sm:gap-2 w-full">
                   {me.ticket.map((row, rIdx) => (
-                    <div key={rIdx} className="grid grid-cols-9 gap-1 sm:gap-2">
+                    <div key={rIdx} className="grid grid-cols-9 gap-0.5 sm:gap-2 w-full">
                       {row.map((num, cIdx) => {
                         const isDrawn = num !== null && gameState.drawnNumbers.includes(num);
                         const isMarked = num !== null && markedNumbers.has(num);
@@ -295,13 +332,13 @@ export default function TambolaBoard() {
                           <div
                             key={cIdx}
                             onClick={() => num !== null && toggleMark(num)}
-                            className={`relative h-10 sm:h-12 lg:h-16 flex items-center justify-center text-sm sm:text-base lg:text-xl font-black rounded-md sm:rounded-xl transition-all select-none ${cellStyle}`}
+                            className={`relative h-8 sm:h-12 lg:h-16 flex items-center justify-center text-[10px] sm:text-base lg:text-xl font-black rounded sm:rounded-xl transition-all select-none ${cellStyle}`}
                           >
                             {num !== null ? num : ''}
                             
-                            {/* Authentic Red Circular Stamp Marker */}
+                            {/* Authentic Red Circular Stamp Marker - Scaled for fluid grid */}
                             {isMarked && (
-                              <div className="absolute w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 rounded-full border-2 sm:border-[3px] border-red-500/80 shadow-[0_0_10px_rgba(239,68,68,0.3)] pointer-events-none scale-110 sm:scale-125"></div>
+                              <div className="absolute w-5 h-5 sm:w-9 sm:h-9 lg:w-11 lg:h-11 rounded-full border-[1.5px] sm:border-[3px] border-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.3)] pointer-events-none scale-110 sm:scale-125"></div>
                             )}
                           </div>
                         );
