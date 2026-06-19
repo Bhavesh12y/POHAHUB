@@ -372,11 +372,13 @@ export default function TambolaBoard() {
                         const isDrawn = num !== null && gameState.drawnNumbers.includes(num);
                         const isMarked = num !== null && markedNumbers.has(num);
                         
-                        let cellStyle = "bg-transparent";
+                       let cellStyle = "bg-transparent";
                         if (num !== null) {
-                          if (isMarked) cellStyle = "bg-white/5 text-gray-300 shadow-inner";
-                          else if (isDrawn) cellStyle = "bg-blue-500/20 hover:bg-blue-500/40 text-blue-100 cursor-pointer shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-400/50";
-                          else cellStyle = "bg-white/5 text-gray-600 opacity-40 cursor-not-allowed";
+                          if (isMarked) {
+                            cellStyle = "bg-white/5 text-gray-400 shadow-inner";
+                          } else {
+                            cellStyle = "bg-white/10 hover:bg-white/20 text-white cursor-pointer shadow-sm border border-white/10";
+                          }
                         }
 
                         return (
