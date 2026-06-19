@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import socket from '../../lib/socket.js';
+import { connectSocket } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby.jsx';
 
 const CLAIMS = [
@@ -14,6 +14,7 @@ const CLAIMS = [
 
 export default function TambolaBoard() {
   const { roomCode } = useParams();
+  const socket = connectSocket();
   const [room, setRoom] = useState(null);
   const [markedNumbers, setMarkedNumbers] = useState(new Set());
   const [errorToast, setErrorToast] = useState('');
