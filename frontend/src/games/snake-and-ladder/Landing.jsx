@@ -61,10 +61,10 @@ export default function SnakeAndLadderLanding() {
     <div className="max-w-xl mx-auto px-5 py-12 sm:py-16">
       <div className="text-center mb-10">
         <div className="sketch-border inline-block bg-green-300 px-5 py-3 mb-6 rotate-1">
-          <span className="text-2xl font-black uppercase">Snake & Ladder</span>
+          <span className="text-[clamp(1.1rem,2.5vw,1.5rem)] font-black uppercase">Snake & Ladder</span>
         </div>
-        <h1 className="text-5xl font-black uppercase mb-3 text-ink">Multiplayer Edition</h1>
-        <p className="text-xl text-gray-800 font-bold">Roll, climb, slide, and race to the top.</p>
+        <h1 className="text-[clamp(1.75rem,5vw,3rem)] font-black uppercase mb-3 text-ink">Multiplayer Edition</h1>
+        <p className="text-[clamp(1rem,2vw,1.25rem)] text-gray-800 font-bold">Roll, climb, slide, and race to the top.</p>
       </div>
 
       <div className="paper-panel bg-white p-6 sm:p-8 space-y-6">

@@ -234,7 +234,7 @@ export default function TicTacToeBoard() {
               {gameState.status === 'won' ? (
                 <>
                   <div className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-4">Match Concluded</div>
-                  <h2 className="text-5xl font-extrabold mb-2 text-shimmer tracking-tighter drop-shadow-2xl">
+                  <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-extrabold mb-2 text-shimmer tracking-tighter drop-shadow-2xl">
                     {gameState.winner?.name ?? 'Someone'}
                   </h2>
                   <h3 className="text-2xl font-light text-gray-300 mb-8 tracking-wide">claims the victory!</h3>
@@ -242,7 +242,7 @@ export default function TicTacToeBoard() {
               ) : (
                 <>
                   <div className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-4">Match Concluded</div>
-                  <h2 className="text-5xl font-extrabold mb-8 text-gray-300 tracking-tighter">Stalemate</h2>
+                  <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-extrabold mb-8 text-gray-300 tracking-tighter">Stalemate</h2>
                 </>
               )}
               <div className="w-full h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent mb-8" />
@@ -265,7 +265,7 @@ export default function TicTacToeBoard() {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col xl:flex-row gap-8">
         <div className="flex-1 space-y-6">
           <div className="glass-card p-8 bg-[#0a0a0c]/80 border-white/[0.05]">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b border-white/[0.05] pb-6">
@@ -297,7 +297,7 @@ export default function TicTacToeBoard() {
 
             {/* THE TIC TAC TOE BOARD */}
             {gameState && (
-              <div className="mx-auto max-w-sm mt-8">
+              <div className="mx-auto w-full max-w-[min(90vw,24rem)] mt-8">
                 <div className="grid grid-cols-3 gap-3 p-4 rounded-3xl bg-[#111] border border-white/[0.05] shadow-[inset_0_10px_30px_rgba(0,0,0,0.8)]">
                   {gameState.board.map((cellValue, index) => {
                     const isWinningCell = winningSet.has(index);
@@ -306,7 +306,7 @@ export default function TicTacToeBoard() {
                         key={index}
                         onClick={() => handleCellClick(index)}
                         disabled={!isPlaying || !isMyTurn || cellValue !== null || pendingMove !== null}
-                        className={`aspect-square flex items-center justify-center rounded-2xl text-6xl font-extrabold transition-all duration-300 ${
+                        className={`aspect-square flex items-center justify-center rounded-2xl text-[clamp(1.5rem,6vw,3.75rem)] font-extrabold transition-all duration-300 ${
                           cellValue === null 
                             ? 'bg-[#1a1c23] hover:bg-white/[0.05] cursor-pointer' 
                             : 'bg-[#0a0a0c] cursor-default'
@@ -342,7 +342,7 @@ export default function TicTacToeBoard() {
           </div>
         </div>
 
-        <div className="lg:w-96">
+        <div className="xl:w-80 shrink-0">
           <ChatPanel messages={room.chat ?? []} onSend={handleChat} disabled={!connected} />
         </div>
       </div>

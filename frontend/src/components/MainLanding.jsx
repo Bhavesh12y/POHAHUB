@@ -98,17 +98,17 @@ export default function MainLanding() {
             </span>
           </div>
 
-          <h2 className="max-w-4xl text-5xl sm:text-7xl md:text-8xl font-black uppercase leading-[0.95] tracking-normal">
+          <h2 className="max-w-4xl text-[clamp(2rem,7vw,5rem)] font-black uppercase leading-[0.95] tracking-normal">
             Pick a game.
             <span className="block text-pink-600">Start the room.</span>
           </h2>
 
-          <p className="mt-6 max-w-2xl text-lg sm:text-2xl font-bold text-gray-800 leading-relaxed">
+          <p className="mt-6 max-w-2xl text-[clamp(1rem,2vw,1.4rem)] font-bold text-gray-800 leading-relaxed">
             A bright notebook arcade for quick multiplayer matches with friends.
           </p>
         </section>
 
-        <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <section className="grid sm:grid-cols-2 xl:grid-cols-3 gap-8">
           {GAMES.map((game, index) => {
             const CardWrapper = game.available ? Link : 'div';
             const delay = `${(index + 1) * 90}ms`;
@@ -132,7 +132,7 @@ export default function MainLanding() {
                   <img
                     src={game.image}
                     alt={`${game.title} preview`}
-                    className={`h-44 w-full object-cover transition-transform duration-200 ${
+                    className={`aspect-video w-full object-cover transition-transform duration-200 ${
                       game.available ? 'group-hover:scale-[1.03]' : ''
                     }`}
                   />

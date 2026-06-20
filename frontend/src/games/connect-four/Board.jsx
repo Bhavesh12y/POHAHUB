@@ -282,7 +282,7 @@ export default function ConnectFourBoard() {
                   <div className="text-sm font-bold tracking-widest uppercase text-gray-500 mb-2">
                     Match Concluded
                   </div>
-                  <h2 className="text-5xl font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
+                  <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
                     {gameState.winner?.name ?? 'Someone'} 
                   </h2>
                   <h3 className="text-2xl font-bold mb-8 uppercase">
@@ -294,7 +294,7 @@ export default function ConnectFourBoard() {
                   <div className="text-sm font-bold tracking-widest uppercase text-gray-500 mb-2">
                     Match Concluded
                   </div>
-                  <h2 className="text-5xl font-black mb-8 text-black tracking-tighter uppercase">
+                  <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black mb-8 text-black tracking-tighter uppercase">
                     Stalemate
                   </h2>
                 </>
@@ -321,7 +321,7 @@ export default function ConnectFourBoard() {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col xl:flex-row gap-8">
         {/* Main Game Column */}
         <div className="flex-1 space-y-6">
           <div className="p-8 bg-[#333333] border-[3px] border-black rounded-lg shadow-[8px_8px_0px_#000] -rotate-1 text-white">
@@ -330,7 +330,7 @@ export default function ConnectFourBoard() {
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b-[3px] border-black pb-6">
               <div>
                 <p className="text-xs font-bold uppercase text-gray-400 mb-1">Room Code</p>
-                <p className="text-3xl font-bold tracking-widest text-white">
+                <p className="text-[clamp(1.25rem,3vw,2rem)] font-bold tracking-widest text-white">
                   {room.code}
                 </p>
               </div>
@@ -386,7 +386,7 @@ export default function ConnectFourBoard() {
 
             {/* The Game Board Area */}
             {gameState && (
-              <div className="mx-auto max-w-md bg-white p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
+              <div className="mx-auto w-full max-w-sm xl:max-w-md bg-white p-4 sm:p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
                 
                 {/* Column Drop Buttons */}
                 <div className="grid grid-cols-7 gap-2 mb-4">
@@ -450,7 +450,7 @@ export default function ConnectFourBoard() {
         </div>
 
         {/* Chat Column */}
-        <div className="lg:w-96">
+        <div className="xl:w-80 shrink-0">
           <ChatPanel
             messages={room.chat ?? []}
             onSend={handleChat}

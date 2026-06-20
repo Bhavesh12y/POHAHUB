@@ -44,14 +44,14 @@ export default function Layout() {
             className="group flex items-center gap-3 cursor-pointer"
           >
             <div className="bg-[#facc15] text-black border-[3px] border-black px-3 py-1 shadow-[4px_4px_0px_#000] -rotate-3 transition-transform duration-200 group-hover:-rotate-1">
-              <span className="text-2xl sm:text-3xl font-black tracking-widest uppercase">PH</span>
+              <span className="text-[clamp(1.1rem,2.5vw,1.75rem)] font-black tracking-widest uppercase">PH</span>
             </div>
 
-            <div className="flex flex-col justify-center">
-              <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-widest leading-none text-black">
+            <div className="flex flex-col justify-center min-w-0">
+              <h1 className="text-[clamp(1.25rem,3vw,2.25rem)] font-black uppercase tracking-widest leading-none text-black">
                 Pohahub
               </h1>
-              <p className="text-[9px] sm:text-[11px] font-black uppercase text-gray-600 tracking-wider mt-1">
+              <p className="text-[clamp(0.55rem,1.1vw,0.7rem)] font-black uppercase text-gray-600 tracking-wider mt-1">
                 Multiplayer notebook arcade
               </p>
             </div>

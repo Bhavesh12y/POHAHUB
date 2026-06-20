@@ -12,13 +12,13 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
   return (
     <div className="paper-panel max-w-2xl mx-auto px-5 py-10 sm:px-8 sm:py-14 text-center flex flex-col items-center justify-center bg-white">
       <div className="sketch-border bg-yellow-300 px-4 py-2 mb-6 -rotate-2">
-        <span className="text-2xl font-black uppercase">Room Code: {roomCode}</span>
+        <span className="text-[clamp(1rem,3vw,1.5rem)] font-black uppercase">Room Code: {roomCode}</span>
       </div>
 
-      <h2 className="text-3xl sm:text-4xl font-black uppercase text-ink mb-2">
+      <h2 className="text-[clamp(1.25rem,3vw,2rem)] font-black uppercase text-ink mb-2">
         Invite Friends
       </h2>
-      <p className="text-base sm:text-lg text-gray-800 mb-6 font-bold px-4">
+      <p className="text-[clamp(0.875rem,1.8vw,1.125rem)] text-gray-800 mb-6 font-bold px-4">
         Share this link to let friends join directly.
       </p>
 
@@ -55,7 +55,7 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
       )}
 
       {isHost ? (
-        <button className="sketch-button bg-yellow-300 w-[80%] sm:w-auto px-10 py-3" onClick={onStart} disabled={playerCount < 2}>
+        <button className="sketch-button bg-yellow-300 w-full sm:w-auto px-10 py-3" onClick={onStart} disabled={playerCount < 2}>
           Start Game
         </button>
       ) : (

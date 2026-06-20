@@ -287,7 +287,7 @@ export default function SnakeAndLadderBoard() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-10 text-center animate-pop-in rounded-xl -rotate-2">
             <div className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-4">Game Over</div>
-            <h2 className="text-5xl font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
+            <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
                 {gameState.winner?.name}
             </h2>
             <h3 className="text-xl font-bold text-black mb-8 uppercase">reached 100 first! 🏆</h3>
@@ -319,7 +319,7 @@ export default function SnakeAndLadderBoard() {
         )}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+      <div className="flex flex-col xl:flex-row gap-6 xl:gap-8">
         
         {/* GAME BOARD & CONTROLS */}
         <div className="flex-1 flex flex-col gap-6">
@@ -332,7 +332,7 @@ export default function SnakeAndLadderBoard() {
                  gamePath="snake-and-ladder/room" 
              />
           ) : (
-            <div className="relative w-full max-w-[600px] mx-auto aspect-square bg-white border-[4px] border-black rounded-lg p-2 sm:p-3 shadow-[8px_8px_0px_#000] rotate-1">
+            <div className="relative w-full max-w-[min(95vw,580px)] mx-auto aspect-square bg-white border-[4px] border-black rounded-lg p-2 sm:p-3 shadow-[8px_8px_0px_#000] rotate-1">
               
               {/* THE 100x100 ALIGNED CANVAS */}
               <div className="relative w-full h-full border-[3px] border-black rounded overflow-hidden bg-white shadow-[inset_2px_2px_0px_rgba(0,0,0,0.1)]">
@@ -394,7 +394,7 @@ export default function SnakeAndLadderBoard() {
                 <button 
                     onClick={rollDice} 
                     disabled={!isMyTurn || isRolling} 
-                    className={`text-5xl sm:text-6xl mb-4 transition-all bg-white border-[3px] border-black rounded-xl p-4 shadow-[4px_4px_0px_#000] flex items-center justify-center ${!isMyTurn ? 'opacity-50 cursor-not-allowed translate-y-[2px] translate-x-[2px] shadow-[2px_2px_0px_#000]' : 'hover:-translate-y-1 hover:shadow-[6px_6px_0px_#000] cursor-pointer'}`}
+                    className={`text-[clamp(2rem,5vw,3.5rem)] mb-4 transition-all bg-white border-[3px] border-black rounded-xl p-4 shadow-[4px_4px_0px_#000] flex items-center justify-center ${!isMyTurn ? 'opacity-50 cursor-not-allowed translate-y-[2px] translate-x-[2px] shadow-[2px_2px_0px_#000]' : 'hover:-translate-y-1 hover:shadow-[6px_6px_0px_#000] cursor-pointer'}`}
                 >
                   {diceDisplay}
                 </button>
@@ -420,7 +420,7 @@ export default function SnakeAndLadderBoard() {
         </div>
 
         {/* LOBBY CHAT */}
-        <div className="lg:w-80 h-[400px] lg:h-auto mt-4 lg:mt-0">
+        <div className="xl:w-72 shrink-0 h-72 xl:h-auto mt-4 xl:mt-0">
             <ChatPanel messages={room.chat ?? []} onSend={handleChat} />
         </div>
       </div>

@@ -84,7 +84,7 @@ export default function TicTacToeLanding() {
           />
         </div>
 
-        <h2 className="text-4xl font-extrabold mb-3 tracking-tighter text-gray-100">
+        <h2 className="text-[clamp(1.5rem,4vw,2.5rem)] font-extrabold mb-3 tracking-tighter text-gray-100">
           Tic Tac Toe
         </h2>
         <p className="text-gray-500 font-light tracking-wide">

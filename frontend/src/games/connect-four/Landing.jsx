@@ -76,7 +76,7 @@ export default function ConnectFourLanding() {
   return (
     <div className="max-w-xl mx-auto px-5 py-12 sm:py-16">
       <div className="text-center mb-10">
-        <div className="sketch-border inline-flex items-center justify-center w-24 h-24 bg-violet-300 mb-6 overflow-hidden -rotate-2">
+        <div className="sketch-border inline-flex items-center justify-center w-[clamp(4rem,10vw,6rem)] aspect-square bg-violet-300 mb-6 overflow-hidden -rotate-2">
           <img
             src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png"
             alt="Connect 4 Preview"
@@ -84,8 +84,8 @@ export default function ConnectFourLanding() {
           />
         </div>
 
-        <h2 className="text-5xl font-black uppercase mb-3 text-ink">Connect 4</h2>
-        <p className="text-xl text-gray-800 font-bold">Create a room or join with a friend's code.</p>
+        <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black uppercase mb-3 text-ink">Connect 4</h2>
+        <p className="text-[clamp(1rem,2vw,1.25rem)] text-gray-800 font-bold">Create a room or join with a friend's code.</p>
       </div>
 
       <div className="paper-panel bg-white p-6 sm:p-8 space-y-6">

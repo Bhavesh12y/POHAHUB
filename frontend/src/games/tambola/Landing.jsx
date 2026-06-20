@@ -69,7 +69,7 @@ export default function TambolaLanding() {
       {/* HEADER */}
       <div className="text-center mb-12 rotate-1">
         <h2 
-            className="text-5xl md:text-6xl font-black mb-3 tracking-tighter text-[#facc15] uppercase"
+            className="text-[clamp(2rem,6vw,4rem)] font-black mb-3 tracking-tighter text-[#facc15] uppercase"
             style={{ WebkitTextStroke: '2px black', textShadow: '4px 4px 0px #000' }}
         >
           Tambola
@@ -80,7 +80,7 @@ export default function TambolaLanding() {
       </div>
 
       {/* MAIN CARD */}
-      <div className="bg-white border-[4px] border-black p-8 space-y-6 rounded-xl shadow-[12px_12px_0px_#000] -rotate-1 relative">
+      <div className="bg-white border-[4px] border-black p-8 space-y-6 rounded-xl shadow-[clamp(6px,1.5vw,12px)_clamp(6px,1.5vw,12px)_0px_#000] -rotate-1 relative">
         
         {/* Username Input */}
         <div>

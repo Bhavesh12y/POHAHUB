@@ -295,7 +295,7 @@ export default function ScribbleBoard() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-6 sm:p-10 text-center animate-pop-in rounded-xl -rotate-2">
             <div className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-4">Match Concluded</div>
-            <h2 className="text-4xl sm:text-5xl font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
+            <h2 className="text-[clamp(1.5rem,5vw,3rem)] font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
                 {gameState.winner?.name}
             </h2>
             <h3 className="text-lg sm:text-xl font-bold text-black mb-2 uppercase">is the Grand Artist!</h3>
@@ -329,7 +329,7 @@ export default function ScribbleBoard() {
         
         <div className="order-1 md:order-2 col-span-2 md:col-span-1 text-center bg-[#222] border-[3px] border-black shadow-[inset_3px_3px_0px_rgba(0,0,0,0.5)] md:bg-transparent md:border-none md:shadow-none rounded-lg py-3 md:py-0 mt-2 md:mt-0">
           <p className="text-[9px] sm:text-xs font-bold tracking-[0.2em] uppercase text-gray-400 mb-1">Word</p>
-          <p className="text-xl sm:text-3xl font-black tracking-widest text-[#facc15] min-h-[32px] uppercase">
+          <p className="text-[clamp(1rem,3vw,2rem)] font-black tracking-widest text-[#facc15] min-h-[32px] uppercase">
             {gameState?.currentWord || "_ _ _ _ _"}
           </p>
         </div>
@@ -342,7 +342,7 @@ export default function ScribbleBoard() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col xl:flex-row gap-6">
         <div className="flex-1 flex flex-col gap-4">
           
           {room.status === 'waiting' ? (
@@ -477,7 +477,7 @@ export default function ScribbleBoard() {
         </div>
 
         {/* CHAT / GUESS PANEL */}
-        <div className="lg:w-80 h-[300px] lg:h-auto mt-4 lg:mt-0">
+        <div className="xl:w-72 shrink-0 h-64 xl:h-auto mt-4 xl:mt-0">
             <ChatPanel 
                 messages={room?.chat ?? []} 
                 onSend={handleChat} 

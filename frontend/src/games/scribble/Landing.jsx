@@ -40,15 +40,15 @@ export default function ScribbleLanding() {
   return (
     <div className="max-w-xl mx-auto px-5 py-12 sm:py-16">
       <div className="text-center mb-10">
-        <div className="sketch-border inline-flex items-center justify-center w-24 h-24 bg-sky-300 mb-6 overflow-hidden rotate-1">
+        <div className="sketch-border inline-flex items-center justify-center w-[clamp(4rem,10vw,6rem)] aspect-square bg-sky-300 mb-6 overflow-hidden rotate-1">
           <img
             src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/scribble.png"
             alt="Scribble Preview"
             className="w-full h-full object-cover"
           />
         </div>
-        <h2 className="text-5xl font-black uppercase mb-3 text-ink">Scribble</h2>
-        <p className="text-xl text-gray-800 font-bold">Draw your word, guess the art.</p>
+        <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black uppercase mb-3 text-ink">Scribble</h2>
+        <p className="text-[clamp(1rem,2vw,1.25rem)] text-gray-800 font-bold">Draw your word, guess the art.</p>
       </div>
 
       <div className="paper-panel bg-white p-6 sm:p-8 space-y-6">

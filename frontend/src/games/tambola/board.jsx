@@ -291,7 +291,7 @@ export default function TambolaBoard() {
       {gameState.status === 'finished' && (
         <div className="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex flex-col items-center p-4 sm:p-10 overflow-y-auto">
           <h1 
-            className="text-6xl sm:text-8xl font-black text-[#facc15] mb-6 mt-10 text-center uppercase tracking-tighter"
+            className="text-[clamp(2rem,7vw,5rem)] font-black text-[#facc15] mb-6 mt-10 text-center uppercase tracking-tighter"
             style={{ WebkitTextStroke: '3px black', textShadow: '6px 6px 0px #000' }}
           >
             Game Over!
@@ -318,10 +318,10 @@ export default function TambolaBoard() {
         </div>
       )}
 
-      <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-6 lg:gap-8 w-full">
+      <div className="max-w-[1400px] mx-auto flex flex-col xl:flex-row gap-6 xl:gap-8 w-full">
         
         {/* LEFT COLUMN: Caller Console & Drawn Board */}
-        <div className="w-full lg:w-1/4 flex flex-col gap-6 order-1">
+        <div className="w-full xl:w-1/4 flex flex-col gap-6 order-1">
           <div className="bg-[#333333] border-[3px] border-black rounded-lg p-4 sm:p-6 text-center shadow-[8px_8px_0px_#000] w-full -rotate-1 text-white">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-xs sm:text-sm text-[#facc15] uppercase tracking-widest font-black flex-1">Last Drawn</h3>
@@ -334,7 +334,7 @@ export default function TambolaBoard() {
               </button>
             </div>
             
-            <div className="text-7xl sm:text-8xl xl:text-9xl font-black text-white my-4 bg-black border-[4px] border-[#facc15] rounded-xl py-6 shadow-[inset_0_0_20px_rgba(250,204,21,0.2)]">
+            <div className="text-[clamp(2.5rem,8vw,6rem)] font-black text-white my-4 bg-black border-[4px] border-[#facc15] rounded-xl py-6 shadow-[inset_0_0_20px_rgba(250,204,21,0.2)]">
               {lastDrawn}
             </div>
 
@@ -380,7 +380,7 @@ export default function TambolaBoard() {
         </div>
 
         {/* MIDDLE COLUMN: Player Ticket & Claims */}
-        <div className="w-full lg:w-2/4 flex flex-col gap-6 order-2">
+        <div className="w-full xl:w-2/4 flex flex-col gap-6 order-2">
           
           {/* Ticket UI */}
           <div className="bg-[#3b82f6] border-[4px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full text-white">
@@ -406,7 +406,7 @@ export default function TambolaBoard() {
                           <div
                             key={cIdx}
                             onClick={() => num !== null && toggleMark(num)}
-                            className={`relative h-10 sm:h-12 lg:h-16 flex items-center justify-center text-xs sm:text-base lg:text-2xl font-black rounded transition-all select-none ${cellStyle}`}
+                            className={`relative h-8 sm:h-10 xl:h-14 flex items-center justify-center text-xs sm:text-sm xl:text-xl font-black rounded transition-all select-none ${cellStyle}`}
                           >
                             {num !== null ? num : ''}
                             
@@ -475,7 +475,7 @@ export default function TambolaBoard() {
         </div>
 
         {/* RIGHT COLUMN: Chat Panel */}
-        <div ref={chatRef} className="w-full lg:w-1/4 flex flex-col order-3 h-[400px] lg:h-auto pb-8 lg:pb-0 scroll-mt-24">
+        <div ref={chatRef} className="w-full xl:w-1/4 flex flex-col order-3 h-72 xl:h-auto pb-8 xl:pb-0 scroll-mt-24">
           <ChatPanel
             messages={room.chat ?? []}
             onSend={(message) => socket.emit('chat:message', { message })}
