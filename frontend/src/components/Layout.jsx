@@ -31,33 +31,38 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col text-ink font-sketch relative overflow-x-hidden">
-      <header className="sticky top-0 z-50 bg-[#fdfdfd]/95 border-b-[3px] border-black">
-        <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
+    <div className="min-h-screen flex flex-col text-black font-sans relative overflow-x-hidden">
+      
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 bg-white border-b-[4px] border-black shadow-[0_4px_0px_rgba(0,0,0,1)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+          
+          {/* LOGO */}
           <Link
             to="/"
             onClick={(e) => handleNavigation(e, '/')}
             className="group flex items-center gap-3 cursor-pointer"
           >
-            <div className="sketch-border bg-yellow-300 px-3 py-2 -rotate-2 transition-transform duration-200 group-hover:rotate-1">
-              <span className="text-2xl font-black tracking-wide">PH</span>
+            <div className="bg-[#facc15] text-black border-[3px] border-black px-3 py-1 shadow-[4px_4px_0px_#000] -rotate-3 transition-transform duration-200 group-hover:-rotate-1">
+              <span className="text-2xl sm:text-3xl font-black tracking-widest uppercase">PH</span>
             </div>
 
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-normal leading-none">
+            <div className="flex flex-col justify-center">
+              <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-widest leading-none text-black">
                 Pohahub
               </h1>
-              <p className="text-xs sm:text-sm font-bold uppercase text-gray-700">
+              <p className="text-[9px] sm:text-[11px] font-black uppercase text-gray-600 tracking-wider mt-1">
                 Multiplayer notebook arcade
               </p>
             </div>
           </Link>
 
+          {/* BACK TO HUB BUTTON */}
           {!isHome && (
             <Link
               to="/"
               onClick={(e) => handleNavigation(e, '/')}
-              className="sketch-button bg-sky-200 px-4 py-2 text-xs sm:text-sm"
+              className="bg-[#7dd3fc] text-black font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] px-4 py-2 text-xs sm:text-sm transition-all rounded-sm rotate-1"
             >
               Back to Hub
             </Link>
@@ -65,21 +70,24 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="flex-1 relative z-10">
+      {/* MAIN CONTENT */}
+      <main className="flex-1 relative z-10 w-full">
         <Outlet />
       </main>
 
-      <footer className="relative z-10 border-t-[3px] border-black bg-white/90 py-7 text-center">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm font-bold uppercase text-gray-800">
+      {/* FOOTER */}
+      <footer className="relative z-10 border-t-[4px] border-black bg-white py-6 mt-12">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-black uppercase tracking-widest text-black">
           <p>(c) {new Date().getFullYear()} Pohahub</p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <span>Terms & Conditions</span>
-            <span>Privacy Policy</span>
+          
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+            <span className="cursor-pointer hover:underline decoration-[3px] underline-offset-4">Terms & Conditions</span>
+            <span className="cursor-pointer hover:underline decoration-[3px] underline-offset-4">Privacy Policy</span>
             <a
               href="https://www.instagram.com/bhavesh12z"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline decoration-[3px] underline-offset-4 hover:text-pink-600"
+              className="text-[#ef4444] hover:text-black underline decoration-[3px] underline-offset-4 transition-colors"
             >
               Contact Us
             </a>
