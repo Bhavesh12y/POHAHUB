@@ -9,9 +9,7 @@ export default function ConnectFourLanding() {
   const [roomCode, setRoomCode] = useState(searchParams.get('join')?.toUpperCase() || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
- 
 
-  // Load username from localStorage on mount
   useEffect(() => {
     const savedUsername = localStorage.getItem('pohahub_username');
     if (savedUsername) {
@@ -76,32 +74,23 @@ export default function ConnectFourLanding() {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-12">
-  <div className="text-center mb-12">
-    
-    {/* Premium Image Placeholder Container */}
-    <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#0a0a0c] border border-white/[0.08] shadow-[0_0_20px_rgba(255,255,255,0.03)] mb-6 overflow-hidden group">
-      {/* Subtle hover shine */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none" />
-      
-      <img 
-        src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png" 
-        alt="Connect 4 Preview" 
-        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-      />
-    </div>
+    <div className="max-w-xl mx-auto px-5 py-12 sm:py-16">
+      <div className="text-center mb-10">
+        <div className="sketch-border inline-flex items-center justify-center w-24 h-24 bg-violet-300 mb-6 overflow-hidden -rotate-2">
+          <img
+            src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png"
+            alt="Connect 4 Preview"
+            className="w-full h-full object-cover"
+          />
+        </div>
 
-    <h2 className="text-4xl font-extrabold mb-3 tracking-tighter text-gray-100">
-      Connect 4
-    </h2>
-    <p className="text-gray-500 font-light tracking-wide">
-      Create a room or join with a friend&apos;s code.
-    </p>
-  </div>
+        <h2 className="text-5xl font-black uppercase mb-3 text-ink">Connect 4</h2>
+        <p className="text-xl text-gray-800 font-bold">Create a room or join with a friend's code.</p>
+      </div>
 
-      <div className="glass-card p-8 space-y-6">
+      <div className="paper-panel bg-white p-6 sm:p-8 space-y-6">
         <div>
-          <label className="block text-sm font-medium text-hub-muted mb-2">Username</label>
+          <label className="block text-sm font-black uppercase text-gray-800 mb-2">Username</label>
           <input
             type="text"
             className="input-field"
@@ -113,34 +102,31 @@ export default function ConnectFourLanding() {
         </div>
 
         {error && (
-          <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+          <div className="sketch-border bg-red-200 px-4 py-3 text-red-900 text-sm font-black">
             {error}
           </div>
         )}
 
         <button
           type="button"
-          className="btn-primary w-full"
+          className="sketch-button bg-yellow-300 w-full px-6 py-3"
           onClick={handleCreate}
           disabled={loading}
         >
           {loading ? 'Connecting...' : 'Create Room'}
         </button>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-hub-border" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-3 bg-hub-card text-hub-muted">or join existing</span>
-          </div>
+        <div className="flex items-center gap-4 py-1">
+          <div className="h-[3px] flex-1 bg-black" />
+          <span className="text-sm font-black uppercase text-gray-800">or join existing</span>
+          <div className="h-[3px] flex-1 bg-black" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-hub-muted mb-2">Room Code</label>
+          <label className="block text-sm font-black uppercase text-gray-800 mb-2">Room Code</label>
           <input
             type="text"
-            className="input-field uppercase tracking-widest text-center font-mono"
+            className="input-field uppercase tracking-widest text-center text-xl"
             placeholder="ABC123"
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
@@ -150,7 +136,7 @@ export default function ConnectFourLanding() {
 
         <button
           type="button"
-          className="btn-secondary w-full"
+          className="sketch-button bg-pink-300 w-full px-6 py-3"
           onClick={handleJoin}
           disabled={loading}
         >

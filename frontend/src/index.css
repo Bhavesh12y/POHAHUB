@@ -3,37 +3,164 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    min-height: 100%;
+  }
+
   body {
-    /* Set default to true black to match the premium feel */
-    @apply bg-[#050505] text-gray-200 antialiased min-h-screen;
+    margin: 0;
+    min-height: 100vh;
+    color: #111111;
+    font-family: 'Architects Daughter', cursive;
+    background-color: #fdfdfd;
+    background-image:
+      linear-gradient(90deg, transparent 40px, #ff9999 40px, #ff9999 42px, transparent 42px),
+      linear-gradient(#e0e0e0 1px, transparent 1px);
+    background-size: 100% 30px;
+    background-position: 0 5px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  ::selection {
+    background: #fde047;
+    color: #111111;
   }
 }
 
 @layer components {
-  /* Platinum / White accents for primary buttons */
+  .sketch-border {
+    border: 3px solid #000000;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    box-shadow: 6px 6px 0 0 #000000;
+  }
+
+  .sketch-button {
+    border: 3px solid #000000;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    box-shadow: 5px 5px 0 0 #000000;
+    color: #111111;
+    font-weight: 900;
+    text-transform: uppercase;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .sketch-button:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled) {
+    transform: translate(-2px, -2px) rotate(-1deg);
+    box-shadow: 7px 7px 0 0 #000000;
+  }
+
+  .sketch-button:active:not(:disabled),
+  .btn-primary:active:not(:disabled),
+  .btn-secondary:active:not(:disabled) {
+    transform: translate(4px, 4px) rotate(0deg);
+    box-shadow: 1px 1px 0 0 #000000;
+  }
+
+  .sketch-button:disabled,
+  .btn-primary:disabled,
+  .btn-secondary:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .sketch-input {
+    width: 100%;
+    border: 3px solid #000000;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    background: #ffffff;
+    color: #111111;
+    box-shadow: 4px 4px 0 0 #000000;
+    outline: none;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .sketch-input:focus,
+  .input-field:focus {
+    background: #ecfeff;
+    transform: translate(-1px, -1px);
+    box-shadow: 6px 6px 0 0 #000000;
+  }
+
+  .paper-panel {
+    background: rgba(255, 255, 255, 0.92);
+    border: 3px solid #000000;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    box-shadow: 6px 6px 0 0 #000000;
+  }
+
   .btn-primary {
-    @apply px-6 py-3 rounded-xl bg-gray-100 hover:bg-white text-black font-bold tracking-wide
-           transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] 
-           hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none;
+    border: 3px solid #000000;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    background: #fde047;
+    box-shadow: 5px 5px 0 0 #000000;
+    color: #111111;
+    padding: 0.75rem 1.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
   }
 
-  /* Deep dark styling for secondary buttons */
   .btn-secondary {
-    @apply px-6 py-3 rounded-xl bg-[#0a0a0c] border border-white/[0.08] hover:border-white/[0.2]
-           text-gray-300 font-semibold transition-all duration-300 hover:text-white
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    border: 3px solid #000000;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    background: #bae6fd;
+    box-shadow: 5px 5px 0 0 #000000;
+    color: #111111;
+    padding: 0.75rem 1.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
   }
 
-  /* Sleek, barely-there borders for inputs */
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl bg-[#0a0a0c] border border-white/[0.08]
-           text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-400
-           focus:ring-1 focus:ring-gray-400 transition-colors shadow-inner;
+    width: 100%;
+    border: 3px solid #000000;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    background: #ffffff;
+    color: #111111;
+    box-shadow: 4px 4px 0 0 #000000;
+    padding: 0.75rem 1rem;
+    outline: none;
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
   }
 
-  /* Premium glass card look using very low opacity whites instead of heavy blurring */
+  .input-field::placeholder {
+    color: #6b7280;
+  }
+
   .glass-card {
-    @apply bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-2xl;
+    background: rgba(255, 255, 255, 0.92);
+    border: 3px solid #000000;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    box-shadow: 6px 6px 0 0 #000000;
   }
 }
