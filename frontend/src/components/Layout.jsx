@@ -1,12 +1,42 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 
+function useDesktopScalingFix() {
+  useEffect(() => {
+    const applyReverseZoom = () => {
+      // Ignore Mobile/Tablets. They handle high-DPI retina screens differently.
+      if (window.innerWidth < 1024) {
+        document.body.style.zoom = '100%';
+        return;
+      }
+
+      // Get the Windows Display Scaling factor
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      // If Windows is scaled between 125% and 250%...
+      if (pixelRatio > 1 && pixelRatio <= 2.5) {
+        // Reverse it! (e.g., 150% scaling becomes 66.66% zoom)
+        document.body.style.zoom = `${100 / pixelRatio}%`;
+      } else {
+        document.body.style.zoom = '100%';
+      }
+    };
+
+    applyReverseZoom();
+    window.addEventListener('resize', applyReverseZoom);
+    return () => window.removeEventListener('resize', applyReverseZoom);
+  }, []);
+}
+
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
+  useDesktopScalingFix();
 
   const isHome = location.pathname === '/';
   const isInGameRoom = location.pathname.includes('/room/');
+
+  
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
