@@ -278,10 +278,15 @@ export default function ScribbleBoard() {
   return (
     <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-8 relative font-sans">
       
-      {/* POPUP CSS */}
+      {/* POPUP & CUSTOM CURSOR CSS */}
       <style>{`
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); } }
         .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        /* High Contrast Custom Cursor for Drawing */
+        .custom-cursor-brush {
+            cursor: url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 2v20M2 12h20' stroke='%23ffffff' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M12 2v20M2 12h20' stroke='%23000000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair !important;
+        }
       `}</style>
 
       {/* WINNER POPUP */}
@@ -433,9 +438,9 @@ export default function ScribbleBoard() {
                   </div>
                 )}
 
-                {/* THE FIX: Moved the cursor logic classes directly to the canvas element */}
+                {/* THE FIX: Replaced custom-crosshair logic with the new custom-cursor-brush class */}
                 <canvas ref={canvasRef} width={800} height={600} 
-                  className={`w-full h-full relative z-10 touch-none ${(isMyTurn && gameState?.turnState === 'drawing') ? (activeTool === 'fill' ? 'cursor-cell' : 'cursor-crosshair') : 'cursor-default'}`}
+                  className={`w-full h-full relative z-10 touch-none ${(isMyTurn && gameState?.turnState === 'drawing') ? (activeTool === 'fill' ? 'cursor-cell' : 'custom-cursor-brush') : 'cursor-default'}`}
                   onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseOut={onMouseUp}
                   onTouchStart={onMouseDown} onTouchMove={onMouseMove} onTouchEnd={onMouseUp} />
               </div>
