@@ -9,15 +9,15 @@ const ROWS = 6;
 function Disc({ color, isWinning, animate }) {
   const colorClass =
     color === 'red'
-      ? 'bg-gradient-to-br from-red-500 to-red-800 shadow-[0_0_15px_rgba(239,68,68,0.5)] border border-red-400/50'
+      ? 'bg-[#ef4444]' // Flat Red
       : color === 'yellow'
-        ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_0_15px_rgba(250,204,21,0.5)] border border-yellow-300/50'
-        : 'bg-[#131823] shadow-inner border border-white/[0.18] ring-1 ring-white/10';
+      ? 'bg-[#facc15]' // Flat Yellow
+      : 'bg-white';    // Empty cell
 
   return (
     <div
-      className={`w-full aspect-square rounded-full transition-all duration-300 ${colorClass} ${
-        isWinning ? 'ring-2 ring-white ring-offset-4 ring-offset-[#050505] scale-110 z-10' : ''
+      className={`w-full aspect-square rounded-full transition-all duration-300 border-[3px] border-black shadow-[inset_-3px_-3px_0px_rgba(0,0,0,0.15)] ${colorClass} ${
+        isWinning ? 'ring-4 ring-white ring-offset-4 ring-offset-black scale-110 z-10' : ''
       } ${animate ? 'animate-drop' : ''}`}
     />
   );
@@ -41,32 +41,36 @@ function ChatPanel({ messages, onSend, disabled }) {
   };
 
   return (
-    <div className="glass-card flex flex-col h-full min-h-[280px] bg-[#0a0a0c]/80 border-white/[0.05]">
-      <div className="px-4 py-4 border-b border-white/[0.05] font-bold tracking-widest text-xs uppercase text-gray-400">
+    <div className="flex flex-col h-full min-h-[280px] bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
+      <div className="px-4 py-3 border-b-[3px] border-black font-bold uppercase tracking-wide text-sm text-gray-200">
         Room Chat
       </div>
-      <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-800">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600">
         {messages.length === 0 && (
-          <p className="text-gray-600 text-center py-4 font-light italic">No messages yet</p>
+          <p className="text-gray-400 text-center py-4 font-light italic">No messages yet</p>
         )}
         {messages.map((msg) => (
           <div key={msg.id} className="break-words">
-            <span className="font-semibold text-gray-300">{msg.playerName}: </span>
-            <span className="text-gray-400 font-light">{msg.message}</span>
+            <span className="font-bold text-[#facc15]">{msg.playerName}: </span>
+            <span className="text-gray-100">{msg.message}</span>
           </div>
         ))}
       </div>
-      <form onSubmit={handleSubmit} className="p-3 border-t border-white/[0.05] flex gap-2">
+      <form onSubmit={handleSubmit} className="p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg">
         <input
           type="text"
-          className="input-field py-2 text-sm flex-1 bg-black/50"
+          className="py-2 px-3 text-sm flex-1 bg-black border-[2px] border-black rounded text-white focus:outline-none focus:ring-2 focus:ring-[#facc15]"
           placeholder="Type a message..."
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={disabled}
           maxLength={500}
         />
-        <button type="submit" className="btn-primary py-2 px-4 text-sm" disabled={disabled}>
+        <button
+          type="submit"
+          className="bg-[#facc15] text-black font-bold uppercase border-[2px] border-black rounded px-4 py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-50"
+          disabled={disabled}
+        >
           Send
         </button>
       </form>
@@ -218,11 +222,11 @@ export default function ConnectFourBoard() {
   if (!room) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24 text-center">
-        <div className="glass-card p-10 bg-[#0a0a0c]/80 border-white/[0.05]">
-          <div className="animate-pulse text-gray-500 mb-2 tracking-widest uppercase text-sm">Connecting to room...</div>
-          <p className="text-xl text-white font-mono">{roomCode}</p>
+        <div className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-10 rounded-lg max-w-md mx-auto -rotate-1">
+          <div className="animate-pulse text-gray-500 font-bold mb-2 tracking-widest uppercase text-sm">Connecting to room...</div>
+          <p className="text-3xl text-black font-black font-mono">{roomCode}</p>
           {!connected && (
-            <p className="text-sm text-red-400 mt-4">
+            <p className="text-sm text-[#ef4444] font-bold mt-4">
               Server connection failed.
             </p>
           )}
@@ -250,78 +254,64 @@ export default function ConnectFourBoard() {
   })();
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 relative">
+    <div className="max-w-6xl mx-auto px-4 py-8 relative font-sans">
       
-      {/* --- INJECTED CSS FOR POPUP ANIMATION --- */}
+      {/* INJECTED CSS FOR POPUP ANIMATION */}
       <style>{`
         @keyframes popIn {
-          0% { opacity: 0; transform: scale(0.95) translateY(20px); filter: blur(10px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); }
-        }
-        @keyframes shimmerText {
-          0% { background-position: -200% center; }
-          100% { background-position: 200% center; }
+          0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); }
+          100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); }
         }
         .animate-pop-in {
-          animation: popIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .text-shimmer {
-          background: linear-gradient(90deg, #9ca3af 0%, #ffffff 50%, #9ca3af 100%);
-          background-size: 200% auto;
-          color: transparent;
-          -webkit-background-clip: text;
-          animation: shimmerText 3s linear infinite;
+          animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
       `}</style>
 
-      {/* --- PREMIUM CELEBRATION POPUP --- */}
+      {/* PREMIUM CELEBRATION POPUP - Neo-Brutalist Version */}
       {(gameState?.status === 'won' || gameState?.status === 'draw') && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Dark Blur Backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-700" />
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300" />
           
           {/* Modal Card */}
-          <div className="relative w-full max-w-md glass-card bg-[#0a0a0c] border border-white/[0.1] shadow-[0_0_50px_rgba(255,255,255,0.05)] p-10 text-center animate-pop-in rounded-3xl overflow-hidden">
+          <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-10 text-center animate-pop-in rounded-xl overflow-hidden -rotate-2">
             
-            {/* Ambient Inner Glow */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white/[0.03] to-transparent pointer-events-none" />
-            
-            <div className="relative z-10">
+            <div className="relative z-10 text-black">
               {gameState.status === 'won' ? (
                 <>
-                  <div className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-4">
+                  <div className="text-sm font-bold tracking-widest uppercase text-gray-500 mb-2">
                     Match Concluded
                   </div>
-                  <h2 className="text-5xl font-extrabold mb-2 text-shimmer tracking-tighter drop-shadow-2xl">
+                  <h2 className="text-5xl font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
                     {gameState.winner?.name ?? 'Someone'} 
                   </h2>
-                  <h3 className="text-2xl font-light text-gray-300 mb-8 tracking-wide">
+                  <h3 className="text-2xl font-bold mb-8 uppercase">
                     claims the victory!
                   </h3>
                 </>
               ) : (
                 <>
-                  <div className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-4">
+                  <div className="text-sm font-bold tracking-widest uppercase text-gray-500 mb-2">
                     Match Concluded
                   </div>
-                  <h2 className="text-5xl font-extrabold mb-8 text-gray-300 tracking-tighter">
+                  <h2 className="text-5xl font-black mb-8 text-black tracking-tighter uppercase">
                     Stalemate
                   </h2>
                 </>
               )}
               
-              <div className="w-full h-px bg-gradient-to-r from-transparent via-white/[0.1] to-transparent mb-8" />
+              <div className="w-full h-[3px] bg-black mb-8" />
               <div className="flex flex-col gap-3">
                 <button
                   type="button"
                   onClick={handlePlayAgain}
-                  className="btn-primary w-full block py-4 text-sm font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-white text-[#050505] transition-all duration-300 rounded-xl"
+                  className="bg-[#facc15] w-full block py-4 text-sm font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black transition-all duration-150 rounded"
                 >
                   Play Again
                 </button>
                 <Link 
                   to="/games/connect-four" 
-                  className="btn-secondary w-full block py-4 text-sm font-bold tracking-widest uppercase text-white text-center hover:border-white/[0.3] transition-all duration-300 rounded-xl"
+                  className="bg-gray-200 w-full block py-4 text-sm font-bold tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black text-center transition-all duration-150 rounded"
                 >
                   Return to Hub
                 </Link>
@@ -332,47 +322,49 @@ export default function ConnectFourBoard() {
       )}
 
       <div className="flex flex-col lg:flex-row gap-8">
+        {/* Main Game Column */}
         <div className="flex-1 space-y-6">
-          <div className="glass-card p-8 bg-[#0a0a0c]/80 border-white/[0.05]">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b border-white/[0.05] pb-6">
+          <div className="p-8 bg-[#333333] border-[3px] border-black rounded-lg shadow-[8px_8px_0px_#000] -rotate-1 text-white">
+            
+            {/* Header Info */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b-[3px] border-black pb-6">
               <div>
-                <p className="text-xs font-bold tracking-[0.2em] uppercase text-gray-600 mb-1">Room Code</p>
-                <p className="text-3xl font-mono font-bold tracking-widest text-gray-200">
+                <p className="text-xs font-bold uppercase text-gray-400 mb-1">Room Code</p>
+                <p className="text-3xl font-bold tracking-widest text-white">
                   {room.code}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase text-gray-600 mb-1">Status</p>
-                <p className="font-medium text-gray-300 tracking-wide">{statusMessage}</p>
+                <p className="text-xs font-bold uppercase text-gray-400 mb-1">Status</p>
+                <p className="font-bold text-[#facc15]">{statusMessage}</p>
               </div>
             </div>
 
             {error && (
-              <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm backdrop-blur-sm">
+              <div className="mb-6 px-4 py-3 bg-red-500 border-[3px] border-black rounded text-black font-bold shadow-[4px_4px_0px_#000]">
                 {error}
               </div>
             )}
 
+            {/* Players List */}
             <div className="flex flex-wrap gap-4 mb-8">
               {room.players.map((player) => {
                 const color = gameState?.players?.find((p) => p.id === player.id)?.color;
                 return (
                   <div
                     key={player.id}
-                    className={`flex items-center gap-3 px-4 py-2 rounded-full bg-[#111] border transition-colors ${
-                      player.id === myPlayerId ? 'border-gray-500/50 shadow-sm' : 'border-white/[0.05]'
-                    }`}
+                    className="flex items-center gap-3 px-4 py-2 bg-white rounded-full border-[3px] border-black shadow-[3px_3px_0px_#000] text-black"
                   >
                     {color && (
                       <span
-                        className={`w-3 h-3 rounded-full shadow-inner ${
-                          color === 'red' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]'
+                        className={`w-4 h-4 rounded-full border-2 border-black ${
+                          color === 'red' ? 'bg-[#ef4444]' : 'bg-[#facc15]'
                         }`}
                       />
                     )}
-                    <span className="text-sm font-medium text-gray-300">
+                    <span className="text-sm font-bold">
                       {player.name}
-                      <span className="text-gray-600 font-light ml-1">
+                      <span className="text-gray-500 font-normal ml-1">
                         {player.id === room.hostId && '(Host)'}
                         {player.id === myPlayerId && '(You)'}
                       </span>
@@ -384,23 +376,25 @@ export default function ConnectFourBoard() {
 
             {room.status === 'waiting' && (
               <WaitingLobby 
-      roomCode={room.code} 
-      isHost={isHost} 
-      playerCount={room.players.length} 
-      onStart={handleStart} 
-      gamePath="connect-four/room" 
-  />
+                roomCode={room.code} 
+                isHost={isHost} 
+                playerCount={room.players.length} 
+                onStart={handleStart} 
+                gamePath="connect-four/room" 
+              />
             )}
 
+            {/* The Game Board Area */}
             {gameState && (
-              <div className="mx-auto max-w-md">
+              <div className="mx-auto max-w-md bg-white p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
+                
                 {/* Column Drop Buttons */}
-                <div className="grid grid-cols-7 gap-2 mb-3">
+                <div className="grid grid-cols-7 gap-2 mb-4">
                   {Array.from({ length: COLS }).map((_, col) => (
                     <button
                       key={col}
                       type="button"
-                      className="aspect-square rounded-xl border border-white/[0.08] bg-[#0c131b] text-gray-400 transition-all hover:bg-white/[0.08] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="aspect-square rounded-full border-[3px] border-black bg-[#facc15] text-black font-bold text-xl shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[3px_3px_0px_#000] disabled:cursor-not-allowed"
                       onClick={() => handleDrop(col)}
                       disabled={
                         !isPlaying ||
@@ -410,16 +404,13 @@ export default function ConnectFourBoard() {
                       }
                       aria-label={`Drop in column ${col + 1}`}
                     >
-                      <span className="text-xl">↓</span>
+                      ↓
                     </button>
                   ))}
                 </div>
 
-                {/* The Board */}
-                <div
-                  className="p-4 rounded-3xl bg-[#1a1c23] shadow-2xl border border-white/[0.05]"
-                  style={{ boxShadow: 'inset 0 10px 30px rgba(0,0,0,0.8)' }}
-                >
+                {/* The Board Grid */}
+                <div className="p-3 rounded-lg bg-[#3b82f6] border-[3px] border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.2)]">
                   {gameState.board ? (
                     <div className="grid grid-cols-7 gap-2">
                       {gameState.board.map((row, rowIndex) =>
@@ -439,21 +430,16 @@ export default function ConnectFourBoard() {
                       )}
                     </div>
                   ) : (
-                    <div className="rounded-3xl border border-dashed border-white/[0.08] bg-black/20 p-12 text-center text-gray-400">
-                      <p className="text-sm font-medium">Waiting for board data...</p>
-                      <p className="text-xs mt-2">If this persists, the backend may not be serializing the board.</p>
+                    <div className="rounded-lg border-[3px] border-dashed border-black bg-white p-12 text-center text-black font-bold">
+                      <p>Waiting for board data...</p>
                     </div>
                   )}
                 </div>
 
                 {myColor && (
-                  <p className="text-center text-sm text-gray-500 mt-6 tracking-wide">
+                  <p className="text-center text-sm font-bold text-black mt-6 uppercase">
                     You are playing as{' '}
-                    <span
-                      className={`font-bold uppercase tracking-widest ${
-                        myColor === 'red' ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]'
-                      }`}
-                    >
+                    <span className={myColor === 'red' ? 'text-[#ef4444]' : 'text-[#facc15] text-stroke-black'}>
                       {myColor}
                     </span>
                   </p>
@@ -463,6 +449,7 @@ export default function ConnectFourBoard() {
           </div>
         </div>
 
+        {/* Chat Column */}
         <div className="lg:w-96">
           <ChatPanel
             messages={room.chat ?? []}
