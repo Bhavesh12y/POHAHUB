@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 
+import { useEffect } from 'react';
+
 function useDesktopScalingFix() {
   useEffect(() => {
     const applyReverseZoom = () => {
@@ -10,15 +12,22 @@ function useDesktopScalingFix() {
         return;
       }
 
+      // TWEAK THIS VALUE: 
+      // 0.90 = 10% smaller than normal
+      // 0.85 = 15% smaller than normal
+      // 0.80 = 20% smaller than normal
+      const EXTRA_ZOOM_OUT = 0.90; 
+
       // Get the Windows Display Scaling factor
       const pixelRatio = window.devicePixelRatio || 1;
 
       // If Windows is scaled between 125% and 250%...
       if (pixelRatio > 1 && pixelRatio <= 2.5) {
-        // Reverse it! (e.g., 150% scaling becomes 66.66% zoom)
-        document.body.style.zoom = `${100 / pixelRatio}%`;
+        // Reverse the OS scale, AND apply your custom zoom out
+        document.body.style.zoom = `${(100 / pixelRatio) * EXTRA_ZOOM_OUT}%`;
       } else {
-        document.body.style.zoom = '100%';
+        // Even if they are on a normal 100% monitor, apply the extra zoom out
+        document.body.style.zoom = `${100 * EXTRA_ZOOM_OUT}%`;
       }
     };
 
@@ -27,7 +36,6 @@ function useDesktopScalingFix() {
     return () => window.removeEventListener('resize', applyReverseZoom);
   }, []);
 }
-
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
