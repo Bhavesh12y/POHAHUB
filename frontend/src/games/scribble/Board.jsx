@@ -120,7 +120,6 @@ const performFloodFill = (ctx, startX, startY, fillColorHex) => {
   ctx.putImageData(imageData, 0, 0);
 };
 
-
 export default function ScribbleBoard() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
@@ -372,7 +371,6 @@ export default function ScribbleBoard() {
 
                 {/* Colors - Grid View */}
                 <div className="flex items-center gap-4 bg-gray-200 p-2 rounded border-[3px] border-black">
-                    {/* The 2x5 Grid (simplified to 1x7 here to match array) */}
                     <div className="grid grid-cols-7 gap-2">
                     {COLORS.slice(0, 7).map(c => (
                         <button 
@@ -408,7 +406,7 @@ export default function ScribbleBoard() {
               </div>
 
               {/* THE CANVAS */}
-              <div className={`relative w-full aspect-[4/3] sm:aspect-video rounded-lg overflow-hidden bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] rotate-1 ${(isMyTurn && gameState?.turnState === 'drawing') ? (activeTool === 'fill' ? 'cursor-cell' : 'cursor-crosshair') : 'cursor-default'}`}>
+              <div className={`relative w-full aspect-[4/3] sm:aspect-video rounded-lg overflow-hidden bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] rotate-1`}>
                 
                 {gameState?.turnState === 'selecting' && (
                   <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -435,8 +433,9 @@ export default function ScribbleBoard() {
                   </div>
                 )}
 
-                {/* touch-none added to prevent scrolling */}
-                <canvas ref={canvasRef} width={800} height={600} className="w-full h-full relative z-10 touch-none"
+                {/* THE FIX: Moved the cursor logic classes directly to the canvas element */}
+                <canvas ref={canvasRef} width={800} height={600} 
+                  className={`w-full h-full relative z-10 touch-none ${(isMyTurn && gameState?.turnState === 'drawing') ? (activeTool === 'fill' ? 'cursor-cell' : 'cursor-crosshair') : 'cursor-default'}`}
                   onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseOut={onMouseUp}
                   onTouchStart={onMouseDown} onTouchMove={onMouseMove} onTouchEnd={onMouseUp} />
               </div>
