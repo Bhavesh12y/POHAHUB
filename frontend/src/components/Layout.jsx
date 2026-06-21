@@ -1,36 +1,54 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 
-function useDesktopScalingFix() {
+import { useEffect } from 'react';
+
+export function useDesktopScalingFix() {
   useEffect(() => {
     const applyReverseZoom = () => {
-      // Ignore Mobile/Tablets. They handle high-DPI retina screens differently.
+      // Ignore Mobile/Tablets
       if (window.innerWidth < 1024) {
-        document.body.style.zoom = '100%';
+        document.body.style.removeProperty('zoom');
         return;
       }
 
-      // TWEAK THIS VALUE: 
-      // 0.90 = 10% smaller than normal
-      // 0.85 = 15% smaller than normal
-      // 0.80 = 20% smaller than normal
       const EXTRA_ZOOM_OUT = 0.90; 
-
-      // Get the Windows Display Scaling factor
       const pixelRatio = window.devicePixelRatio || 1;
+      
+      // 1. Debugging: Check the console to see what the browser is actually reporting
+      console.log(`[Scaling Debug] OS/Browser Scaling: ${pixelRatio * 100}%`);
 
-      // If Windows is scaled between 125% and 250%...
+      let targetZoom = EXTRA_ZOOM_OUT;
+
       if (pixelRatio > 1 && pixelRatio <= 2.5) {
-        // Reverse the OS scale, AND apply your custom zoom out
-        document.body.style.zoom = `${(100 / pixelRatio) * EXTRA_ZOOM_OUT}%`;
-      } else {
-        // Even if they are on a normal 100% monitor, apply the extra zoom out
-        document.body.style.zoom = `${100 * EXTRA_ZOOM_OUT}%`;
+        // Use decimals (e.g., 0.6) instead of percentages for better browser support
+        targetZoom = (1 / pixelRatio) * EXTRA_ZOOM_OUT;
       }
+
+      console.log(`[Scaling Debug] Applying Zoom Level: ${Math.round(targetZoom * 100)}%`);
+
+      // 2. Target the React root container instead of the body
+      const targetElement = document.getElementById('root') || document.body;
+
+      // Method A: Standard Zoom (Using decimals)
+      targetElement.style.zoom = targetZoom; 
+      
+      /* // Method B: The "Nuclear Option" (CSS Transform)
+      // If you are on Firefox or 'zoom' STILL fails, comment out Method A above
+      // and uncomment these lines. CSS Transform works universally on all browsers.
+      
+      targetElement.style.transform = `scale(${targetZoom})`;
+      targetElement.style.transformOrigin = 'top left';
+      // We have to expand the width/height container to compensate for the scale down
+      targetElement.style.width = `${100 / targetZoom}%`;
+      targetElement.style.height = `${100 / targetZoom}%`;
+      */
     };
 
     applyReverseZoom();
     window.addEventListener('resize', applyReverseZoom);
+    
+    // Cleanup on unmount
     return () => window.removeEventListener('resize', applyReverseZoom);
   }, []);
 }
