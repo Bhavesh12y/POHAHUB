@@ -231,7 +231,7 @@ export default function TambolaBoard() {
     : '--';
 
   return (
-    <div className="relative min-h-[85vh] font-sans text-black overflow-x-hidden px-2 sm:px-4 py-4 sm:py-8 w-full max-w-[100vw]">
+    <div className="relative min-h-[85vh] flex justify-center items-start font-sans text-black overflow-x-hidden px-2 sm:px-4 py-4 sm:py-8 w-full max-w-[100vw]">
       
       <style>{`
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); } }
