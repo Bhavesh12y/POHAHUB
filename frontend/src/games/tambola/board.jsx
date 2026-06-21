@@ -231,7 +231,7 @@ export default function TambolaBoard() {
     : '--';
 
   return (
-    <div className="relative min-h-[85vh] flex justify-center items-start font-sans text-black overflow-x-hidden px-2 sm:px-4 py-4 sm:py-8 w-full max-w-[100vw]">
+    <div className="relative min-h-[85vh] w-full flex flex-col items-center font-sans text-black overflow-x-hidden px-4 sm:px-6 py-4 sm:py-8">
       
       <style>{`
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); } }
@@ -312,7 +312,7 @@ export default function TambolaBoard() {
         </div>
       )}
 
-      <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-6 lg:gap-8 w-full">
+      <div className="w-full max-w-[1400px] flex flex-col lg:flex-row justify-center items-start gap-6 lg:gap-8">
         
         <div className="w-full lg:w-1/4 flex flex-col gap-6 order-1">
           <div className="bg-[#333333] border-[3px] border-black rounded-lg p-4 sm:p-6 text-center shadow-[8px_8px_0px_#000] w-full -rotate-1 text-white">
