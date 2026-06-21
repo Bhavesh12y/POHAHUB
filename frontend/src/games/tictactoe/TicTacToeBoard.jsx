@@ -331,12 +331,12 @@ export default function TicTacToeBoard() {
                           className={`aspect-square flex items-center justify-center rounded border-[3px] border-black text-[clamp(2.5rem,8vw,5rem)] font-black transition-all duration-150 uppercase disabled:hover:translate-y-0 disabled:hover:shadow-none ${cellStyle}`}
                         >
                           {cellValue === 'X' && (
-                            <span className="text-[#3b82f6] animate-pop-in" style={{ WebkitTextStroke: '2px black' }}>
+                            <span className="text-[#3b82f6] animate-pop-in" style={{ WebkitTextStroke: '0px black' }}>
                               X
                             </span>
                           )}
                           {cellValue === 'O' && (
-                            <span className="text-[#ef4444] animate-pop-in" style={{ WebkitTextStroke: '2px black' }}>
+                            <span className="text-[#ef4444] animate-pop-in" style={{ WebkitTextStroke: 'Opx black' }}>
                               O
                             </span>
                           )}

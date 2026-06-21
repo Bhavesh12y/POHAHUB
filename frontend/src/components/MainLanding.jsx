@@ -102,7 +102,8 @@ export default function MainLanding() {
 
           <h2 className="max-w-5xl text-[clamp(3rem,8vw,6rem)] font-black uppercase leading-[0.9] tracking-tighter">
             Pick a game.
-            <span className="block text-[#ffc0cb ]" style={{ WebkitTextStroke: '2px black' }}>Start the room.</span>
+            <span   className="block text-pink-400" >  Start the room.
+</span>
           </h2>
 
           <p className="mt-6 max-w-2xl text-[clamp(1rem,2vw,1.4rem)] font-bold text-gray-700 leading-relaxed uppercase tracking-wider">

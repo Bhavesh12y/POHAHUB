@@ -23,7 +23,8 @@ function Disc({ color, isWinning, animate }) {
   );
 }
 
-function ChatPanel({ messages, onSend, disabled }) {
+// Reusable Chat Panel (With Scrollbar Fix & Crash Protection)
+function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
 
@@ -41,22 +42,26 @@ function ChatPanel({ messages, onSend, disabled }) {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-[280px] bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
-      <div className="px-4 py-3 border-b-[3px] border-black font-bold uppercase tracking-wide text-sm text-gray-200">
+    <div className="flex flex-col w-full h-[350px] lg:h-[500px] bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
+      <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold uppercase tracking-widest text-xs text-gray-200 bg-[#222] shrink-0">
         Room Chat
       </div>
-      <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
         {messages.length === 0 && (
-          <p className="text-gray-400 text-center py-4 font-light italic">No messages yet</p>
+          <p className="text-gray-400 text-center py-4 font-bold italic">No messages yet</p>
         )}
         {messages.map((msg) => (
-          <div key={msg.id} className="break-words">
-            <span className="font-bold text-[#facc15]">{msg.playerName}: </span>
-            <span className="text-gray-100">{msg.message}</span>
+          <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-3 bg-[#facc15] text-black border-[2px] border-black rounded p-2 shadow-[2px_2px_0px_#000]' : ''}`}>
+            {msg.playerId !== 'SYSTEM' && (
+              <span className="font-black text-[#facc15] tracking-wider uppercase">{msg.playerName}: </span>
+            )}
+            <span className={msg.playerId === 'SYSTEM' ? 'font-black text-[11px] uppercase tracking-widest' : 'text-gray-100 font-medium'}>
+              {msg.message}
+            </span>
           </div>
         ))}
       </div>
-      <form onSubmit={handleSubmit} className="p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg">
+      <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg shrink-0">
         <input
           type="text"
           className="py-2 px-3 text-sm flex-1 bg-black border-[2px] border-black rounded text-white focus:outline-none focus:ring-2 focus:ring-[#facc15]"
@@ -68,7 +73,7 @@ function ChatPanel({ messages, onSend, disabled }) {
         />
         <button
           type="submit"
-          className="bg-[#facc15] text-black font-bold uppercase border-[2px] border-black rounded px-4 py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-50"
+          className="bg-[#facc15] text-black font-black uppercase border-[2px] border-black rounded px-4 py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-50 shrink-0"
           disabled={disabled}
         >
           Send
@@ -87,6 +92,10 @@ export default function ConnectFourBoard() {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState('');
   const [pendingColumn, setPendingColumn] = useState(null);
+  
+  // Mobile chat notification states
+  const [chatToast, setChatToast] = useState(null);
+  const chatRef = useRef(null);
 
   const lastMoveRef = useRef(null);
 
@@ -156,6 +165,12 @@ export default function ConnectFourBoard() {
       setRoom((prev) =>
         prev ? { ...prev, chat: [...(prev.chat ?? []), msg] } : prev,
       );
+      
+      // Trigger mobile toast if message isn't from me and screen is < 1024px
+      if (msg.playerName !== username && window.innerWidth < 1024) {
+        setChatToast(msg);
+        setTimeout(() => setChatToast(null), 3500); // Hide after 3.5s
+      }
     };
 
     const onRoomClosed = () => {
@@ -219,6 +234,11 @@ export default function ConnectFourBoard() {
     }
   };
 
+  const scrollToChat = () => {
+    setChatToast(null);
+    chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   if (!room) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24 text-center">
@@ -254,7 +274,7 @@ export default function ConnectFourBoard() {
   })();
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 relative font-sans">
+    <div className="w-full max-w-[1600px] mx-auto px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(1rem,3vw,2rem)] relative font-sans">
       
       {/* INJECTED CSS FOR POPUP ANIMATION */}
       <style>{`
@@ -266,6 +286,21 @@ export default function ConnectFourBoard() {
           animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
       `}</style>
+
+      {/* Mobile Chat Notification Toast */}
+      {chatToast && (
+        <div 
+          onClick={scrollToChat}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3b82f6] border-[3px] border-black text-white px-4 py-3 rounded shadow-[6px_6px_0px_#000] z-50 flex items-center gap-3 cursor-pointer w-11/12 max-w-sm lg:hidden animate-[popIn_0.3s_ease-out] -rotate-1"
+        >
+          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black">💬</span>
+          <div className="flex flex-col flex-1 truncate">
+            <span className="text-xs font-black uppercase text-[#facc15]">{chatToast.playerName}</span>
+            <span className="text-sm font-bold truncate">{chatToast.message}</span>
+          </div>
+          <span className="text-xs font-bold text-black bg-white border-[2px] border-black px-2 py-1 rounded">View</span>
+        </div>
+      )}
 
       {/* PREMIUM CELEBRATION POPUP - Neo-Brutalist Version */}
       {(gameState?.status === 'won' || gameState?.status === 'draw') && (
@@ -321,27 +356,29 @@ export default function ConnectFourBoard() {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Main Game Column */}
-        <div className="flex-1 space-y-6">
-          <div className="p-8 bg-[#333333] border-[3px] border-black rounded-lg shadow-[8px_8px_0px_#000] -rotate-1 text-white">
+      {/* MAIN SPLIT LAYOUT */}
+      <div className="flex flex-col xl:flex-row gap-[clamp(1rem,3vw,2rem)] items-stretch">
+        
+        {/* LEFT COLUMN: GAME OR LOBBY */}
+        <div className="flex-1 w-full min-w-0 flex flex-col">
+          <div className="bg-[#333333] border-[3px] border-black rounded-lg p-6 sm:p-8 shadow-[8px_8px_0px_#000] -rotate-1 text-white">
             
             {/* Header Info */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b-[3px] border-black pb-6">
               <div>
                 <p className="text-xs font-bold uppercase text-gray-400 mb-1">Room Code</p>
-                <p className="text-[clamp(1.25rem,3vw,2rem)] font-bold tracking-widest text-white">
+                <p className="text-[clamp(1.5rem,4vw,2.25rem)] font-bold tracking-widest text-white">
                   {room.code}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-xs font-bold uppercase text-gray-400 mb-1">Status</p>
-                <p className="font-bold text-[#facc15]">{statusMessage}</p>
+                <p className="font-bold text-[#facc15] text-[clamp(0.8rem,2vw,1rem)] uppercase">{statusMessage}</p>
               </div>
             </div>
 
             {error && (
-              <div className="mb-6 px-4 py-3 bg-red-500 border-[3px] border-black rounded text-black font-bold shadow-[4px_4px_0px_#000]">
+              <div className="mb-6 px-4 py-3 bg-[#ef4444] border-[3px] border-black rounded text-black font-bold shadow-[4px_4px_0px_#000]">
                 {error}
               </div>
             )}
@@ -386,7 +423,8 @@ export default function ConnectFourBoard() {
 
             {/* The Game Board Area */}
             {gameState && (
-                 <div className="mx-auto max-w-md bg-white p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
+              <div className="mx-auto max-w-[min(90vw,28rem)] bg-white p-4 sm:p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
+                
                 {/* Column Drop Buttons */}
                 <div className="grid grid-cols-7 gap-2 mb-4">
                   {Array.from({ length: COLS }).map((_, col) => (
@@ -411,7 +449,7 @@ export default function ConnectFourBoard() {
                 {/* The Board Grid */}
                 <div className="p-3 rounded-lg bg-[#3b82f6] border-[3px] border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.2)]">
                   {gameState.board ? (
-                    <div className="grid grid-cols-7 gap-2">
+                    <div className="grid grid-cols-7 gap-1 sm:gap-2">
                       {gameState.board.map((row, rowIndex) =>
                         row.map((cell, colIndex) => {
                           const isLastMove =
@@ -438,7 +476,7 @@ export default function ConnectFourBoard() {
                 {myColor && (
                   <p className="text-center text-sm font-bold text-black mt-6 uppercase">
                     You are playing as{' '}
-                    <span className={myColor === 'red' ? 'text-[#ef4444]' : 'text-[#facc15] text-stroke-black'}>
+                    <span className={myColor === 'red' ? 'text-[#ef4444]' : 'text-[#facc15]'} style={{ WebkitTextStroke: '1px black' }}>
                       {myColor}
                     </span>
                   </p>
@@ -448,8 +486,8 @@ export default function ConnectFourBoard() {
           </div>
         </div>
 
-        {/* Chat Column */}
-         <div className="lg:w-96">
+        {/* RIGHT COLUMN: CHAT PANEL */}
+        <div ref={chatRef} className="w-full xl:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 xl:mt-0 scroll-mt-24">
           <ChatPanel
             messages={room.chat ?? []}
             onSend={handleChat}

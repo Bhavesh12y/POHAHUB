@@ -84,7 +84,13 @@ export default function ConnectFourLanding() {
           />
         </div>
 
-        <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black uppercase mb-3 text-ink">Connect 4</h2>
+        <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black uppercase mb-3 text-ink"><div className="inline-block rotate-[-1deg]">
+  <div className="bg-pink-300 border-[3px] border-black px-6 py-3 shadow-[6px_6px_0px_#000]">
+    <h2 className="text-[clamp(1.2rem,3vw,2rem)] font-black uppercase tracking-wide text-black">
+      Connect 4
+    </h2>
+  </div>
+</div></h2>
         <p className="text-[clamp(1rem,2vw,1.25rem)] text-gray-800 font-bold">Create a room or join with a friend's code.</p>
       </div>
 

@@ -87,9 +87,15 @@ export default function TicTacToeLanding() {
 
         <h2 
             className="text-[clamp(2.5rem,6vw,4rem)] font-black mb-3 tracking-tighter text-[#facc15] uppercase leading-none"
-            style={{ WebkitTextStroke: '2px black', textShadow: '4px 4px 0px #000' }}
+            style={{ WebkitTextStroke: '0px black' }}
         >
-          Tic Tac Toe
+          <div className="inline-block rotate-[-1deg]">
+  <div className="bg-pink-300 border-[3px] border-black px-6 py-3 shadow-[6px_6px_0px_#000]">
+    <h2 className="text-[clamp(1.2rem,3vw,2rem)] font-black uppercase tracking-wide text-black">
+      Tic Tac Toe
+    </h2>
+  </div>
+</div>
         </h2>
         <p className="text-black font-bold tracking-widest uppercase bg-white border-[3px] border-black inline-block px-4 py-1 rounded shadow-[4px_4px_0px_#000] -rotate-1 mt-2">
           Create or join a room

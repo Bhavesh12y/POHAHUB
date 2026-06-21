@@ -112,8 +112,8 @@ export default function Layout() {
       </main>
 
       {/* FOOTER */}
-      <footer className="relative z-10 border-t-[4px] border-black bg-white py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-black uppercase tracking-widest text-black">
+      <footer className="hidden">
+        <div className="max-w-7lg mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-black uppercase tracking-widest text-black">
           <p>(c) {new Date().getFullYear()} Pohahub</p>
           
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
@@ -130,6 +130,33 @@ export default function Layout() {
           </div>
         </div>
       </footer>
+
+      <a
+  href="https://www.instagram.com/bhavesh12z"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="hidden md:block fixed bottom-2 right-2 z-50
+             text-[11px] sm:text-xs
+             font-black text-[#ef4444]
+             underline underline-offset-4"
+>
+   Enjoying? Send me a Maggie
+</a>
+
+{/* <a
+  href="https://www.instagram.com/bhavesh12z"
+  target="_blank"
+  rel="noopener noreferrer"
+  // className="fixed bottom-3 right-3 z-50
+  //            bg-[#ffc0cb] text-black font-black text-xs sm:text-sm
+  //            border-[3px] border-black px-4 py-2
+  //            shadow-[4px_4px_0px_#000]
+  //            hover:translate-y-[2px]
+  //            hover:shadow-[2px_2px_0px_#000]
+  //            transition-all"
+>
+  Enjoying? Send me a Maggie
+</a> */}
     </div>
   );
 }

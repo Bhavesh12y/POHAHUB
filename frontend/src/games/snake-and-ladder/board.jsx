@@ -3,8 +3,8 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 
-// --- CHAT PANEL ---
-function ChatPanel({ messages, onSend }) {
+// --- CHAT PANEL (With Scrollbar Fix & Crash Protection) ---
+function ChatPanel({ messages = [], onSend }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
 
@@ -20,24 +20,24 @@ function ChatPanel({ messages, onSend }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white min-h-[300px]">
-      <div className="px-4 py-3 border-b-[3px] border-black font-bold tracking-widest text-xs uppercase text-gray-200 bg-[#222]">
+    <div className="flex flex-col w-full h-[350px] lg:h-[500px] bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
+      <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold tracking-widest text-xs uppercase text-gray-200 bg-[#222] shrink-0">
         Lobby Chat
       </div>
-      <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
         {messages.length === 0 && (
           <p className="text-gray-400 text-center py-4 font-bold italic">No messages yet</p>
         )}
         {messages.map((msg) => (
-          <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-3 bg-[#facc15] border-[2px] border-black rounded p-2 shadow-[2px_2px_0px_#000]' : ''}`}>
+          <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-3 bg-[#facc15] text-black border-[2px] border-black rounded p-2 shadow-[2px_2px_0px_#000]' : ''}`}>
             {msg.playerId !== 'SYSTEM' && <span className="font-black text-[#facc15] uppercase tracking-wider">{msg.playerName}: </span>}
-            <span className={msg.playerId === 'SYSTEM' ? 'text-black font-bold text-[11px] uppercase tracking-widest' : 'text-gray-100 font-medium'}>
+            <span className={msg.playerId === 'SYSTEM' ? 'font-black text-[11px] uppercase tracking-widest' : 'text-gray-100 font-medium'}>
               {msg.message}
             </span>
           </div>
         ))}
       </div>
-      <form onSubmit={handleSubmit} className="p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg">
+      <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg shrink-0">
         <input 
           type="text" 
           className="py-2 px-3 rounded text-sm flex-1 bg-black border-[2px] border-black text-white focus:outline-none focus:ring-2 focus:ring-[#facc15]" 
@@ -45,7 +45,7 @@ function ChatPanel({ messages, onSend }) {
           value={text} 
           onChange={(e) => setText(e.target.value)} 
         />
-        <button type="submit" className="bg-[#facc15] text-black font-black uppercase border-[2px] border-black rounded px-4 py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all">
+        <button type="submit" className="bg-[#facc15] text-black font-black uppercase border-[2px] border-black rounded px-4 py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all shrink-0">
           Send
         </button>
       </form>
@@ -132,6 +132,10 @@ export default function SnakeAndLadderBoard() {
 
   const [room, setRoom] = useState(location.state?.room ?? null);
   
+  // Mobile chat notification states
+  const [chatToast, setChatToast] = useState(null);
+  const chatRef = useRef(null);
+
   // Animation & Dice States
   const [isRolling, setIsRolling] = useState(false);
   const [diceDisplay, setDiceDisplay] = useState('🎲');
@@ -161,6 +165,12 @@ export default function SnakeAndLadderBoard() {
     });
     socket.on('chat:message', (msg) => {
       setRoom((prev) => prev ? { ...prev, chat: [...(prev.chat ?? []), msg] } : prev);
+
+      // Trigger mobile toast if message isn't from me and screen is < 1024px
+      if (msg.playerName !== username && window.innerWidth < 1024) {
+        setChatToast(msg);
+        setTimeout(() => setChatToast(null), 3500); // Hide after 3.5s
+      }
     });
 
     if (socket.connected) syncRoom();
@@ -268,6 +278,11 @@ export default function SnakeAndLadderBoard() {
       }
   }, [gameState?.lastRoll?.roll, isRolling]);
 
+  const scrollToChat = () => {
+    setChatToast(null);
+    chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   if (!room) return (
     <div className="text-center py-24 text-black font-black uppercase tracking-widest text-xl animate-pulse">
         Connecting...
@@ -281,13 +296,28 @@ export default function SnakeAndLadderBoard() {
         .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
       `}</style>
 
+      {/* Mobile Chat Notification Toast */}
+      {chatToast && (
+        <div 
+          onClick={scrollToChat}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3b82f6] border-[3px] border-black text-white px-4 py-3 rounded shadow-[6px_6px_0px_#000] z-50 flex items-center gap-3 cursor-pointer w-11/12 max-w-sm lg:hidden animate-[popIn_0.3s_ease-out] -rotate-1"
+        >
+          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black">💬</span>
+          <div className="flex flex-col flex-1 truncate">
+            <span className="text-xs font-black uppercase text-[#facc15]">{chatToast.playerName}</span>
+            <span className="text-sm font-bold truncate">{chatToast.message}</span>
+          </div>
+          <span className="text-xs font-bold text-black bg-white border-[2px] border-black px-2 py-1 rounded">View</span>
+        </div>
+      )}
+
       {/* WINNER POPUP */}
       {(gameState?.status === 'won') && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-10 text-center animate-pop-in rounded-xl -rotate-2">
             <div className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-4">Game Over</div>
-            <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
+            <h2 className="text-5xl font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
                 {gameState.winner?.name}
             </h2>
             <h3 className="text-xl font-bold text-black mb-8 uppercase">reached 100 first! 🏆</h3>
@@ -319,7 +349,7 @@ export default function SnakeAndLadderBoard() {
         )}
       </div>
 
-      <div className="flex flex-col xl:flex-row gap-6 xl:gap-8">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         
         {/* GAME BOARD & CONTROLS */}
         <div className="flex-1 flex flex-col gap-6">
@@ -420,7 +450,7 @@ export default function SnakeAndLadderBoard() {
         </div>
 
         {/* LOBBY CHAT */}
-        <div className="xl:w-72 shrink-0 h-72 xl:h-auto mt-4 xl:mt-0">
+        <div ref={chatRef} className="w-full xl:w-80 shrink-0 mt-4 xl:mt-0 scroll-mt-24">
             <ChatPanel messages={room.chat ?? []} onSend={handleChat} />
         </div>
       </div>
