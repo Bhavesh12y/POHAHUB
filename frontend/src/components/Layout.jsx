@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Analytics } from "@vercel/analytics/react"
 
 export function useDesktopScalingFix() {
   useEffect(() => {
