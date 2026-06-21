@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 
-import { useEffect } from 'react';
-
 export function useDesktopScalingFix() {
   useEffect(() => {
     const applyReverseZoom = () => {
