@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Analytics } from "@vercel/analytics/react"
 
+
+
+
 export function useDesktopScalingFix() {
   useEffect(() => {
     const applyReverseZoom = () => {
@@ -127,6 +130,7 @@ export default function Layout() {
       <main className="flex-1 relative z-10 w-full">
         <Outlet />
       </main>
+      <Analytics />
 
       {/* FOOTER */}
       <footer className="hidden">
