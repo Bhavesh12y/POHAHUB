@@ -450,7 +450,7 @@ export default function SnakeAndLadderBoard() {
         </div>
 
         {/* LOBBY CHAT */}
-        <div ref={chatRef} className="w-full xl:w-80 shrink-0 mt-4 xl:mt-0 scroll-mt-24">
+        <div ref={chatRef} className="w-full lg:w-80 shrink-0 mt-4 lg:mt-0 scroll-mt-24">
             <ChatPanel messages={room.chat ?? []} onSend={handleChat} />
         </div>
       </div>

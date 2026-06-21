@@ -273,7 +273,7 @@ export default function TicTacToeBoard() {
       )}
 
       {/* MAIN SPLIT LAYOUT */}
-      <div className="flex flex-col xl:flex-row gap-[clamp(1rem,3vw,2rem)] items-stretch">
+      <div className="flex flex-col lg:flex-row gap-[clamp(1rem,3vw,2rem)] items-stretch">
         
         {/* LEFT COLUMN: GAME OR LOBBY */}
         <div className="flex-1 w-full min-w-0 flex flex-col">
@@ -360,7 +360,7 @@ export default function TicTacToeBoard() {
         </div>
 
         {/* RIGHT COLUMN: CHAT PANEL */}
-        <div className="w-full xl:w-80 2xl:w-96 flex flex-col shrink-0">
+        <div className="w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0">
           <ChatPanel messages={room.chat ?? []} onSend={handleChat} disabled={!connected} />
         </div>
       </div>
