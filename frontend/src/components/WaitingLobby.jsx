@@ -1,10 +1,11 @@
 import { useState } from 'react';
 
-export default function WaitingLobby({ roomCode, isHost, playerCount, players = [], onStart, gamePath }) {
+export default function WaitingLobby({ roomCode, isHost, playerCount, players = [], onStart }) {
   const [copied, setCopied] = useState(false);
 
   const copyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/games/${gamePath}/${roomCode}`);
+    // navigator.clipboard grabs the exact current URL from the browser
+    navigator.clipboard.writeText(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -26,12 +27,13 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
         <input
           type="text"
           readOnly
-          value={`${window.location.origin}/games/${gamePath}/${roomCode}`}
+          // window.location.href forces the input to display the exact address bar URL
+          value={typeof window !== 'undefined' ? window.location.href : ''} 
           className="input-field text-xs sm:text-sm text-center"
           onClick={(e) => e.target.select()}
         />
         <button onClick={copyLink} className="sketch-button bg-sky-200 px-5 py-3 text-xs sm:text-sm shrink-0">
-          {copied ? 'Copied' : 'Copy Link'}
+          {copied ? 'Copied!' : 'Copy Link'}
         </button>
       </div>
 
