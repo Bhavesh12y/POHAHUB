@@ -24,9 +24,7 @@ function Disc({ color, isWinning, animate }) {
 }
 
 // Reusable Chat Panel (With Scrollbar Fix & Crash Protection)
-import React, { useState, useRef, useEffect } from 'react';
-
-export function ChatPanel({ messages = [], onSend, disabled }) {
+function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
 
@@ -44,29 +42,29 @@ export function ChatPanel({ messages = [], onSend, disabled }) {
   };
 
   return (
-    <div className="flex flex-col w-full h-[500px] lg:h-[700px] bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
-      <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold uppercase tracking-widest text-sm text-gray-200 bg-[#222] shrink-0">
+    <div className="flex flex-col w-full h-[350px] lg:h-[500px] bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
+      <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold uppercase tracking-widest text-xs text-gray-200 bg-[#222] shrink-0">
         Room Chat
       </div>
-      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 text-base sm:text-lg scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
         {messages.length === 0 && (
           <p className="text-gray-400 text-center py-4 font-bold italic">No messages yet</p>
         )}
         {messages.map((msg) => (
-          <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-3 bg-[#facc15] text-black border-[2px] border-black rounded p-3 shadow-[2px_2px_0px_#000]' : ''}`}>
+          <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-3 bg-[#facc15] text-black border-[2px] border-black rounded p-2 shadow-[2px_2px_0px_#000]' : ''}`}>
             {msg.playerId !== 'SYSTEM' && (
               <span className="font-black text-[#facc15] tracking-wider uppercase">{msg.playerName}: </span>
             )}
-            <span className={msg.playerId === 'SYSTEM' ? 'font-black text-xs sm:text-sm uppercase tracking-widest' : 'text-gray-100 font-medium'}>
+            <span className={msg.playerId === 'SYSTEM' ? 'font-black text-[11px] uppercase tracking-widest' : 'text-gray-100 font-medium'}>
               {msg.message}
             </span>
           </div>
         ))}
       </div>
-      <form onSubmit={handleSubmit} className="p-3 sm:p-4 border-t-[3px] border-black flex gap-3 bg-[#2a2a2a] rounded-b-lg shrink-0">
+      <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg shrink-0">
         <input
           type="text"
-          className="py-3 px-4 text-base flex-1 bg-black border-[2px] border-black rounded text-white focus:outline-none focus:ring-2 focus:ring-[#facc15]"
+          className="py-2 px-3 text-sm flex-1 bg-black border-[2px] border-black rounded text-white focus:outline-none focus:ring-2 focus:ring-[#facc15]"
           placeholder="Type a message..."
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -75,7 +73,7 @@ export function ChatPanel({ messages = [], onSend, disabled }) {
         />
         <button
           type="submit"
-          className="bg-[#facc15] text-black text-base font-black uppercase border-[2px] border-black rounded px-6 py-3 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-50 shrink-0"
+          className="bg-[#facc15] text-black font-black uppercase border-[2px] border-black rounded px-4 py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-50 shrink-0"
           disabled={disabled}
         >
           Send
@@ -84,6 +82,7 @@ export function ChatPanel({ messages = [], onSend, disabled }) {
     </div>
   );
 }
+
 export default function ConnectFourBoard() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
