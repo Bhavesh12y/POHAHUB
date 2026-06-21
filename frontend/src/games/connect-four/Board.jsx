@@ -386,7 +386,8 @@ export default function ConnectFourBoard() {
 
             {/* The Game Board Area */}
             {gameState && (
-                 <div className="mx-auto max-w-md bg-white p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
+              <div className="mx-auto w-full max-w-sm xl:max-w-md bg-white p-4 sm:p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
+                
                 {/* Column Drop Buttons */}
                 <div className="grid grid-cols-7 gap-2 mb-4">
                   {Array.from({ length: COLS }).map((_, col) => (
@@ -449,7 +450,7 @@ export default function ConnectFourBoard() {
         </div>
 
         {/* Chat Column */}
-         <div className="lg:w-96">
+        <div className="xl:w-80 shrink-0">
           <ChatPanel
             messages={room.chat ?? []}
             onSend={handleChat}

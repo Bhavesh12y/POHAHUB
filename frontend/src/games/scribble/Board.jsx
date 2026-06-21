@@ -342,7 +342,7 @@ export default function ScribbleBoard() {
         </div>
       </div>
 
-          <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col xl:flex-row gap-6">
         <div className="flex-1 flex flex-col gap-4">
           
           {room.status === 'waiting' ? (
@@ -477,7 +477,7 @@ export default function ScribbleBoard() {
         </div>
 
         {/* CHAT / GUESS PANEL */}
-           <div className="lg:w-80 h-[300px] lg:h-auto mt-4 lg:mt-0">
+        <div className="xl:w-72 shrink-0 h-64 xl:h-auto mt-4 xl:mt-0">
             <ChatPanel 
                 messages={room?.chat ?? []} 
                 onSend={handleChat} 
