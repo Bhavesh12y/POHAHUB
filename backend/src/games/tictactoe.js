@@ -10,7 +10,10 @@ const WIN_LINES = [
   [2, 4, 6],
 ];
 
+
+
 export function createTicTacToeState(players) {
+   const startIndex = Math.floor(Math.random() * players.length);
   return {
     board: Array(BOARD_SIZE).fill(null),
     players: players.map((p) => ({ id: p.id, name: p.name, symbol: p.symbol })),
