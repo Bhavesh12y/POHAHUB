@@ -2,44 +2,69 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Robust fallback list to fix the "no words coming in" bug
+// --- YOUR PUBLISHED GOOGLE SHEET LINK ---
+const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSktbZaUpHjnxmV8iMjXTc-NrcknJl7EaWJPhHw4z1blDlwKTissKkzflUyunBEPpnFwtpw33zGrgBb/pub?output=csv';
+
+// --- FALLBACK WORDS ---
+// Just in case Google goes down or the server loses internet
 let WORDS = [
   'APPLE', 'ASTRONAUT', 'BACKPACK', 'BANANA', 'BICYCLE', 'BUTTERFLY', 'CAMERA', 'CASTLE', 
-  'COMPASS', 'COMPUTER', 'DIAMOND', 'DRAGON', 'ELEPHANT', 'FIRETRUCK', 'GUITAR', 'HAMBURGER', 
-  'HELICOPTER', 'IGLOO', 'KANGAROO', 'LIGHTHOUSE', 'MICROSCOPE', 'MOUNTAIN', 'OCEAN', 
-  'PENGUIN', 'PIZZA', 'PYRAMID', 'ROCKET', 'SATELLITE', 'SNOWMAN', 'SPIDER', 'SUNFLOWER', 
-  'TELESCOPE', 'TIGER', 'TORNADO', 'UMBRELLA', 'VOLCANO', 'WATERFALL', 'WIZARD', 'ZEBRA'
+  'COMPASS', 'COMPUTER', 'DIAMOND', 'DRAGON', 'ELEPHANT', 'FIRETRUCK', 'GUITAR', 'HAMBURGER'
 ];
 
-try {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const wordsData = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/words.json'), 'utf8'));
-  if (Array.isArray(wordsData)) WORDS = wordsData;
-  else if (wordsData.words) WORDS = wordsData.words;
-} catch (e) {
-  console.log('Words file not found or invalid, using robust fallback list.');
+// --- AUTO-FETCHER ---
+async function fetchWordsFromGoogleSheet() {
+  try {
+    const response = await fetch(GOOGLE_SHEET_CSV_URL);
+    if (!response.ok) throw new Error('Network response was not ok');
+    
+    const csvText = await response.text();
+    
+    // Clean up the data: Split by line breaks, uppercase it, trim spaces, remove empty rows
+    const sheetWords = csvText
+      .split('\n')
+      .map(word => word.replace(/,/g, '').trim().toUpperCase()) // Remove rogue commas just in case
+      .filter(word => word.length > 0);
+
+    if (sheetWords.length > 0) {
+      WORDS = sheetWords;
+      console.log(`✅ [Scribble] Successfully loaded ${WORDS.length} words from Google Sheets!`);
+    }
+  } catch (error) {
+    console.error('❌ [Scribble] Failed to fetch words from Google Sheet. Using fallback list.', error.message);
+  }
 }
+
+// 1. Fetch immediately when the server boots up
+fetchWordsFromGoogleSheet();
+
+// 2. Automatically re-fetch every 1 hour (3600000 ms) to get any new words you added!
+setInterval(fetchWordsFromGoogleSheet, 3600000); 
 
 function getThreeRandomWords() {
   return [...WORDS].sort(() => 0.5 - Math.random()).slice(0, 3);
 }
 
+// --- GAME STATE LOGIC ---
 export function createScribbleState(players) {
+  // RANDOMIZE STARTING PLAYER
+  const startIndex = Math.floor(Math.random() * players.length);
+
   return {
     status: 'playing',
     players: players.map((p) => ({ id: p.id, name: p.name, score: 0 })),
-    drawerIndex: 0,
-    drawerId: players[0].id,
+    drawerIndex: startIndex,
+    drawerId: players[startIndex].id,
     round: 1,
     maxRounds: 3,
-    turnState: 'selecting', // 'selecting' or 'drawing'
+    turnState: 'selecting',
     wordOptions: getThreeRandomWords(),
     currentWord: '',
     guessedPlayers: [],
-    hints: [], // Array of revealed indices
+    hints: [],
     hintsRevealed: 0,
     startTime: 0,
-    timeLimit: 60, // 60 seconds to draw
+    timeLimit: 60,
   };
 }
 
@@ -65,12 +90,10 @@ export function endScribbleTurn(state) {
     state.round++;
   }
 
-  // End game after 3 rounds
   if (state.round > state.maxRounds) {
     state.status = 'won';
     state.winner = [...state.players].sort((a, b) => b.score - a.score)[0];
   } else {
-    // Setup next turn
     state.turnState = 'selecting';
     state.drawerId = state.players[state.drawerIndex].id;
     state.wordOptions = getThreeRandomWords();
@@ -89,7 +112,6 @@ export function serializeScribbleState(state, viewerId) {
   let displayWord = state.currentWord;
   let sentWordOptions = [];
 
-  // Hide the word and options from guessers
   if (!isDrawer && !isGameOver) {
     sentWordOptions = [];
     if (state.turnState === 'drawing') {

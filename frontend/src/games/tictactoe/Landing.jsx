@@ -69,77 +69,94 @@ export default function TicTacToeLanding() {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-12">
-      <div className="text-center mb-12">
+    <div className="max-w-xl mx-auto px-6 py-12 font-sans">
+      
+      {/* HEADER */}
+      <div className="text-center mb-12 rotate-1">
         
-        {/* Premium Image Placeholder Container */}
-        <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#0a0a0c] border border-white/[0.08] shadow-[0_0_20px_rgba(255,255,255,0.03)] mb-6 overflow-hidden group">
-          {/* Subtle hover shine */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none" />
-          
+        {/* Neo-Brutalist Image Container */}
+        <div className="relative inline-flex items-center justify-center w-24 h-24 mb-8 group -rotate-3">
+          {/* Offset shadow block */}
+          <div className="absolute inset-0 bg-[#f9a8d4] border-[3px] border-black rounded translate-x-2 translate-y-2" />
           <img 
             src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/original-c03c34a74dba4bb1c8010bec8c06e719.png" 
             alt="Tic Tac Toe Preview" 
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            className="relative z-10 w-full h-full object-cover border-[3px] border-black rounded bg-white transition-transform duration-300 group-hover:-translate-y-1 group-hover:-translate-x-1"
           />
         </div>
 
-        <h2 className="text-4xl font-extrabold mb-3 tracking-tighter text-gray-100">
-          Tic Tac Toe
+        <h2 
+            className="text-[clamp(2.5rem,6vw,4rem)] font-black mb-3 tracking-tighter text-[#facc15] uppercase leading-none"
+            style={{ WebkitTextStroke: '0px black' }}
+        >
+          <div className="inline-block rotate-[-1deg]">
+  <div className="bg-pink-300 border-[3px] border-black px-6 py-3 shadow-[6px_6px_0px_#000]">
+    <h2 className="text-[clamp(1.2rem,3vw,2rem)] font-black uppercase tracking-wide text-black">
+      Tic Tac Toe
+    </h2>
+  </div>
+</div>
         </h2>
-        <p className="text-gray-500 font-light tracking-wide">
-          Create a room or join with a friend&apos;s code.
+        <p className="text-black font-bold tracking-widest uppercase bg-white border-[3px] border-black inline-block px-4 py-1 rounded shadow-[4px_4px_0px_#000] -rotate-1 mt-2">
+          Create or join a room
         </p>
       </div>
 
-      <div className="glass-card bg-[#0a0a0c]/80 border-white/[0.05] p-8 space-y-6 rounded-2xl shadow-2xl">
+      {/* MAIN CARD */}
+      <div className="bg-white border-[4px] border-black p-8 space-y-6 rounded-xl shadow-[12px_12px_0px_#000] -rotate-1 relative">
+        
+        {/* Username Input */}
         <div>
-          <label className="block text-xs font-bold tracking-[0.2em] uppercase text-gray-600 mb-3">
+          <label className="block text-sm font-black tracking-widest uppercase text-black mb-2">
             Username
           </label>
           <input
             type="text"
-            className="input-field"
-            placeholder="Your display name"
+            className="w-full px-4 py-3 bg-white border-[3px] border-black rounded text-black font-bold focus:outline-none focus:ring-4 focus:ring-[#f9a8d4] transition-all placeholder:text-gray-400 uppercase"
+            placeholder="YOUR DISPLAY NAME"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             maxLength={20}
           />
         </div>
 
+        {/* Error Message */}
         {error && (
-          <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm backdrop-blur-sm">
+          <div className="px-4 py-3 rounded bg-[#ef4444] border-[3px] border-black text-black font-black uppercase tracking-wide text-sm shadow-[4px_4px_0px_#000] animate-bounce">
             {error}
           </div>
         )}
 
+        {/* Create Room Button */}
         <button
           type="button"
-          className="btn-primary w-full"
+          className="w-full py-3 bg-[#facc15] text-black font-black tracking-widest uppercase border-[3px] border-black rounded shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[6px_6px_0px_#000] disabled:cursor-not-allowed"
           onClick={handleCreate}
           disabled={loading}
         >
-          {loading ? 'Establishing Connection...' : 'Create Room'}
+          {loading ? 'Connecting...' : 'Create Room'}
         </button>
 
-        <div className="relative py-2">
+        {/* Divider */}
+        <div className="relative py-4">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-white/[0.05]" />
+            <div className="w-full border-t-[3px] border-black" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="px-4 bg-[#0a0a0c] tracking-widest uppercase text-gray-600">
-              or join existing
+            <span className="px-4 bg-white font-black tracking-widest uppercase text-black border-[3px] border-black rounded-full shadow-[2px_2px_0px_#000]">
+              OR JOIN EXISTING
             </span>
           </div>
         </div>
 
+        {/* Room Code Input */}
         <div>
-          <label className="block text-xs font-bold tracking-[0.2em] uppercase text-gray-600 mb-3">
+          <label className="block text-sm font-black tracking-widest uppercase text-black mb-2">
             Room Code
           </label>
           <input
             type="text"
-            className="input-field uppercase tracking-widest text-center font-mono text-xl"
+            className="w-full px-4 py-4 bg-gray-100 border-[3px] border-black rounded focus:outline-none focus:ring-4 focus:ring-[#3b82f6] transition-all uppercase tracking-[0.3em] text-center font-black text-2xl text-black"
             placeholder="ABC123"
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
@@ -147,13 +164,14 @@ export default function TicTacToeLanding() {
           />
         </div>
 
+        {/* Join Room Button */}
         <button
           type="button"
-          className="btn-secondary w-full"
+          className="w-full py-3 bg-[#f9a8d4] text-black font-black tracking-widest uppercase border-[3px] border-black rounded shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[6px_6px_0px_#000] disabled:cursor-not-allowed"
           onClick={handleJoin}
           disabled={loading}
         >
-          Join Room
+          {loading ? 'Connecting...' : 'Join Room'}
         </button>
       </div>
     </div>

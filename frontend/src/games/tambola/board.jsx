@@ -37,32 +37,36 @@ function ChatPanel({ messages, onSend, disabled }) {
   };
 
   return (
-    <div className="bg-[#111]/80 backdrop-blur-md border border-white/10 rounded-2xl flex flex-col h-full min-h-[300px] lg:max-h-[600px] shadow-xl overflow-hidden w-full">
-      <div className="px-4 py-3 sm:py-4 border-b border-white/[0.05] font-bold tracking-widest text-[10px] sm:text-xs uppercase text-gray-400 bg-black/20">
+    <div className="flex flex-col h-full bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white min-h-[300px] lg:max-h-[600px] w-full">
+      <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold tracking-widest text-xs uppercase text-gray-200 bg-[#222]">
         Room Chat
       </div>
-      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-xs sm:text-sm scrollbar-thin scrollbar-thumb-gray-800">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
         {messages.length === 0 && (
-          <p className="text-gray-600 text-center py-4 font-light italic">No messages yet</p>
+          <p className="text-gray-400 text-center py-4 font-bold italic">No messages yet</p>
         )}
         {messages.map((msg, idx) => (
           <div key={msg.id || idx} className="break-words">
-            <span className="font-semibold text-gray-300">{msg.playerName}: </span>
-            <span className="text-gray-400 font-light">{msg.message}</span>
+            <span className="font-black text-[#facc15] uppercase tracking-wider">{msg.playerName}: </span>
+            <span className="text-gray-100 font-medium">{msg.message}</span>
           </div>
         ))}
       </div>
-      <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t border-white/[0.05] flex gap-2 bg-black/20">
+      <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg">
         <input
           type="text"
-          className="py-1.5 sm:py-2 px-3 rounded-lg text-xs sm:text-sm flex-1 bg-black/50 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="py-1.5 sm:py-2 px-3 rounded text-sm flex-1 bg-black border-[2px] border-black text-white focus:outline-none focus:ring-2 focus:ring-[#facc15]"
           placeholder="Type a message..."
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={disabled}
           maxLength={500}
         />
-        <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-colors" disabled={disabled}>
+        <button 
+          type="submit" 
+          className="bg-[#facc15] text-black font-black uppercase border-[2px] border-black rounded px-3 sm:px-4 py-1.5 sm:py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-50" 
+          disabled={disabled}
+        >
           Send
         </button>
       </form>
@@ -156,7 +160,11 @@ export default function TambolaBoard() {
     return () => clearInterval(timer);
   }, [isAutoDrawing, room?.gameState?.status, socket]);
 
-  if (!room) return <div className="min-h-screen flex items-center justify-center text-white">Connecting...</div>;
+  if (!room) return (
+    <div className="min-h-screen flex items-center justify-center font-bold text-black uppercase tracking-widest text-xl animate-pulse">
+        Connecting...
+    </div>
+  );
 
   const playerId = room.viewerId;
   const isHost = room.hostId === playerId;
@@ -224,11 +232,17 @@ export default function TambolaBoard() {
     : '--';
 
   return (
-    <div className="relative min-h-[85vh] text-gray-200 overflow-x-hidden px-2 sm:px-4 py-4 sm:py-8 w-full max-w-[100vw]">
+    <div className="relative min-h-[85vh] font-sans text-black overflow-x-hidden px-2 sm:px-4 py-4 sm:py-8 w-full max-w-[100vw]">
       
+      {/* POPUP CSS */}
+      <style>{`
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); } }
+        .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      `}</style>
+
       {/* Toast Error */}
       {errorToast && (
-        <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base rounded-full shadow-lg z-50 animate-bounce whitespace-nowrap">
+        <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 bg-[#ef4444] border-[3px] border-black text-black px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-bold uppercase rounded shadow-[6px_6px_0px_#000] z-50 animate-bounce whitespace-nowrap">
           {errorToast}
         </div>
       )}
@@ -237,32 +251,35 @@ export default function TambolaBoard() {
       {chatToast && (
         <div 
           onClick={scrollToChat}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/95 backdrop-blur shadow-2xl border border-blue-400/50 text-white px-4 py-3 rounded-2xl z-50 flex items-center gap-3 cursor-pointer w-11/12 max-w-sm lg:hidden animate-[popIn_0.3s_ease-out]"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3b82f6] border-[3px] border-black text-white px-4 py-3 rounded shadow-[6px_6px_0px_#000] z-50 flex items-center gap-3 cursor-pointer w-11/12 max-w-sm lg:hidden animate-[popIn_0.3s_ease-out] -rotate-1"
         >
-          <span className="bg-white/20 p-2 rounded-full leading-none">💬</span>
+          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black">💬</span>
           <div className="flex flex-col flex-1 truncate">
-            <span className="text-xs font-bold text-blue-200">{chatToast.playerName}</span>
-            <span className="text-sm truncate">{chatToast.message}</span>
+            <span className="text-xs font-black uppercase text-[#facc15]">{chatToast.playerName}</span>
+            <span className="text-sm font-bold truncate">{chatToast.message}</span>
           </div>
-          <span className="text-xs text-blue-200 bg-black/20 px-2 py-1 rounded">View</span>
+          <span className="text-xs font-bold text-black bg-white border-[2px] border-black px-2 py-1 rounded">View</span>
         </div>
       )}
 
       {/* Rules Modal */}
       {showRules && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111] border border-white/10 rounded-2xl p-6 sm:p-8 w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col">
-            <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-              <h2 className="text-2xl font-bold text-white">Tambola Rules</h2>
-              <button onClick={() => setShowRules(false)} className="text-gray-400 hover:text-white bg-white/5 p-2 rounded-full">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border-[4px] border-black rounded-lg p-6 sm:p-8 w-full max-w-lg shadow-[12px_12px_0px_#000] max-h-[80vh] flex flex-col -rotate-1 animate-pop-in">
+            <div className="flex justify-between items-center mb-6 border-b-[4px] border-black pb-4">
+              <h2 className="text-3xl font-black text-black uppercase tracking-widest">Tambola Rules</h2>
+              <button 
+                onClick={() => setShowRules(false)} 
+                className="bg-[#ef4444] text-black font-black border-[3px] border-black shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] w-10 h-10 flex items-center justify-center rounded"
+              >
                 ✕
               </button>
             </div>
-            <div className="overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-thumb-gray-700 flex-1">
+            <div className="overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-thumb-gray-800 flex-1">
               {CLAIMS.map(c => (
-                <div key={c.id} className="bg-white/5 p-3 rounded-lg">
-                  <h4 className="font-bold text-blue-400">{c.label}</h4>
-                  <p className="text-sm text-gray-300 mt-1">{c.desc}</p>
+                <div key={c.id} className="bg-gray-100 border-[3px] border-black p-4 rounded shadow-[4px_4px_0px_rgba(0,0,0,0.1)]">
+                  <h4 className="font-black text-xl text-[#3b82f6] uppercase">{c.label}</h4>
+                  <p className="text-sm font-bold text-gray-700 mt-1">{c.desc}</p>
                 </div>
               ))}
             </div>
@@ -272,22 +289,25 @@ export default function TambolaBoard() {
 
       {/* Detailed Winning / Game Over Screen */}
       {gameState.status === 'finished' && (
-        <div className="absolute inset-0 z-40 bg-[#0a0a0c]/95 backdrop-blur-md flex flex-col items-center p-4 sm:p-10 rounded-2xl overflow-y-auto">
-          <h1 className="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-6 mt-10 animate-pulse text-center">
+        <div className="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex flex-col items-center p-4 sm:p-10 overflow-y-auto">
+          <h1 
+            className="text-[clamp(2rem,7vw,5rem)] font-black text-[#facc15] mb-6 mt-10 text-center uppercase tracking-tighter"
+            style={{ WebkitTextStroke: '3px black', textShadow: '6px 6px 0px #000' }}
+          >
             Game Over!
           </h1>
-          <div className="w-full max-w-3xl bg-[#111] border border-white/10 rounded-2xl p-4 sm:p-8 shadow-2xl mb-10">
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 border-b border-white/10 pb-4 text-center tracking-widest uppercase">
+          <div className="w-full max-w-3xl bg-white border-[4px] border-black rounded-lg p-4 sm:p-8 shadow-[12px_12px_0px_#000] mb-10 rotate-1 animate-pop-in">
+            <h2 className="text-2xl sm:text-4xl font-black text-black mb-6 border-b-[4px] border-black pb-4 text-center tracking-widest uppercase">
               Final Results
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {CLAIMS.map(claim => {
                 const winnerId = gameState.activeClaims[claim.id];
                 const winner = winnerId ? gameState.players.find(p => p.id === winnerId) : null;
                 return (
-                  <div key={claim.id} className={`flex justify-between items-center p-3 sm:p-4 rounded-xl border transition-colors ${winner ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/5'}`}>
-                    <span className="text-gray-300 font-medium text-sm sm:text-base">{claim.label}</span>
-                    <span className={`font-bold text-sm sm:text-base ${winner ? 'text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'text-gray-600'}`}>
+                  <div key={claim.id} className={`flex justify-between items-center p-4 rounded border-[3px] border-black shadow-[4px_4px_0px_#000] ${winner ? 'bg-[#10b981]' : 'bg-gray-200'}`}>
+                    <span className="font-black uppercase text-sm sm:text-base text-black">{claim.label}</span>
+                    <span className="font-bold text-sm sm:text-base text-black bg-white border-[2px] border-black px-2 py-1 rounded">
                       {winner ? winner.name : 'Unclaimed'}
                     </span>
                   </div>
@@ -298,30 +318,32 @@ export default function TambolaBoard() {
         </div>
       )}
 
-      <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-4 sm:gap-6 w-full">
+      <div className="max-w-[1400px] mx-auto flex flex-col xl:flex-row gap-6 xl:gap-8 w-full">
         
         {/* LEFT COLUMN: Caller Console & Drawn Board */}
-        <div className="w-full lg:w-1/4 flex flex-col gap-4 sm:gap-6 order-1">
-          <div className="bg-[#111]/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 text-center shadow-xl w-full">
+        <div className="w-full xl:w-1/4 flex flex-col gap-6 order-1">
+          <div className="bg-[#333333] border-[3px] border-black rounded-lg p-4 sm:p-6 text-center shadow-[8px_8px_0px_#000] w-full -rotate-1 text-white">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs sm:text-sm text-gray-400 uppercase tracking-widest font-semibold flex-1">Last Drawn</h3>
+              <h3 className="text-xs sm:text-sm text-[#facc15] uppercase tracking-widest font-black flex-1">Last Drawn</h3>
               <button 
                 onClick={() => setIsSoundEnabled(!isSoundEnabled)}
-                className={`p-2 rounded-full transition-colors flex items-center justify-center ${isSoundEnabled ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                className={`w-10 h-10 border-[2px] border-black rounded flex items-center justify-center shadow-[3px_3px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_#000] ${isSoundEnabled ? 'bg-[#facc15] text-black' : 'bg-gray-300 text-gray-500'}`}
                 title="Toggle Announcer"
               >
                 {isSoundEnabled ? '🔊' : '🔇'}
               </button>
             </div>
-            <div className="text-6xl sm:text-7xl xl:text-8xl font-black text-blue-400 my-2 sm:my-4 drop-shadow-[0_0_20px_rgba(96,165,250,0.4)]">
+            
+            <div className="text-[clamp(2.5rem,8vw,6rem)] font-black text-white my-4 bg-black border-[4px] border-[#facc15] rounded-xl py-6 shadow-[inset_0_0_20px_rgba(250,204,21,0.2)]">
               {lastDrawn}
             </div>
+
             {isHost && gameState.status === 'playing' && (
-              <div className="mt-4 sm:mt-6 flex flex-col gap-2 sm:gap-3">
+              <div className="mt-6 flex flex-col gap-3">
                 <button
                   onClick={() => setIsAutoDrawing(!isAutoDrawing)}
-                  className={`w-full py-2 sm:py-3 text-xs sm:text-sm lg:text-base font-bold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${
-                    isAutoDrawing ? 'bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/50 hover:bg-green-500/30'
+                  className={`w-full py-3 text-sm lg:text-base font-black uppercase rounded border-[3px] border-black transition-all shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] flex items-center justify-center gap-2 text-black ${
+                    isAutoDrawing ? 'bg-[#ef4444]' : 'bg-[#10b981]'
                   }`}
                 >
                   {isAutoDrawing ? '⏸ Pause Auto' : '▶️ Start Auto'}
@@ -329,7 +351,7 @@ export default function TambolaBoard() {
                 <button 
                   onClick={handleDraw} 
                   disabled={isAutoDrawing}
-                  className="w-full py-2 sm:py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white text-xs sm:text-sm lg:text-base font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)]"
+                  className="w-full py-3 bg-[#3b82f6] disabled:bg-gray-400 disabled:shadow-none disabled:translate-y-0 disabled:translate-x-0 disabled:cursor-not-allowed text-white text-sm lg:text-base font-black uppercase rounded border-[3px] border-black transition-all shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000]"
                 >
                   Draw 1 Number
                 </button>
@@ -337,16 +359,16 @@ export default function TambolaBoard() {
             )}
           </div>
 
-          <div className="bg-[#111]/80 backdrop-blur-md border border-white/10 rounded-2xl p-3 sm:p-4 shadow-xl w-full flex-1">
-            <h3 className="text-xs sm:text-sm text-gray-400 uppercase tracking-widest font-semibold mb-3 sm:mb-4 text-center">Numbers Board</h3>
-            <div className="grid grid-cols-10 gap-0.5 sm:gap-1 text-center">
+          <div className="bg-white border-[3px] border-black rounded-lg p-3 sm:p-5 shadow-[6px_6px_0px_#000] w-full flex-1 rotate-1">
+            <h3 className="text-xs sm:text-sm text-black uppercase tracking-widest font-black mb-4 text-center">Numbers Board</h3>
+            <div className="grid grid-cols-10 gap-1 text-center">
               {Array.from({ length: 90 }, (_, i) => i + 1).map((num) => {
                 const isDrawn = gameState.drawnNumbers.includes(num);
                 return (
                   <div 
                     key={num} 
-                    className={`text-[9px] sm:text-[10px] xl:text-xs py-1 rounded-[2px] sm:rounded-sm transition-all duration-300 flex items-center justify-center aspect-[4/5] sm:aspect-auto ${
-                      isDrawn ? 'bg-blue-500/80 text-white font-bold scale-110 shadow-sm z-10' : 'bg-white/5 text-gray-600'
+                    className={`text-[9px] sm:text-[10px] xl:text-xs py-1 rounded-[2px] border-[2px] border-black font-black transition-all duration-150 flex items-center justify-center aspect-square sm:aspect-auto ${
+                      isDrawn ? 'bg-[#facc15] text-black scale-125 shadow-[2px_2px_0px_#000] z-10' : 'bg-gray-100 text-gray-400'
                     }`}
                   >
                     {num}
@@ -358,26 +380,25 @@ export default function TambolaBoard() {
         </div>
 
         {/* MIDDLE COLUMN: Player Ticket & Claims */}
-        <div className="w-full lg:w-2/4 flex flex-col gap-4 sm:gap-6 order-2">
+        <div className="w-full xl:w-2/4 flex flex-col gap-6 order-2">
           
           {/* Ticket UI */}
-          <div className="bg-[#111]/80 backdrop-blur-md border border-white/10 rounded-2xl p-3 sm:p-6 shadow-xl w-full">
-            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-gray-200">Your Ticket</h2>
+          <div className="bg-[#3b82f6] border-[4px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full text-white">
+            <h2 className="text-2xl sm:text-3xl font-black mb-4 uppercase tracking-wider text-white" style={{ WebkitTextStroke: '1px black' }}>Your Ticket</h2>
             {me ? (
               <div className="w-full pb-2">
-                <div className="flex flex-col gap-1 sm:gap-2 w-full">
+                <div className="flex flex-col gap-2 w-full bg-white p-2 border-[4px] border-black rounded-lg shadow-[inset_4px_4px_0px_rgba(0,0,0,0.15)]">
                   {me.ticket.map((row, rIdx) => (
-                    <div key={rIdx} className="grid grid-cols-9 gap-0.5 sm:gap-2 w-full">
+                    <div key={rIdx} className="grid grid-cols-9 gap-1 sm:gap-2 w-full">
                       {row.map((num, cIdx) => {
-                        const isDrawn = num !== null && gameState.drawnNumbers.includes(num);
                         const isMarked = num !== null && markedNumbers.has(num);
                         
-let cellStyle = "bg-slate-900/90 text-white/70 border border-white/10 shadow-inner";
+                        let cellStyle = "bg-gray-200 border-[2px] border-gray-400 text-transparent"; // Empty cell
                         if (num !== null) {
                           if (isMarked) {
-                            cellStyle = "bg-blue-600/25 text-white shadow-[inset_0_0_15px_rgba(37,99,235,0.25)] border border-blue-300/30";
+                            cellStyle = "bg-[#ef4444] text-white border-[3px] border-black shadow-[inset_3px_3px_0px_rgba(0,0,0,0.3)]";
                           } else {
-                            cellStyle = "bg-slate-800/95 text-white hover:bg-slate-700/95 cursor-pointer shadow-sm border border-white/15";
+                            cellStyle = "bg-white text-black border-[3px] border-black hover:bg-[#facc15] hover:-translate-y-1 hover:shadow-[3px_3px_0px_#000] cursor-pointer shadow-[1px_1px_0px_#000]";
                           }
                         }
 
@@ -385,11 +406,16 @@ let cellStyle = "bg-slate-900/90 text-white/70 border border-white/10 shadow-inn
                           <div
                             key={cIdx}
                             onClick={() => num !== null && toggleMark(num)}
-                            className={`relative h-8 sm:h-12 lg:h-16 flex items-center justify-center text-[10px] sm:text-base lg:text-xl font-black rounded sm:rounded-xl transition-all select-none ${cellStyle}`}
+                            className={`relative h-8 sm:h-10 xl:h-14 flex items-center justify-center text-xs sm:text-sm xl:text-xl font-black rounded transition-all select-none ${cellStyle}`}
                           >
                             {num !== null ? num : ''}
+                            
+                            {/* Visual "Stamp" for marked cells */}
                             {isMarked && (
-                              <div className="absolute w-5 h-5 sm:w-9 sm:h-9 lg:w-11 lg:h-11 rounded-full border-[1.5px] sm:border-[3px] border-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.3)] pointer-events-none scale-110 sm:scale-125"></div>
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-80">
+                                <div className="w-full h-1 bg-black -rotate-45 absolute"></div>
+                                <div className="w-full h-1 bg-black rotate-45 absolute"></div>
+                              </div>
                             )}
                           </div>
                         );
@@ -399,24 +425,26 @@ let cellStyle = "bg-slate-900/90 text-white/70 border border-white/10 shadow-inn
                 </div>
               </div>
             ) : (
-              <div className="text-center py-6 sm:py-10 text-sm sm:text-base text-gray-500">You are spectating.</div>
+              <div className="text-center py-6 sm:py-10 text-lg font-bold bg-white text-black border-[3px] border-black rounded shadow-[inset_4px_4px_0px_rgba(0,0,0,0.1)]">
+                You are spectating.
+              </div>
             )}
           </div>
 
           {/* Claim Buttons */}
-          <div className="bg-[#111]/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl w-full">
-            <div className="flex justify-between items-center mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-200">Prizes & Claims</h2>
+          <div className="bg-white border-[3px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full rotate-1">
+            <div className="flex justify-between items-center mb-4 border-b-[3px] border-black pb-3">
+              <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-widest">Prizes</h2>
               <button 
                 onClick={() => setShowRules(true)} 
-                className="bg-white/10 hover:bg-white/20 text-gray-300 text-xs font-bold w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-colors"
+                className="bg-[#facc15] text-black border-[2px] border-black shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] text-sm font-black w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all"
                 title="View Rules"
               >
-                i
+                ?
               </button>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
               {CLAIMS.map((claim) => {
                 const winnerId = gameState.activeClaims[claim.id];
                 const winner = winnerId ? gameState.players.find((p) => p.id === winnerId) : null;
@@ -426,16 +454,16 @@ let cellStyle = "bg-slate-900/90 text-white/70 border border-white/10 shadow-inn
                     key={claim.id}
                     onClick={() => !winnerId && handleClaim(claim.id)}
                     disabled={!!winnerId || !me}
-                    className={`p-2 sm:p-3 rounded-lg flex flex-col items-center justify-center transition-all ${
+                    className={`p-2 sm:p-3 rounded border-[3px] border-black flex flex-col items-center justify-center transition-all ${
                       winnerId
                         ? winnerId === playerId
-                          ? 'bg-green-500/20 border border-green-500/50 text-green-400'
-                          : 'bg-white/5 text-gray-500 border border-white/5 cursor-not-allowed'
-                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]'
+                          ? 'bg-[#10b981] text-black shadow-[2px_2px_0px_#000]'
+                          : 'bg-gray-300 text-gray-500 opacity-80 cursor-not-allowed'
+                        : 'bg-[#3b82f6] hover:bg-[#facc15] text-white hover:text-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000]'
                     }`}
                   >
-                    <span className="font-bold text-xs sm:text-sm">{claim.label}</span>
-                    <span className="text-[9px] sm:text-[10px] mt-0.5 sm:mt-1 font-medium text-center truncate w-full px-1">
+                    <span className="font-black uppercase text-xs sm:text-sm">{claim.label}</span>
+                    <span className="text-[10px] sm:text-xs mt-1 font-bold text-center truncate w-full bg-white border-[2px] border-black px-1 py-0.5 rounded text-black">
                       {winner ? `Won by ${winner.name}` : 'Claim'}
                     </span>
                   </button>
@@ -447,7 +475,7 @@ let cellStyle = "bg-slate-900/90 text-white/70 border border-white/10 shadow-inn
         </div>
 
         {/* RIGHT COLUMN: Chat Panel */}
-        <div ref={chatRef} className="w-full lg:w-1/4 flex flex-col order-3 h-[400px] lg:h-auto pb-8 lg:pb-0 scroll-mt-24">
+        <div ref={chatRef} className="w-full xl:w-1/4 flex flex-col order-3 h-72 xl:h-auto pb-8 xl:pb-0 scroll-mt-24">
           <ChatPanel
             messages={room.chat ?? []}
             onSend={(message) => socket.emit('chat:message', { message })}

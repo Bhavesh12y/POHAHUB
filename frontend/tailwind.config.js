@@ -4,27 +4,40 @@ export default {
   theme: {
     extend: {
       colors: {
+        paper: '#fdfdfd',
+        ink: '#111111',
+        pastel: {
+          yellow: '#fde047',
+          pink: '#f9a8d4',
+          sky: '#7dd3fc',
+          mint: '#86efac',
+          peach: '#fecaca',
+          lavender: '#c4b5fd',
+          orange: '#fdba74',
+        },
         hub: {
-          bg: '#0a0e1a',
-          surface: '#121829',
-          card: '#1a2235',
-          border: '#2a3550',
-          accent: '#6366f1',
-          accentHover: '#818cf8',
-          glow: '#a78bfa',
-          text: '#e2e8f0',
-          muted: '#94a3b8',
+          bg: '#fdfdfd',
+          surface: '#ffffff',
+          card: '#ffffff',
+          border: '#111111',
+          accent: '#fde047',
+          accentHover: '#facc15',
+          glow: '#fde047',
+          text: '#111111',
+          muted: '#4b5563',
         },
       },
       fontFamily: {
-        display: ['Segoe UI', 'system-ui', 'sans-serif'],
+        sans: ['Architects Daughter', 'cursive'],
+        display: ['Architects Daughter', 'cursive'],
+        sketch: ['Architects Daughter', 'cursive'],
       },
       boxShadow: {
-        glow: '0 0 40px rgba(99, 102, 241, 0.25)',
-        card: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        sketch: '6px 6px 0 0 #000000',
+        'sketch-sm': '4px 4px 0 0 #000000',
+        'sketch-lg': '8px 8px 0 0 #000000',
       },
       animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         drop: 'drop 0.35s ease-out',
       },
       keyframes: {

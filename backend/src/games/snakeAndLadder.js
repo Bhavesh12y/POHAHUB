@@ -4,6 +4,7 @@ const LADDERS = { 1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 8
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308']; // Red, Blue, Green, Yellow
 
 export const createSnakeAndLadderState = (players) => {
+  const startIndex = Math.floor(Math.random() * players.length);
   return {
     players: players.map((p, i) => ({ 
       ...p, 

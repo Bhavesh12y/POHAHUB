@@ -4,44 +4,49 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
   const [copied, setCopied] = useState(false);
 
   const copyLink = () => {
-    // Automatically uses whatever gamePath you pass it!
     navigator.clipboard.writeText(`${window.location.origin}/games/${gamePath}/${roomCode}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="text-center py-12 sm:py-20 border border-dashed border-white/[0.1] rounded-3xl bg-[#0a0a0c]/50 flex flex-col items-center justify-center max-w-2xl mx-auto">
-      <div className="mb-6 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] text-4xl">🔗</div>
-      <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Invite Friends</h2>
-      <p className="text-sm text-gray-400 mb-6 font-light px-4">Share this link to let friends join directly.</p>
-      
-      <div className="flex items-center justify-center gap-2 w-full max-w-sm px-4 mb-8">
-        <input 
-            type="text" 
-            readOnly 
-            value={`${window.location.origin}/games/${gamePath}/${roomCode}`}
-            className="input-field text-xs sm:text-sm text-center w-full bg-black/50 border-white/10"
-            onClick={(e) => e.target.select()}
+    <div className="paper-panel max-w-2xl mx-auto px-5 py-10 sm:px-8 sm:py-14 text-center flex flex-col items-center justify-center bg-white">
+      <div className="sketch-border bg-yellow-300 px-4 py-2 mb-6 -rotate-2">
+        <span className="text-[clamp(1rem,3vw,1.5rem)] font-black uppercase">Room Code: {roomCode}</span>
+      </div>
+
+      <h2 className="text-[clamp(1.25rem,3vw,2rem)] font-black uppercase text-ink mb-2">
+        Invite Friends
+      </h2>
+      <p className="text-[clamp(0.875rem,1.8vw,1.125rem)] text-gray-800 mb-6 font-bold px-4">
+        Share this link to let friends join directly.
+      </p>
+
+      <div className="flex flex-col sm:flex-row items-stretch justify-center gap-3 w-full max-w-xl mb-8">
+        <input
+          type="text"
+          readOnly
+          value={`${window.location.origin}/games/${gamePath}/${roomCode}`}
+          className="input-field text-xs sm:text-sm text-center"
+          onClick={(e) => e.target.select()}
         />
-        <button onClick={copyLink} className="btn-secondary py-2.5 px-4 text-xs sm:text-sm shrink-0 whitespace-nowrap border border-white/10">
-            {copied ? '✅ Copied' : 'Copy Link'}
+        <button onClick={copyLink} className="sketch-button bg-sky-200 px-5 py-3 text-xs sm:text-sm shrink-0">
+          {copied ? 'Copied' : 'Copy Link'}
         </button>
       </div>
 
-      {/* NEW: Players Joined Section */}
       {players.length > 0 && (
-        <div className="w-full max-w-md px-4 mb-8">
-          <h3 className="text-xs text-gray-500 uppercase tracking-widest mb-3 font-bold">
+        <div className="w-full max-w-md mb-8">
+          <h3 className="text-sm text-gray-800 uppercase tracking-wide mb-4 font-black">
             Players in Lobby ({players.length})
           </h3>
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex flex-wrap justify-center gap-3">
             {players.map((player, idx) => (
-              <div 
-                key={player.id || idx} 
-                className="bg-white/10 border border-white/20 px-3 py-1.5 rounded-full text-sm text-gray-200 flex items-center gap-2 shadow-md transition-all animate-[popIn_0.3s_ease-out]"
+              <div
+                key={player.id || idx}
+                className="sketch-border bg-green-200 px-3 py-1.5 text-sm text-ink font-bold flex items-center gap-2"
               >
-                <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
+                <span className="inline-block h-2 w-2 bg-green-600 border-2 border-black" />
                 {player.name}
               </div>
             ))}
@@ -50,11 +55,13 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
       )}
 
       {isHost ? (
-        <button className="btn-primary w-[80%] sm:w-auto px-10" onClick={onStart} disabled={playerCount < 2}>
+        <button className="sketch-button bg-yellow-300 w-full sm:w-auto px-10 py-3" onClick={onStart} disabled={playerCount < 2}>
           Start Game
         </button>
       ) : (
-        <p className="text-gray-500 animate-pulse uppercase tracking-widest text-xs sm:text-sm">Waiting for host to start...</p>
+        <p className="text-gray-800 uppercase tracking-wide text-sm sm:text-base font-black">
+          Waiting for host to start...
+        </p>
       )}
     </div>
   );
