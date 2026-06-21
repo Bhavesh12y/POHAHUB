@@ -42,10 +42,10 @@ function ChatPanel({ messages, onSend, disabled }) {
         Room Chat
       </div>
       <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
-        {messages.length === 0 && (
+        {(!messages || messages.length === 0) && (
           <p className="text-gray-400 text-center py-4 font-bold italic">No messages yet</p>
         )}
-        {messages.map((msg, idx) => (
+        {messages?.map((msg, idx) => (
           <div key={msg.id || idx} className="break-words">
             <span className="font-black text-[#facc15] uppercase tracking-wider">{msg.playerName}: </span>
             <span className="text-gray-100 font-medium">{msg.message}</span>
@@ -85,7 +85,7 @@ export default function TambolaBoard() {
   const [isAutoDrawing, setIsAutoDrawing] = useState(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState(false);
   const [showRules, setShowRules] = useState(false);
-  const [chatToast, setChatToast] = useState(null); // Mobile chat notification
+  const [chatToast, setChatToast] = useState(null);
 
   const prevDrawnLength = useRef(0);
   const chatRef = useRef(null);
@@ -126,10 +126,9 @@ export default function TambolaBoard() {
     const handleChatMessage = (msg) => {
       setRoom((prev) => prev ? { ...prev, chat: [...(prev.chat ?? []), msg] } : prev);
       
-      // Trigger mobile toast if message isn't from me and screen is < 1024px
       if (msg.playerName !== currentUsername && window.innerWidth < 1024) {
         setChatToast(msg);
-        setTimeout(() => setChatToast(null), 3500); // Hide after 3.5s
+        setTimeout(() => setChatToast(null), 3500); 
       }
     };
 
@@ -166,18 +165,18 @@ export default function TambolaBoard() {
     </div>
   );
 
-  const playerId = room.viewerId;
-  const isHost = room.hostId === playerId;
-  const gameState = room.gameState;
-  const me = gameState?.players.find((p) => p.id === playerId);
+  const playerId = room?.viewerId;
+  const isHost = room?.hostId === playerId;
+  const gameState = room?.gameState;
+  const me = gameState?.players?.find((p) => p.id === playerId);
 
-  if (room.status === 'waiting') {
+  if (room?.status === 'waiting') {
     return (
       <WaitingLobby
-        roomCode={room.code}
+        roomCode={room?.code}
         isHost={isHost}
-        playerCount={room.players.length}
-        players={room.players}
+        playerCount={room?.players?.length || 0}
+        players={room?.players || []}
         onStart={() => socket.emit('room:start', {}, (result) => {
           if (!result.ok) {
             setErrorToast(result.error || 'Failed to start game');
@@ -208,7 +207,7 @@ export default function TambolaBoard() {
   };
 
   const toggleMark = (num) => {
-    const isDrawn = gameState.drawnNumbers.includes(num);
+    const isDrawn = gameState?.drawnNumbers?.includes(num);
     if (!isDrawn) {
       setErrorToast(`Number ${num} hasn't been drawn yet!`);
       setTimeout(() => setErrorToast(''), 2000);
@@ -227,27 +226,24 @@ export default function TambolaBoard() {
     chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  const lastDrawn = gameState.drawnNumbers.length > 0 
+  const lastDrawn = gameState?.drawnNumbers?.length > 0 
     ? gameState.drawnNumbers[gameState.drawnNumbers.length - 1] 
     : '--';
 
   return (
-    <div className="relative min-h-[85vh] font-sans text-black overflow-x-hidden px-2 sm:px-4 py-4 sm:py-8 w-full max-w-[100vw]">
+    <div className="relative min-h-[85vh] w-full flex flex-col items-center font-sans text-black overflow-x-hidden px-4 sm:px-6 py-4 sm:py-8">
       
-      {/* POPUP CSS */}
       <style>{`
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); } }
         .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
       `}</style>
 
-      {/* Toast Error */}
       {errorToast && (
         <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 bg-[#ef4444] border-[3px] border-black text-black px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-bold uppercase rounded shadow-[6px_6px_0px_#000] z-50 animate-bounce whitespace-nowrap">
           {errorToast}
         </div>
       )}
 
-      {/* Mobile Chat Notification Toast */}
       {chatToast && (
         <div 
           onClick={scrollToChat}
@@ -262,7 +258,6 @@ export default function TambolaBoard() {
         </div>
       )}
 
-      {/* Rules Modal */}
       {showRules && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border-[4px] border-black rounded-lg p-6 sm:p-8 w-full max-w-lg shadow-[12px_12px_0px_#000] max-h-[80vh] flex flex-col -rotate-1 animate-pop-in">
@@ -287,8 +282,7 @@ export default function TambolaBoard() {
         </div>
       )}
 
-      {/* Detailed Winning / Game Over Screen */}
-      {gameState.status === 'finished' && (
+      {gameState?.status === 'finished' && (
         <div className="absolute inset-0 z-40 bg-black/80 backdrop-blur-sm flex flex-col items-center p-4 sm:p-10 overflow-y-auto">
           <h1 
             className="text-[clamp(2rem,7vw,5rem)] font-black text-[#facc15] mb-6 mt-10 text-center uppercase tracking-tighter"
@@ -302,8 +296,8 @@ export default function TambolaBoard() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {CLAIMS.map(claim => {
-                const winnerId = gameState.activeClaims[claim.id];
-                const winner = winnerId ? gameState.players.find(p => p.id === winnerId) : null;
+                const winnerId = gameState?.activeClaims?.[claim.id];
+                const winner = winnerId ? gameState?.players?.find(p => p.id === winnerId) : null;
                 return (
                   <div key={claim.id} className={`flex justify-between items-center p-4 rounded border-[3px] border-black shadow-[4px_4px_0px_#000] ${winner ? 'bg-[#10b981]' : 'bg-gray-200'}`}>
                     <span className="font-black uppercase text-sm sm:text-base text-black">{claim.label}</span>
@@ -318,10 +312,9 @@ export default function TambolaBoard() {
         </div>
       )}
 
-      <div className="max-w-[1400px] mx-auto flex flex-col xl:flex-row gap-6 xl:gap-8 w-full">
+      <div className="w-full max-w-[1400px] flex flex-col lg:flex-row justify-center items-start gap-6 lg:gap-8">
         
-        {/* LEFT COLUMN: Caller Console & Drawn Board */}
-        <div className="w-full xl:w-1/4 flex flex-col gap-6 order-1">
+        <div className="w-full lg:w-1/4 flex flex-col gap-6 order-1">
           <div className="bg-[#333333] border-[3px] border-black rounded-lg p-4 sm:p-6 text-center shadow-[8px_8px_0px_#000] w-full -rotate-1 text-white">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-xs sm:text-sm text-[#facc15] uppercase tracking-widest font-black flex-1">Last Drawn</h3>
@@ -338,7 +331,7 @@ export default function TambolaBoard() {
               {lastDrawn}
             </div>
 
-            {isHost && gameState.status === 'playing' && (
+            {isHost && gameState?.status === 'playing' && (
               <div className="mt-6 flex flex-col gap-3">
                 <button
                   onClick={() => setIsAutoDrawing(!isAutoDrawing)}
@@ -363,11 +356,11 @@ export default function TambolaBoard() {
             <h3 className="text-xs sm:text-sm text-black uppercase tracking-widest font-black mb-4 text-center">Numbers Board</h3>
             <div className="grid grid-cols-10 gap-1 text-center">
               {Array.from({ length: 90 }, (_, i) => i + 1).map((num) => {
-                const isDrawn = gameState.drawnNumbers.includes(num);
+                const isDrawn = gameState?.drawnNumbers?.includes(num);
                 return (
                   <div 
                     key={num} 
-                    className={`text-[9px] sm:text-[10px] xl:text-xs py-1 rounded-[2px] border-[2px] border-black font-black transition-all duration-150 flex items-center justify-center aspect-square sm:aspect-auto ${
+                    className={`text-[9px] sm:text-[10px] lg:text-xs py-1 rounded-[2px] border-[2px] border-black font-black transition-all duration-150 flex items-center justify-center aspect-square sm:aspect-auto ${
                       isDrawn ? 'bg-[#facc15] text-black scale-125 shadow-[2px_2px_0px_#000] z-10' : 'bg-gray-100 text-gray-400'
                     }`}
                   >
@@ -379,21 +372,20 @@ export default function TambolaBoard() {
           </div>
         </div>
 
-        {/* MIDDLE COLUMN: Player Ticket & Claims */}
-        <div className="w-full xl:w-2/4 flex flex-col gap-6 order-2">
-          
-          {/* Ticket UI */}
+        <div className="w-full lg:w-2/4 flex flex-col gap-6 order-2">
           <div className="bg-[#3b82f6] border-[4px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full text-white">
             <h2 className="text-2xl sm:text-3xl font-black mb-4 uppercase tracking-wider text-white" style={{ WebkitTextStroke: '1px black' }}>Your Ticket</h2>
-            {me ? (
+            
+            {/* THIS IS THE CRITICAL FIX: Only render map if ticket exists */}
+            {me?.ticket ? (
               <div className="w-full pb-2">
                 <div className="flex flex-col gap-2 w-full bg-white p-2 border-[4px] border-black rounded-lg shadow-[inset_4px_4px_0px_rgba(0,0,0,0.15)]">
                   {me.ticket.map((row, rIdx) => (
                     <div key={rIdx} className="grid grid-cols-9 gap-1 sm:gap-2 w-full">
-                      {row.map((num, cIdx) => {
+                      {row?.map((num, cIdx) => {
                         const isMarked = num !== null && markedNumbers.has(num);
                         
-                        let cellStyle = "bg-gray-200 border-[2px] border-gray-400 text-transparent"; // Empty cell
+                        let cellStyle = "bg-gray-200 border-[2px] border-gray-400 text-transparent";
                         if (num !== null) {
                           if (isMarked) {
                             cellStyle = "bg-[#ef4444] text-white border-[3px] border-black shadow-[inset_3px_3px_0px_rgba(0,0,0,0.3)]";
@@ -406,11 +398,9 @@ export default function TambolaBoard() {
                           <div
                             key={cIdx}
                             onClick={() => num !== null && toggleMark(num)}
-                            className={`relative h-8 sm:h-10 xl:h-14 flex items-center justify-center text-xs sm:text-sm xl:text-xl font-black rounded transition-all select-none ${cellStyle}`}
+                            className={`relative h-8 sm:h-10 lg:h-14 flex items-center justify-center text-xs sm:text-sm lg:text-xl font-black rounded transition-all select-none ${cellStyle}`}
                           >
                             {num !== null ? num : ''}
-                            
-                            {/* Visual "Stamp" for marked cells */}
                             {isMarked && (
                               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-80">
                                 <div className="w-full h-1 bg-black -rotate-45 absolute"></div>
@@ -426,12 +416,11 @@ export default function TambolaBoard() {
               </div>
             ) : (
               <div className="text-center py-6 sm:py-10 text-lg font-bold bg-white text-black border-[3px] border-black rounded shadow-[inset_4px_4px_0px_rgba(0,0,0,0.1)]">
-                You are spectating.
+                Waiting for ticket generation or spectating...
               </div>
             )}
           </div>
 
-          {/* Claim Buttons */}
           <div className="bg-white border-[3px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full rotate-1">
             <div className="flex justify-between items-center mb-4 border-b-[3px] border-black pb-3">
               <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-widest">Prizes</h2>
@@ -444,10 +433,10 @@ export default function TambolaBoard() {
               </button>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {CLAIMS.map((claim) => {
-                const winnerId = gameState.activeClaims[claim.id];
-                const winner = winnerId ? gameState.players.find((p) => p.id === winnerId) : null;
+                const winnerId = gameState?.activeClaims?.[claim.id];
+                const winner = winnerId ? gameState?.players?.find((p) => p.id === winnerId) : null;
 
                 return (
                   <button
@@ -474,12 +463,11 @@ export default function TambolaBoard() {
 
         </div>
 
-        {/* RIGHT COLUMN: Chat Panel */}
-        <div ref={chatRef} className="w-full xl:w-1/4 flex flex-col order-3 h-72 xl:h-auto pb-8 xl:pb-0 scroll-mt-24">
+        <div ref={chatRef} className="w-full lg:w-1/4 flex flex-col order-3 h-72 lg:h-auto pb-8 lg:pb-0 mt-4 lg:mt-0 scroll-mt-24">
           <ChatPanel
-            messages={room.chat ?? []}
+            messages={room?.chat ?? []}
             onSend={(message) => socket.emit('chat:message', { message })}
-            disabled={room.status === 'waiting'}
+            disabled={room?.status === 'waiting'}
           />
         </div>
 
