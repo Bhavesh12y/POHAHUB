@@ -48,7 +48,7 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
     const existingById = room.players.find((p) => p.id === playerId);
     if (existingById) return { ok: true, room };
 
-    const existingByName = room.players.find((p) => p.name.toLowerCase() === playerName.toLowerCase() && !p.socketId);
+  const existingByName = room.players.find((p) => p.name.toLowerCase() === playerName.toLowerCase());
     if (existingByName) {
       const oldId = existingByName.id;
       existingByName.id = playerId;

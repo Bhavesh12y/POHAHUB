@@ -3,11 +3,11 @@ const COLS = 7;
 const WIN_LENGTH = 4;
 
 export function createConnectFourState(players) {
-   const startIndex = Math.floor(Math.random() * players.length);
+   const startIndex = Math.floor(Math.random() * players.length); 
   return {
     board: Array.from({ length: ROWS }, () => Array(COLS).fill(null)),
     players: players.map((p) => ({ id: p.id, name: p.name, color: p.color })),
-    currentTurnIndex: 0,
+    currentTurnIndex: startIndex, 
     winner: null,
     winningCells: [],
     status: 'playing',

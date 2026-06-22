@@ -13,11 +13,11 @@ const WIN_LINES = [
 
 
 export function createTicTacToeState(players) {
-   const startIndex = Math.floor(Math.random() * players.length);
+   const startIndex = Math.floor(Math.random() * players.length); 
   return {
     board: Array(BOARD_SIZE).fill(null),
     players: players.map((p) => ({ id: p.id, name: p.name, symbol: p.symbol })),
-    currentTurnIndex: 0,
+    currentTurnIndex: startIndex, 
     winner: null,
     winningCells: [],
     status: 'playing',
