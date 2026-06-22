@@ -185,6 +185,7 @@ export default function SnakeAndLadderBoard() {
   const isMyTurn = gameState?.players[gameState?.currentPlayerIndex]?.id === myPlayerId;
 
   // --- LOGIC: QUEUE ANIMATION STEPS ---
+ // --- LOGIC: QUEUE ANIMATION STEPS ---
   useEffect(() => {
     if (!gameState?.players) return;
 
@@ -207,14 +208,15 @@ export default function SnakeAndLadderBoard() {
         
         const steps = [];
         let temp = startPos;
+        const intermediatePos = startPos + roll;
         
-        // 1. Walk step-by-step for the dice roll amount
-        if (roll > 0 && startPos + roll <= 100 && startPos < targetPos) {
+        // 1. Walk step-by-step for the dice roll amount FIRST
+        if (roll > 0 && intermediatePos <= 100) {
            for (let i = 1; i <= roll; i++) {
                temp++;
                steps.push(temp);
            }
-           // 2. If the final spot is a snake/ladder, slide to target!
+           // 2. If the intermediate spot is a snake/ladder, slide to the final target!
            if (temp !== targetPos) steps.push(targetPos);
         } else {
            // Fallback jump if rules bounce back
@@ -227,7 +229,7 @@ export default function SnakeAndLadderBoard() {
     });
 
     if (needsInit && Object.keys(visualPositions).length === 0) setVisualPositions(initialPositions);
-  }, [gameState]); // Triggers when server updates the game state
+  }, [gameState]); // Triggers when server updates the game state// Triggers when server updates the game state
 
   // --- LOGIC: EXECUTE ANIMATION QUEUE ---
   useEffect(() => {
@@ -252,23 +254,24 @@ export default function SnakeAndLadderBoard() {
   const handleStart = () => emitWithAck('room:start', {});
   const handleChat = (message) => emitWithAck('chat:message', { message });
   
-  const rollDice = async () => {
+ const rollDice = async () => {
     if (!isMyTurn || isRolling) return;
     setIsRolling(true);
 
-    // Visual Dice Shuffle!
+    // Visual Dice Shuffle! (Slower speed - 120ms per tick)
     let counter = 0;
     const visualRoll = setInterval(() => {
         setDiceDisplay(DICE_FACES[Math.floor(Math.random() * 6) + 1]);
         counter++;
-        if (counter > 10) clearInterval(visualRoll);
-    }, 50);
-
-    // After 600ms of visual shuffling, execute real move
-    setTimeout(async () => {
-      await emitWithAck('game:move', { action: 'roll' });
-      setIsRolling(false);
-    }, 600);
+        if (counter > 8) {
+            clearInterval(visualRoll);
+            
+            // Animation rukne ke baad asli roll server par bhejenge
+            emitWithAck('game:move', { action: 'roll' }).then(() => {
+                setIsRolling(false);
+            });
+        }
+    }, 120);
   };
 
   // Ensure dice always shows the actual rolled number for everyone
