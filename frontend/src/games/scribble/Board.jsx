@@ -19,7 +19,9 @@ function ChatPanel({ messages, onSend, disabled }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white min-h-[300px] lg:min-h-[400px]">
+    
+    
+<div className="flex flex-col w-full h-[400px] lg:h-[550px] shrink-0 bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
       <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold tracking-widest text-xs uppercase text-gray-200 bg-[#222]">
         Guesses & Chat
       </div>
