@@ -42,6 +42,7 @@ export function ChatPanel({ messages = [], onSend, disabled }) {
   };
 
   return (
+    
     <div className="flex flex-col w-full h-[500px] lg:h-[700px] bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
       <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold uppercase tracking-widest text-sm text-gray-200 bg-[#222] shrink-0">
         Room Chat

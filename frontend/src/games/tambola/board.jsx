@@ -37,7 +37,7 @@ function ChatPanel({ messages, onSend, disabled }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white min-h-[300px] lg:max-h-[600px] w-full">
+    <div className="flex flex-col w-full h-[400px] lg:h-[550px] shrink-0 bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
       <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold tracking-widest text-xs uppercase text-gray-200 bg-[#222]">
         Room Chat
       </div>
@@ -238,8 +238,9 @@ export default function TambolaBoard() {
         .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
       `}</style>
 
+      {/* ERROR TOAST Z-INDEX AND POSITION FIXED HERE (z-[999] top-24) */}
       {errorToast && (
-        <div className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 bg-[#ef4444] border-[3px] border-black text-black px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-bold uppercase rounded shadow-[6px_6px_0px_#000] z-50 animate-bounce whitespace-nowrap">
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#ef4444] border-[3px] border-black text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-black uppercase rounded shadow-[6px_6px_0px_#000] z-[999] animate-bounce whitespace-nowrap tracking-widest">
           {errorToast}
         </div>
       )}
@@ -259,7 +260,7 @@ export default function TambolaBoard() {
       )}
 
       {showRules && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border-[4px] border-black rounded-lg p-6 sm:p-8 w-full max-w-lg shadow-[12px_12px_0px_#000] max-h-[80vh] flex flex-col -rotate-1 animate-pop-in">
             <div className="flex justify-between items-center mb-6 border-b-[4px] border-black pb-4">
               <h2 className="text-3xl font-black text-black uppercase tracking-widest">Tambola Rules</h2>
@@ -331,6 +332,20 @@ export default function TambolaBoard() {
               {lastDrawn}
             </div>
 
+            {/* 🔥 PREVIOUS DRAWS FEATURE ADDED HERE 🔥 */}
+            {gameState?.drawnNumbers?.length > 1 && (
+              <div className="mt-4 pt-4 border-t-[2px] border-black/30 w-full">
+                <p className="text-[10px] uppercase font-black text-gray-400 mb-2 tracking-widest">Previous Draws</p>
+                <div className="flex justify-center gap-2 opacity-90">
+                  {gameState.drawnNumbers.slice(-4, -1).map((num, index) => (
+                    <span key={index} className="bg-gray-200 border-[2px] border-black rounded-full w-8 sm:w-10 h-8 sm:h-10 flex items-center justify-center text-xs sm:text-sm font-black text-black shadow-[2px_2px_0px_#000]">
+                      {num}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {isHost && gameState?.status === 'playing' && (
               <div className="mt-6 flex flex-col gap-3">
                 <button
@@ -376,7 +391,6 @@ export default function TambolaBoard() {
           <div className="bg-[#3b82f6] border-[4px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full text-white">
             <h2 className="text-2xl sm:text-3xl font-black mb-4 uppercase tracking-wider text-white" style={{ WebkitTextStroke: '1px black' }}>Your Ticket</h2>
             
-            {/* THIS IS THE CRITICAL FIX: Only render map if ticket exists */}
             {me?.ticket ? (
               <div className="w-full pb-2">
                 <div className="flex flex-col gap-2 w-full bg-white p-2 border-[4px] border-black rounded-lg shadow-[inset_4px_4px_0px_rgba(0,0,0,0.15)]">

@@ -64,98 +64,101 @@ export default function TambolaLanding() {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-12 font-sans">
-      
-      {/* HEADER */}
-      <div className="text-center mb-12 rotate-1">
-        <h2 
-            className="text-[clamp(2rem,6vw,4rem)] font-black mb-3 tracking-tighter text-[#facc15] uppercase"
-            style={{ WebkitTextStroke: '0px black' }}
-        >
-          <div className="inline-block rotate-[-1deg]">
-  <div className="bg-pink-300 border-[3px] border-black px-6 py-3 shadow-[6px_6px_0px_#000]">
-    <h2 className="text-[clamp(1.2rem,3vw,2rem)] font-black uppercase tracking-wide text-black">
-      Tambola
-    </h2>
-  </div>
-</div>
-        </h2>
-        <p className="text-black font-bold tracking-widest uppercase bg-white border-[3px] border-black inline-block px-4 py-1 rounded shadow-[4px_4px_0px_#000] -rotate-1">
-          Host or join a game
-        </p>
-      </div>
-
-      {/* MAIN CARD */}
-      <div className="bg-white border-[4px] border-black p-8 space-y-6 rounded-xl shadow-[clamp(6px,1.5vw,12px)_clamp(6px,1.5vw,12px)_0px_#000] -rotate-1 relative">
+    /* MAIN WRAPPER UPDATED: Center alignment aur top/bottom spacing ke liye */
+    <div className="min-h-screen flex items-center justify-center py-16 px-4 font-sans">
+      <div className="w-full max-w-xl">
         
-        {/* Username Input */}
-        <div>
-          <label className="block text-sm font-black tracking-widest uppercase text-black mb-2">
-            Username
-          </label>
-          <input
-            type="text"
-            className="w-full px-4 py-3 bg-white border-[3px] border-black rounded text-black font-bold focus:outline-none focus:ring-4 focus:ring-[#facc15] transition-all"
-            placeholder="YOUR DISPLAY NAME"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            maxLength={20}
-          />
+        {/* HEADER */}
+        <div className="text-center mb-12 rotate-1">
+          <div 
+              className="text-[clamp(2rem,6vw,4rem)] font-black mb-3 tracking-tighter text-[#facc15] uppercase"
+              style={{ WebkitTextStroke: '0px black' }}
+          >
+            <div className="inline-block rotate-[-1deg]">
+              <div className="bg-pink-300 border-[3px] border-black px-6 py-3 shadow-[6px_6px_0px_#000]">
+                <h1 className="text-[clamp(1.2rem,3vw,2rem)] font-black uppercase tracking-wide text-black m-0 leading-none">
+                  Tambola
+                </h1>
+              </div>
+            </div>
+          </div>
+          <p className="text-black font-bold tracking-widest uppercase bg-white border-[3px] border-black inline-block px-4 py-1 rounded shadow-[4px_4px_0px_#000] -rotate-1">
+            Host or join a game
+          </p>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="px-4 py-3 rounded bg-[#ef4444] border-[3px] border-black text-black font-black uppercase tracking-wide text-sm shadow-[4px_4px_0px_#000] animate-bounce">
-            {error}
+        {/* MAIN CARD */}
+        <div className="bg-white border-[4px] border-black p-8 space-y-6 rounded-xl shadow-[clamp(6px,1.5vw,12px)_clamp(6px,1.5vw,12px)_0px_#000] -rotate-1 relative">
+          
+          {/* Username Input */}
+          <div>
+            <label className="block text-sm font-black tracking-widest uppercase text-black mb-2">
+              Username
+            </label>
+            <input
+              type="text"
+              className="w-full px-4 py-3 bg-white border-[3px] border-black rounded text-black font-bold focus:outline-none focus:ring-4 focus:ring-[#facc15] transition-all"
+              placeholder="YOUR DISPLAY NAME"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              maxLength={20}
+            />
           </div>
-        )}
 
-        {/* Create Room Button */}
-        <button
-          type="button"
-          className="w-full py-3 bg-[#facc15] text-black font-black tracking-widest uppercase border-[3px] border-black rounded shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[6px_6px_0px_#000] disabled:cursor-not-allowed"
-          onClick={handleCreate}
-          disabled={loading}
-        >
-          {loading ? 'Connecting...' : 'Create Room'}
-        </button>
+          {/* Error Message */}
+          {error && (
+            <div className="px-4 py-3 rounded bg-[#ef4444] border-[3px] border-black text-black font-black uppercase tracking-wide text-sm shadow-[4px_4px_0px_#000] animate-bounce">
+              {error}
+            </div>
+          )}
 
-        {/* Divider */}
-        <div className="relative py-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t-[3px] border-black" />
+          {/* Create Room Button */}
+          <button
+            type="button"
+            className="w-full py-3 bg-[#facc15] text-black font-black tracking-widest uppercase border-[3px] border-black rounded shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[6px_6px_0px_#000] disabled:cursor-not-allowed"
+            onClick={handleCreate}
+            disabled={loading}
+          >
+            {loading ? 'Connecting...' : 'Create Room'}
+          </button>
+
+          {/* Divider */}
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t-[3px] border-black" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-4 bg-white font-black tracking-widest uppercase text-black border-[3px] border-black rounded-full shadow-[2px_2px_0px_#000]">
+                OR JOIN EXISTING
+              </span>
+            </div>
           </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="px-4 bg-white font-black tracking-widest uppercase text-black border-[3px] border-black rounded-full shadow-[2px_2px_0px_#000]">
-              OR JOIN EXISTING
-            </span>
+
+          {/* Room Code Input */}
+          <div>
+            <label className="block text-sm font-black tracking-widest uppercase text-black mb-2">
+              Room Code
+            </label>
+            <input
+              type="text"
+              className="w-full px-4 py-4 bg-gray-100 border-[3px] border-black rounded focus:outline-none focus:ring-4 focus:ring-[#3b82f6] transition-all uppercase tracking-[0.3em] text-center font-black text-2xl text-black"
+              placeholder="ABC123"
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+              maxLength={6}
+            />
           </div>
+
+          {/* Join Room Button */}
+          <button
+            type="button"
+            className="w-full py-3 bg-[#3b82f6] text-white font-black tracking-widest uppercase border-[3px] border-black rounded shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[6px_6px_0px_#000] disabled:cursor-not-allowed"
+            onClick={handleJoin}
+            disabled={loading}
+          >
+            {loading ? 'Connecting...' : 'Join Room'}
+          </button>
         </div>
-
-        {/* Room Code Input */}
-        <div>
-          <label className="block text-sm font-black tracking-widest uppercase text-black mb-2">
-            Room Code
-          </label>
-          <input
-            type="text"
-            className="w-full px-4 py-4 bg-gray-100 border-[3px] border-black rounded focus:outline-none focus:ring-4 focus:ring-[#3b82f6] transition-all uppercase tracking-[0.3em] text-center font-black text-2xl text-black"
-            placeholder="ABC123"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            maxLength={6}
-          />
-        </div>
-
-        {/* Join Room Button */}
-        <button
-          type="button"
-          className="w-full py-3 bg-[#3b82f6] text-white font-black tracking-widest uppercase border-[3px] border-black rounded shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[6px_6px_0px_#000] disabled:cursor-not-allowed"
-          onClick={handleJoin}
-          disabled={loading}
-        >
-          {loading ? 'Connecting...' : 'Join Room'}
-        </button>
       </div>
     </div>
   );
