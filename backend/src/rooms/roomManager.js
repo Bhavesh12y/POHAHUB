@@ -4,7 +4,7 @@ import { createScribbleState, serializeScribbleState } from '../games/scribble.j
 import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } from '../games/snakeAndLadder.js';
 import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } from '../games/tambola.js';
 
-
+import { createStonePaperScissorState, playSpsMove, nextSpsRound, serializeSpsState } from '../games/stonePaperScissor.js';
 const PLAYER_COLORS = ['red', 'yellow'];
 const PLAYER_SYMBOLS = ['X', 'O'];
 
@@ -29,7 +29,7 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
     let limit = maxPlayers;
     if (gameType === 'scribble') limit = 8;
     if (gameType === 'tambola') limit = 50; // Tambola gets a massive lobby!
-
+  if (gameType === 'stone-paper-scissor') limit = 2;
     const host = { id: hostId, name: hostName, socketId: null };
     const room = {
       code: this.generateRoomCode(),
@@ -205,6 +205,8 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
         room.players.map((p) => ({ id: p.id, name: p.name })),
         room.hostId
       );
+    }else if (room.gameType === 'stone-paper-scissor') {
+      room.gameState = createStonePaperScissorState(room.players.map((p) => ({ id: p.id, name: p.name }))); // Add this line
     }
 
     room.status = 'playing';
@@ -232,6 +234,14 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
         return result.ok ? { ok: true, room } : { ok: false, error: result.error };
       }
     }
+    if (room.gameType === 'stone-paper-scissor') {
+      if (payload.action === 'play') {
+        return playSpsMove(room.gameState, playerId, payload.choice).ok ? { ok: true, room } : { ok: false };
+      }
+      if (payload.action === 'nextRound') {
+        return nextSpsRound(room.gameState).ok ? { ok: true, room } : { ok: false };
+      }
+    }
     return { ok: false, error: 'Unsupported game type' };
   }
 
@@ -251,7 +261,7 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     else if (room.gameState && room.gameType === 'scribble') payload.gameState = serializeScribbleState(room.gameState, viewerId);
     else if (room.gameState && room.gameType === 'snake-and-ladder') payload.gameState = serializeSnakeAndLadderState(room.gameState);
     else if (room.gameState && room.gameType === 'tambola') payload.gameState = serializeTambolaState(room.gameState);
-
+    else if (room.gameState && room.gameType === 'stone-paper-scissor') payload.gameState = serializeSpsState(room.gameState);
     return payload;
   }
 }
