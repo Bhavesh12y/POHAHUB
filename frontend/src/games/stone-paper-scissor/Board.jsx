@@ -46,7 +46,8 @@ export default function Board() {
   const resetGame = () => emitWithAck('game:reset');
 
   if (room.status === 'waiting') {
-    return <WaitingLobby roomCode={room.code} isHost={isHost} playerCount={room.players.length} onStart={handleStart} gamePath="stone-paper-scissor/room" />;
+        return <WaitingLobby roomCode={room.code} isHost={isHost} playerCount={room.players.length} onStart={handleStart} gamePath="stone-paper-scissor" />; 
+    
   }
 
   return (
