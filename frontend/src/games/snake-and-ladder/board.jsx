@@ -59,7 +59,7 @@ const getCoordinates = (position) => {
   const row = Math.floor((position - 1) / 10);
   const isLtoR = row % 2 === 0;
   const col = isLtoR ? (position - 1) % 10 : 9 - ((position - 1) % 10);
-  return { x: (col * 10) + 5, y: ((9 - row) * 10) + 5 }; // Returns 0-100 coordinates
+  return { x: (col * 10) + 5, y: ((9 - row) * 10) + 5 }; 
 };
 
 const LadderGraphic = ({ start, end }) => {
@@ -67,7 +67,7 @@ const LadderGraphic = ({ start, end }) => {
   const dy = end.y - start.y;
   const length = Math.sqrt(dx*dx + dy*dy);
   const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-  const numRungs = Math.floor(length / 4); // Spacing between rungs
+  const numRungs = Math.floor(length / 4); 
   
   return (
     <g transform={`translate(${start.x}, ${start.y}) rotate(${angle})`}>
@@ -118,11 +118,13 @@ export default function SnakeAndLadderBoard() {
   const location = useLocation();
 
   const [room, setRoom] = useState(location.state?.room ?? null);
-  
   const [chatToast, setChatToast] = useState(null);
   const chatRef = useRef(null);
 
+  // Dice & Animation States
   const [isRolling, setIsRolling] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [diceHighlighted, setDiceHighlighted] = useState(false);
   const [diceDisplay, setDiceDisplay] = useState('🎲');
   const DICE_FACES = ['❓', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   
@@ -150,7 +152,6 @@ export default function SnakeAndLadderBoard() {
     });
     socket.on('chat:message', (msg) => {
       setRoom((prev) => prev ? { ...prev, chat: [...(prev.chat ?? []), msg] } : prev);
-
       if (msg.playerName !== username && window.innerWidth < 1024) {
         setChatToast(msg);
         setTimeout(() => setChatToast(null), 3500);
@@ -168,9 +169,39 @@ export default function SnakeAndLadderBoard() {
   const isHost = room?.hostId === myPlayerId;
   const isMyTurn = gameState?.players[gameState?.currentPlayerIndex]?.id === myPlayerId;
 
+  // --- LOGIC: UNIFIED SLOW DICE ANIMATION ---
+  useEffect(() => {
+    // Only trigger if a new roll has happened on the server
+    if (gameState?.lastRoll && gameState.lastRoll.roll !== prevRollRef.current) {
+      prevRollRef.current = gameState.lastRoll.roll;
+      
+      setIsRolling(true);
+      setDiceHighlighted(false); // Reset highlight during roll
+      
+      let counter = 0;
+      const visualRoll = setInterval(() => {
+          setDiceDisplay(DICE_FACES[Math.floor(Math.random() * 6) + 1]);
+          counter++;
+          if (counter > 5) { // 5 ticks * 250ms = 1.25s of rolling
+              clearInterval(visualRoll);
+              setDiceDisplay(DICE_FACES[gameState.lastRoll.roll]); 
+              setDiceHighlighted(true); // Make it bright and glowing!
+              
+              // Give players 400ms to admire the bright number before tokens start sliding
+              setTimeout(() => {
+                  setIsRolling(false);
+              }, 400);
+          }
+      }, 250); // Slower, chunkier roll feel
+
+      return () => clearInterval(visualRoll);
+    }
+  }, [gameState?.lastRoll]);
+
   // --- LOGIC: QUEUE ANIMATION STEPS ---
   useEffect(() => {
-    if (!gameState?.players) return;
+    // DO NOT queue token movements while the dice is visually rolling!
+    if (!gameState?.players || isRolling) return;
 
     let needsInit = false;
     const initialPositions = { ...visualPositions };
@@ -201,18 +232,24 @@ export default function SnakeAndLadderBoard() {
            steps.push(targetPos);
         }
 
-        animationQueue.current[p.id] = (animationQueue.current[p.id] || []).concat(steps);
-        needsInit = true;
+        if (steps.length > 0) {
+           animationQueue.current[p.id] = (animationQueue.current[p.id] || []).concat(steps);
+           setIsAnimating(true); // Lock the board!
+           needsInit = true;
+        }
       }
     });
 
-    if (needsInit && Object.keys(visualPositions).length === 0) setVisualPositions(initialPositions);
-  }, [gameState]); 
+    if (needsInit && Object.keys(visualPositions).length === 0) {
+        setVisualPositions(initialPositions);
+    }
+  }, [gameState, isRolling]); // Triggers when isRolling becomes false
 
   // --- LOGIC: EXECUTE ANIMATION QUEUE ---
   useEffect(() => {
     const interval = setInterval(() => {
         let moved = false;
+        let stillAnimating = false;
         const newVis = { ...visualPositions };
         
         Object.keys(animationQueue.current).forEach(id => {
@@ -220,9 +257,19 @@ export default function SnakeAndLadderBoard() {
                 newVis[id] = animationQueue.current[id].shift();
                 moved = true;
             }
+            // Check if queue STILL has items left
+            if (animationQueue.current[id] && animationQueue.current[id].length > 0) {
+                stillAnimating = true;
+            }
         });
 
-        if (moved) setVisualPositions(newVis);
+        if (moved) {
+            setVisualPositions(newVis);
+        }
+        
+        // Update global lock state securely
+        setIsAnimating(prev => prev !== stillAnimating ? stillAnimating : prev);
+        
     }, 400);
 
     return () => clearInterval(interval);
@@ -233,38 +280,13 @@ export default function SnakeAndLadderBoard() {
   const handleChat = (message) => emitWithAck('chat:message', { message });
   
   const rollDice = async () => {
-    if (!isMyTurn || isRolling) return;
-    setIsRolling(true);
-
-    let counter = 0;
-    const visualRoll = setInterval(() => {
-        setDiceDisplay(DICE_FACES[Math.floor(Math.random() * 6) + 1]);
-        counter++;
-        if (counter > 8) {
-            clearInterval(visualRoll);
-            emitWithAck('game:move', { action: 'roll' }).then(() => {
-                setIsRolling(false);
-            });
-        }
-    }, 120);
+    if (!isMyTurn || isRolling || isAnimating) return;
+    setIsRolling(true); // Prevent double clicks instantly
+    setDiceHighlighted(false);
+    
+    // We only emit. The shared useEffect will catch the server update and animate for everyone identically!
+    emitWithAck('game:move', { action: 'roll' });
   };
-
-  // --- LOGIC: OPPONENT DICE ANIMATION ---
-  useEffect(() => {
-    if (gameState?.lastRoll && gameState.lastRoll.roll !== prevRollRef.current && !isRolling) {
-      prevRollRef.current = gameState.lastRoll.roll;
-      
-      let counter = 0;
-      const visualRoll = setInterval(() => {
-          setDiceDisplay(DICE_FACES[Math.floor(Math.random() * 6) + 1]);
-          counter++;
-          if (counter > 8) {
-              clearInterval(visualRoll);
-              setDiceDisplay(DICE_FACES[gameState.lastRoll.roll]); 
-          }
-      }, 100);
-    }
-  }, [gameState?.lastRoll?.roll, isRolling]);
 
   const scrollToChat = () => {
     setChatToast(null);
@@ -276,6 +298,17 @@ export default function SnakeAndLadderBoard() {
         Connecting...
     </div>
   );
+
+  // Dynamic button styles based on exact state
+  const isButtonDisabled = !isMyTurn || isRolling || isAnimating;
+  let btnClass = "text-[clamp(2rem,5vw,3.5rem)] mb-4 transition-all duration-300 bg-white border-[3px] rounded-xl p-4 flex items-center justify-center relative ";
+  if (diceHighlighted) {
+      btnClass += " border-[#facc15] shadow-[0px_0px_25px_#facc15] text-[#ef4444] scale-110 z-10 ";
+  } else if (isButtonDisabled) {
+      btnClass += " border-black text-gray-400 bg-gray-100 shadow-[2px_2px_0px_#000] translate-y-[2px] translate-x-[2px] cursor-not-allowed ";
+  } else {
+      btnClass += " border-black text-black shadow-[4px_4px_0px_#000] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#000] cursor-pointer ";
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 relative font-sans">
@@ -377,7 +410,7 @@ export default function SnakeAndLadderBoard() {
                   })}
                 </div>
 
-                {/* 🔥 GOTIYAN (TOKENS) BADI KI GAYI HAIN 🔥 */}
+                {/* ANIMATED TOKENS */}
                 {gameState.players.map(p => {
                   const displayPos = visualPositions[p.id] ?? p.position;
                   if (displayPos === 0) return null;
@@ -405,15 +438,17 @@ export default function SnakeAndLadderBoard() {
           {room.status === 'playing' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-[#3b82f6] border-[3px] border-black p-6 rounded-lg flex flex-col items-center justify-center shadow-[6px_6px_0px_#000] -rotate-1">
+                
                 <button 
                     onClick={rollDice} 
-                    disabled={!isMyTurn || isRolling} 
-                    className={`text-[clamp(2rem,5vw,3.5rem)] mb-4 transition-all bg-white border-[3px] border-black rounded-xl p-4 shadow-[4px_4px_0px_#000] flex items-center justify-center ${!isMyTurn ? 'cursor-not-allowed text-gray-400 bg-gray-100 shadow-[2px_2px_0px_#000] translate-y-[2px] translate-x-[2px]' : 'hover:-translate-y-1 hover:shadow-[6px_6px_0px_#000] cursor-pointer text-black'}`}
+                    disabled={isButtonDisabled} 
+                    className={btnClass}
                 >
                   {diceDisplay}
                 </button>
-                <p className="text-xs font-black tracking-widest uppercase text-black bg-white px-3 py-1 border-[2px] border-black rounded">
-                    {isMyTurn ? 'Click to Roll' : 'Wait for turn'}
+                
+                <p className="text-xs font-black tracking-widest uppercase text-black bg-white px-3 py-1 border-[2px] border-black rounded transition-all">
+                    {isAnimating ? 'Moving...' : isMyTurn ? 'Click to Roll' : 'Wait for turn'}
                 </p>
               </div>
 
@@ -433,7 +468,7 @@ export default function SnakeAndLadderBoard() {
           )}
         </div>
 
-        {/* LOBBY CHAT - MOVED OUTSIDE FLEX-1 TO FIX LAYOUT */}
+        {/* LOBBY CHAT */}
         <div ref={chatRef} className="w-full lg:w-80 shrink-0 mt-4 lg:mt-0 scroll-mt-24">
             <ChatPanel messages={room.chat ?? []} onSend={handleChat} />
         </div>
