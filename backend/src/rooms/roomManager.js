@@ -205,8 +205,7 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
         room.players.map((p) => ({ id: p.id, name: p.name })),
         room.hostId
       );
-    }
-    else if (room.gameType === 'stone-paper-scissor') {
+    }else if (room.gameType === 'stone-paper-scissor') {
       room.gameState = createStonePaperScissorState(room.players.map((p) => ({ id: p.id, name: p.name }))); // Add this line
     }
 
