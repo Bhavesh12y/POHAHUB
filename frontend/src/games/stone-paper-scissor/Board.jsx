@@ -45,10 +45,19 @@ export default function Board() {
   const nextRound = () => emitWithAck('game:move', { action: 'nextRound' });
   const resetGame = () => emitWithAck('game:reset');
 
-  if (room.status === 'waiting') {
-        return <WaitingLobby roomCode={room.code} isHost={isHost} playerCount={room.players.length} onStart={handleStart} gamePath="stone-paper-scissor" />; 
-    
+  console.log(room);
+console.log(room.status);
+
+ if (room.status === 'waiting') {
+    return <WaitingLobby roomCode={room.code} isHost={isHost} playerCount={room.players.length} onStart={handleStart} gamePath="stone-paper-scissor" />;
   }
+
+  // Prevents the "Cannot read currentRound of undefined" crash!
+  if (!gameState) {
+    return <div className="text-center py-24 text-black font-black uppercase tracking-widest text-xl animate-pulse">Loading Match...</div>;
+  }
+
+
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 font-sans">
