@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* global.css or index.css */
+.perspective { perspective: 1200px; }
+.backface-hidden { backface-visibility: hidden; transform-style: preserve-3d; }
+.relative { transform-style: preserve-3d; }
+
+
 @layer base {
   html {
     min-height: 100%;
