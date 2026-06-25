@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
@@ -7,49 +7,73 @@ import confetti from 'canvas-confetti';
 
 const ICONS = {
   stone: (
-    <svg viewBox="0 0 64 64" className="w-20 h-20">
+    <svg viewBox="0 0 64 64" className="w-full h-full">
       <defs>
         <linearGradient id="gRock" x1="0" x2="1">
           <stop offset="0" stopColor="#9ca3ff" />
           <stop offset="1" stopColor="#6366f1" />
         </linearGradient>
       </defs>
-      <path fill="url(#gRock)" d="M8 36c0-12 8-20 20-20s20 8 28 20-8 20-28 20S8 48 8 36z"/>
+      <path fill="url(#gRock)" d="M8 36c0-12 8-20 20-20s20 8 28 20-8 20-28 20S8 48 8 36z" />
     </svg>
   ),
   paper: (
-    <svg viewBox="0 0 64 64" className="w-20 h-20">
+    <svg viewBox="0 0 64 64" className="w-full h-full">
       <defs>
         <linearGradient id="gPaper" x1="0" x2="1">
           <stop offset="0" stopColor="#fff7ed" />
           <stop offset="1" stopColor="#f97316" />
         </linearGradient>
       </defs>
-      <rect x="10" y="8" width="44" height="48" rx="4" fill="url(#gPaper)"/>
+      <rect x="10" y="8" width="44" height="48" rx="4" fill="url(#gPaper)" />
       <line x1="18" y1="20" x2="46" y2="20" stroke="#fff" strokeWidth="2" />
       <line x1="18" y1="28" x2="46" y2="28" stroke="#fff" strokeWidth="2" />
     </svg>
   ),
   scissor: (
-    <svg viewBox="0 0 64 64" className="w-20 h-20">
+    <svg viewBox="0 0 64 64" className="w-full h-full">
       <defs>
         <linearGradient id="gScissor" x1="0" x2="1">
           <stop offset="0" stopColor="#86efac" />
           <stop offset="1" stopColor="#10b981" />
         </linearGradient>
       </defs>
-      <path d="M12 52 L28 36 L44 52" stroke="url(#gScissor)" strokeWidth="4" strokeLinecap="round" fill="none"/>
-      <circle cx="20" cy="20" r="8" fill="url(#gScissor)"/>
-      <circle cx="44" cy="20" r="8" fill="url(#gScissor)"/>
+      <path d="M12 52 L28 36 L44 52" stroke="url(#gScissor)" strokeWidth="4" strokeLinecap="round" fill="none" />
+      <circle cx="20" cy="20" r="8" fill="url(#gScissor)" />
+      <circle cx="44" cy="20" r="8" fill="url(#gScissor)" />
     </svg>
   ),
   hidden: (
-    <svg viewBox="0 0 64 64" className="w-20 h-20">
+    <svg viewBox="0 0 64 64" className="w-full h-full">
       <circle cx="32" cy="32" r="28" fill="#111827" />
       <text x="32" y="38" textAnchor="middle" fontSize="20" fill="#f9fafb" fontWeight="700">?</text>
     </svg>
   )
 };
+
+const CHOICE_COLORS = { stone: '#6366f1', paper: '#f97316', scissor: '#10b981' };
+const AVATAR_PALETTE = ['#ef4444', '#6366f1', '#10b981', '#f97316', '#eab308', '#06b6d4', '#ec4899'];
+
+function avatarColor(name = '') {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+}
+
+function Avatar({ name, size = 32 }) {
+  return (
+    <div
+      className="rounded-full border-[3px] border-black flex items-center justify-center font-black uppercase text-white shrink-0"
+      style={{ background: avatarColor(name || '?'), width: size, height: size, fontSize: size * 0.45 }}
+    >
+      {name?.[0] || '?'}
+    </div>
+  );
+}
+
+function IconBox({ choice, className = 'w-16 h-16 sm:w-20 sm:h-20' }) {
+  return <div className={className}>{ICONS[choice] || ICONS.hidden}</div>;
+}
 
 export default function Board() {
   const { roomCode } = useParams();
@@ -57,6 +81,10 @@ export default function Board() {
   const location = useLocation();
   const [room, setRoom] = useState(location.state?.room ?? null);
   const [celebrating, setCelebrating] = useState(false);
+
+  // idle -> approaching -> impact -> reveal
+  const [revealStage, setRevealStage] = useState('idle');
+  const lastRoundRef = useRef(null);
 
   useEffect(() => {
     const socket = connectSocket();
@@ -71,7 +99,6 @@ export default function Board() {
     socket.on('connect', syncRoom);
     socket.on('room:update', (updatedRoom) => {
       if (updatedRoom.code === roomCode?.toUpperCase()) {
-        // trigger celebration when a winner appears
         if (updatedRoom.gameState?.status === 'won' && updatedRoom.gameState?.winner?.id === updatedRoom.viewerId) {
           setTimeout(() => runConfetti(), 300);
         }
@@ -84,6 +111,36 @@ export default function Board() {
 
     return () => { socket.off('connect'); socket.off('room:update'); };
   }, [roomCode, navigate]);
+
+  // Drive the collide -> smoke -> reveal sequence whenever a new round result lands
+  useEffect(() => {
+    const gs = room?.gameState;
+    if (!gs) return;
+    if (gs.status === 'round-result') {
+      if (lastRoundRef.current !== gs.currentRound) {
+        lastRoundRef.current = gs.currentRound;
+        setRevealStage('approaching');
+      }
+    } else {
+      setRevealStage('idle');
+    }
+  }, [room?.gameState?.status, room?.gameState?.currentRound]);
+
+  useEffect(() => {
+    if (revealStage !== 'impact') return;
+    const t = setTimeout(() => setRevealStage('reveal'), 750);
+    return () => clearTimeout(t);
+  }, [revealStage]);
+
+  // Randomized smoke-puff layout, regenerated fresh for each round
+  const puffs = useMemo(() => Array.from({ length: 8 }, (_, i) => ({
+    id: i,
+    dx: (Math.random() - 0.5) * 170,
+    dy: -(Math.random() * 70 + 10),
+    size: 46 + Math.random() * 54,
+    delay: Math.random() * 0.12,
+    duration: 0.65 + Math.random() * 0.35,
+  })), [room?.gameState?.currentRound]);
 
   if (!room) return <div className="text-center py-24 text-black font-black uppercase text-xl animate-pulse">Connecting...</div>;
 
@@ -100,11 +157,7 @@ export default function Board() {
 
   function runConfetti() {
     setCelebrating(true);
-    confetti({
-      particleCount: 120,
-      spread: 70,
-      origin: { y: 0.2 }
-    });
+    confetti({ particleCount: 120, spread: 70, origin: { y: 0.2 } });
     setTimeout(() => setCelebrating(false), 2500);
   }
 
@@ -116,105 +169,217 @@ export default function Board() {
     return <div className="text-center py-24 text-black font-black uppercase tracking-widest text-xl animate-pulse">Loading Match...</div>;
   }
 
-  const choiceVariants = {
-    idle: { scale: 1, y: 0 },
-    hover: { scale: 1.06, y: -6 },
-    tap: { scale: 0.96 }
-  };
-
-  const cardFlip = {
-    front: { rotateY: 0, transition: { duration: 0.6 } },
-    back: { rotateY: 180, transition: { duration: 0.6 } }
-  };
+  const colliding = revealStage === 'approaching' || revealStage === 'impact' || revealStage === 'reveal';
+  const winnerId = gameState.roundWinnerId;
+  const isTie = winnerId === 'tie';
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 font-sans">
-      <div className="bg-gradient-to-r from-white to-gray-50 border-[4px] border-black shadow-[8px_8px_0px_#000] p-6 rounded-lg -rotate-1 mb-8 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-white to-gray-50 border-[4px] border-black shadow-[8px_8px_0px_#000] p-4 sm:p-6 rounded-lg -rotate-1 mb-8 flex justify-between items-center gap-4">
         <div>
           <p className="text-xs font-black tracking-widest text-gray-500 uppercase">Best of 3</p>
-          <h2 className="text-2xl font-black uppercase text-[#ef4444]">Round {gameState.currentRound}</h2>
+          <AnimatePresence mode="wait">
+            <motion.h2
+              key={gameState.currentRound}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+              className="text-2xl font-black uppercase text-[#ef4444]"
+            >
+              Round {gameState.currentRound}
+            </motion.h2>
+          </AnimatePresence>
         </div>
-        <div className="text-right">
-          <p className="text-xs font-black tracking-widest text-gray-500 uppercase">Scoreboard</p>
-          <p className="text-xl font-bold uppercase">{me?.name}: {me?.score} | {opponent?.name || 'Waiting'}: {opponent?.score || 0}</p>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
+            <Avatar name={me?.name} size={30} />
+            <span className="font-black uppercase text-base sm:text-lg">{me?.score ?? 0}</span>
+          </div>
+          <span className="font-black text-gray-300 text-sm">vs</span>
+          <div className="flex items-center gap-2">
+            <span className="font-black uppercase text-base sm:text-lg">{opponent?.score ?? 0}</span>
+            <Avatar name={opponent?.name || '?'} size={30} />
+          </div>
         </div>
       </div>
 
       <AnimatePresence>
         {(gameState.status === 'won' || gameState.status === 'draw') ? (
-          <motion.div key="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="bg-gradient-to-r from-yellow-400 to-yellow-300 border-[4px] border-black shadow-[12px_12px_0px_#000] p-10 text-center rounded-xl rotate-1">
-            <h2 className="text-5xl font-black mb-4 uppercase">
+          <motion.div
+            key="result"
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="bg-gradient-to-br from-yellow-300 to-amber-400 border-[4px] border-black shadow-[12px_12px_0px_#000] p-8 sm:p-10 text-center rounded-xl rotate-1"
+          >
+            <div className="text-6xl mb-2">{gameState.status === 'draw' ? '🤝' : '🏆'}</div>
+            <h2 className="text-4xl sm:text-5xl font-black mb-2 uppercase">
               {gameState.status === 'draw' ? "It's a Draw!" : `${gameState.winner.name} Wins!`}
             </h2>
-            <div className="flex justify-center gap-4 mt-8">
+            <p className="font-bold uppercase text-black/60 mb-6 text-sm sm:text-base">
+              Final score — {me?.name}: {me?.score} · {opponent?.name}: {opponent?.score}
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
               {isHost && (
-                <button onClick={resetGame} className="bg-green-400 text-black font-black uppercase border-[3px] border-black py-3 px-8 rounded shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px]">Play Again</button>
+                <button onClick={resetGame} className="bg-green-400 text-black font-black uppercase border-[3px] border-black py-3 px-8 rounded shadow-[4px_4px_0px_#000] transition-transform hover:translate-y-[2px] hover:translate-x-[2px]">Play Again</button>
               )}
-              <Link to="/" className="bg-white text-black font-black uppercase border-[3px] border-black py-3 px-8 rounded shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px]">Exit</Link>
+              <Link to="/" className="bg-white text-black font-black uppercase border-[3px] border-black py-3 px-8 rounded shadow-[4px_4px_0px_#000] transition-transform hover:translate-y-[2px] hover:translate-x-[2px]">Exit</Link>
             </div>
           </motion.div>
         ) : (
-          <motion.div key="play" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Opponent Card */}
-            <div className="bg-gradient-to-br from-gray-100 to-gray-200 border-[4px] border-black shadow-[8px_8px_0px_#000] p-8 text-center flex flex-col items-center justify-center min-h-[300px] rounded-lg rotate-1 perspective">
-              <h3 className="text-xl font-black uppercase mb-4">{opponent?.name || 'Opponent'}</h3>
-              <motion.div className="relative w-40 h-40" initial="front" animate={opponent?.currentChoice ? "back" : "front"} variants={cardFlip}>
-                <motion.div className="absolute inset-0 bg-white rounded-lg flex items-center justify-center backface-hidden shadow-inner" style={{ transform: 'rotateY(0deg)' }}>
-                  {opponent?.currentChoice ? ICONS[opponent.currentChoice] : ICONS.hidden}
-                </motion.div>
-                <motion.div className="absolute inset-0 bg-gray-800 rounded-lg flex items-center justify-center text-white backface-hidden" style={{ transform: 'rotateY(180deg)' }}>
-                  {opponent?.currentChoice ? ICONS[opponent.currentChoice] : ICONS.hidden}
-                </motion.div>
-              </motion.div>
-              <p className="font-bold text-gray-500 uppercase mt-4">{opponent?.currentChoice ? 'Choice Locked' : 'Thinking...'}</p>
-            </div>
+          <motion.div key="play" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <motion.div
+              animate={revealStage === 'impact' ? { x: [0, -10, 10, -7, 7, -3, 3, 0] } : { x: 0 }}
+              transition={{ duration: 0.45 }}
+              className="relative"
+            >
+              <div className={`relative flex items-stretch min-h-[260px] sm:min-h-[320px] ${colliding ? 'justify-center gap-3 sm:gap-4' : 'justify-between gap-4'}`}>
 
-            {/* Player Card */}
-            <div className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-8 text-center flex flex-col items-center justify-center min-h-[300px] rounded-lg -rotate-1">
-              <h3 className="text-xl font-black uppercase mb-4">You <span className="text-sm font-normal">({me?.name})</span></h3>
-
-              {gameState.status === 'round-result' ? (
-                <>
-                  <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-[5rem] mb-4">
-                    {ICONS[me?.currentChoice]}
-                  </motion.div>
-
-                  <motion.h3 initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-2xl font-black text-[#ef4444] uppercase mb-4">
-                    {gameState.roundWinnerId === 'tie' ? "Round Tie!" : gameState.roundWinnerId === me.id ? "You Won the Round!" : "Opponent Won!"}
-                  </motion.h3>
-
-                  {isHost ? (
-                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} onClick={nextRound} className="bg-yellow-400 border-[3px] border-black px-6 py-2 shadow-[4px_4px_0px_#000] font-black uppercase mt-4">Start Next Round</motion.button>
-                  ) : (
-                    <p className="text-sm font-bold text-gray-500 uppercase mt-4">Waiting for host...</p>
+                {/* Opponent fighter */}
+                <motion.div
+                  layout
+                  transition={{ layout: { duration: 0.85, ease: [0.45, 0, 0.2, 1] } }}
+                  onLayoutAnimationComplete={() => { if (revealStage === 'approaching') setRevealStage('impact'); }}
+                  animate={{
+                    scale: revealStage === 'reveal' ? (isTie ? 1 : winnerId === opponent?.id ? 1.06 : 0.94) : 1,
+                    opacity: revealStage === 'reveal' && !isTie && winnerId !== opponent?.id ? 0.55 : 1,
+                  }}
+                  className={`w-36 sm:w-48 bg-gradient-to-br from-gray-100 to-gray-200 border-[4px] border-black shadow-[8px_8px_0px_#000] p-4 sm:p-6 text-center flex flex-col items-center justify-center rounded-lg rotate-1 ${revealStage === 'reveal' && !isTie && winnerId !== opponent?.id ? 'grayscale' : ''}`}
+                  style={revealStage === 'reveal' && winnerId === opponent?.id ? { boxShadow: `8px 8px 0px #000, 0 0 0 4px ${CHOICE_COLORS[opponent?.currentChoice] || '#000'}` } : undefined}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <Avatar name={opponent?.name} size={26} />
+                    <h3 className="text-sm sm:text-xl font-black uppercase truncate max-w-[80px] sm:max-w-[130px]">{opponent?.name || 'Opponent'}</h3>
+                  </div>
+                  <IconBox choice={revealStage === 'idle' ? 'hidden' : (opponent?.currentChoice || 'hidden')} />
+                  {revealStage === 'idle' && (
+                    <p className="font-bold text-gray-500 uppercase mt-3 text-[10px] sm:text-sm">
+                      {opponent?.currentChoice ? '🔒 Locked In' : 'Thinking…'}
+                    </p>
                   )}
-                </>
-              ) : (
-                <>
-                  <motion.div className="text-[5rem] mb-6">{me?.currentChoice ? ICONS[me.currentChoice] : ICONS.hidden}</motion.div>
+                </motion.div>
+
+                {/* VS badge, only while both are still choosing */}
+                <AnimatePresence>
+                  {revealStage === 'idle' && (
+                    <motion.div
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-black text-white font-black text-xs sm:text-sm uppercase rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center border-[3px] border-white shadow-[3px_3px_0px_#000] rotate-6 z-10"
+                    >
+                      VS
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Smoke + impact burst, centered exactly where the two fighters collide */}
+                <AnimatePresence>
+                  {(revealStage === 'impact' || revealStage === 'reveal') && (
+                    <motion.div
+                      initial={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30"
+                    >
+                      {puffs.map(p => (
+                        <motion.div
+                          key={p.id}
+                          className="absolute rounded-full"
+                          style={{
+                            width: p.size, height: p.size, marginLeft: -p.size / 2, marginTop: -p.size / 2,
+                            background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(170,170,180,0.55) 55%, rgba(170,170,180,0) 100%)',
+                            filter: 'blur(3px)',
+                          }}
+                          initial={{ x: 0, y: 0, scale: 0.2, opacity: 0 }}
+                          animate={revealStage === 'impact'
+                            ? { x: p.dx, y: p.dy, scale: 1.2, opacity: [0, 0.9, 0.75] }
+                            : { x: p.dx * 1.5, y: p.dy * 1.8, scale: 1.6, opacity: 0 }}
+                          transition={{ duration: p.duration, delay: p.delay, ease: 'easeOut' }}
+                        />
+                      ))}
+                      <motion.div
+                        className="absolute rounded-full border-[5px] border-black/70"
+                        style={{ width: 10, height: 10, marginLeft: -5, marginTop: -5 }}
+                        initial={{ scale: 0, opacity: 1 }}
+                        animate={{ scale: revealStage === 'impact' ? 13 : 17, opacity: 0 }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                      />
+                      {revealStage === 'impact' && (
+                        <motion.div
+                          initial={{ scale: 0, rotate: -8, opacity: 0 }}
+                          animate={{ scale: [0, 1.25, 1], rotate: [-8, 4, -2], opacity: [0, 1, 1] }}
+                          transition={{ duration: 0.4 }}
+                          className="absolute -translate-x-1/2 -translate-y-1/2 bg-white border-[3px] border-black rounded-full px-4 py-1 font-black uppercase text-xs sm:text-sm shadow-[3px_3px_0px_#000] whitespace-nowrap"
+                        >
+                          Clash!
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Player fighter */}
+                <motion.div
+                  layout
+                  transition={{ layout: { duration: 0.85, ease: [0.45, 0, 0.2, 1] } }}
+                  animate={{
+                    scale: revealStage === 'reveal' ? (isTie ? 1 : winnerId === me?.id ? 1.06 : 0.94) : 1,
+                    opacity: revealStage === 'reveal' && !isTie && winnerId !== me?.id ? 0.55 : 1,
+                  }}
+                  className={`w-36 sm:w-48 bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-4 sm:p-6 text-center flex flex-col items-center justify-center rounded-lg -rotate-1 ${revealStage === 'reveal' && !isTie && winnerId !== me?.id ? 'grayscale' : ''}`}
+                  style={revealStage === 'reveal' && winnerId === me?.id ? { boxShadow: `8px 8px 0px #000, 0 0 0 4px ${CHOICE_COLORS[me?.currentChoice] || '#000'}` } : undefined}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <Avatar name={me?.name} size={26} />
+                    <h3 className="text-sm sm:text-xl font-black uppercase">You</h3>
+                  </div>
 
                   {!me?.currentChoice ? (
-                    <div className="flex gap-4" role="list">
+                    <div className="flex gap-2 sm:gap-3" role="list">
                       {['stone', 'paper', 'scissor'].map(choice => (
                         <motion.button
                           key={choice}
                           onClick={() => playMove(choice)}
-                          className="bg-gradient-to-br from-white to-gray-100 border-[3px] border-black p-4 rounded shadow-[6px_6px_0px_#000] focus:outline-none focus:ring-4 focus:ring-indigo-200"
-                          variants={choiceVariants}
-                          initial="idle"
-                          whileHover="hover"
-                          whileTap="tap"
+                          className="bg-gradient-to-br from-white to-gray-100 border-[3px] border-black p-2 sm:p-3 rounded shadow-[5px_5px_0px_#000] focus:outline-none focus:ring-4 focus:ring-indigo-200"
+                          whileHover={{ scale: 1.06, y: -4 }}
+                          whileTap={{ scale: 0.95 }}
                           aria-label={`Play ${choice}`}
                         >
                           <div className="flex flex-col items-center">
-                            <div className="mb-2">{ICONS[choice]}</div>
-                            <span className="text-xs font-black uppercase tracking-widest">{choice}</span>
+                            <IconBox choice={choice} className="w-10 h-10 sm:w-12 sm:h-12 mb-1" />
+                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest">{choice}</span>
                           </div>
                         </motion.button>
                       ))}
                     </div>
                   ) : (
-                    <p className="font-black text-green-500 text-xl uppercase tracking-widest bg-black px-4 py-2 rounded">Choice Locked</p>
+                    <>
+                      <IconBox choice={me.currentChoice} />
+                      {revealStage === 'idle' && (
+                        <p className="font-black text-green-500 text-[10px] sm:text-sm uppercase tracking-widest bg-black px-3 py-1 rounded mt-3">Choice Locked</p>
+                      )}
+                    </>
+                  )}
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Round outcome banner */}
+            <div className="mt-8 text-center min-h-[90px] flex flex-col items-center justify-center">
+              {revealStage === 'approaching' && (
+                <p className="font-black uppercase tracking-widest text-gray-400 animate-pulse">Brace yourselves…</p>
+              )}
+              {revealStage === 'reveal' && (
+                <>
+                  <motion.h3
+                    initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                    className="text-2xl sm:text-3xl font-black uppercase mb-4"
+                    style={{ color: isTie ? '#6b7280' : '#ef4444' }}
+                  >
+                    {isTie ? "Round Tie!" : winnerId === me?.id ? "You Won the Round!" : "Opponent Won!"}
+                  </motion.h3>
+                  {isHost ? (
+                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} onClick={nextRound} className="bg-yellow-400 border-[3px] border-black px-6 py-2 shadow-[4px_4px_0px_#000] font-black uppercase rounded">Start Next Round</motion.button>
+                  ) : (
+                    <p className="text-sm font-bold text-gray-500 uppercase">Waiting for host…</p>
                   )}
                 </>
               )}
@@ -223,7 +388,6 @@ export default function Board() {
         )}
       </AnimatePresence>
 
-      {/* optional celebration overlay */}
       <AnimatePresence>
         {celebrating && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none fixed inset-0 z-50"></motion.div>

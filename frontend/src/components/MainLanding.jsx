@@ -60,7 +60,7 @@ const GAMES = [
     id: 'stone-paper-scissor',
     title: 'Stone Paper Scissor',
     description: 'Outsmart your opponent in this classic game of hand signs.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/sps.png', // Or whichever image you prefer
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/sps2.png', // Or whichever image you prefer
     path: '/games/stone-paper-scissor',
     available: true,
     headerColor: 'bg-[#fbbf24]', // amber-400
