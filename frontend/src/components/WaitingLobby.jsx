@@ -117,7 +117,7 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
                   : 'bg-purple-200'
               }`}
             >
-              {broadcasting ? 'RADAR ACTIVE...' : 'BROADCAST TO NEARBY PLAYERS'}
+              {broadcasting ? 'RADAR ACTIVE...' : 'BROADCAST TO NEARBY PLAYERS (for phone to phone only)'}
             </button>
           )}
 
