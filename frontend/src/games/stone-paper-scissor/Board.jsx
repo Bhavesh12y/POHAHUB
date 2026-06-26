@@ -5,7 +5,7 @@ import WaitingLobby from '../../components/WaitingLobby';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import rockImg from '../../images/rock.png';
-import paperImg from '../../images/paper.png';
+import paperImg from '../../images/paper1.png';
 import scissorImg from '../../images/scissor.png';
 
 const ICONS = {
