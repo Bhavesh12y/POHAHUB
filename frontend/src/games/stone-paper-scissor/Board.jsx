@@ -251,7 +251,19 @@ export default function Board() {
   }
 
   if (room.status === 'waiting') {
-    return <WaitingLobby roomCode={room.code} isHost={isHost} playerCount={room.players.length} onStart={handleStart} gamePath="stone-paper-scissor" />;
+    // return <WaitingLobby roomCode={room.code} isHost={isHost} playerCount={room.players.length} onStart={handleStart} gamePath="stone-paper-scissor" />;
+    
+        return (
+          <WaitingLobby
+            roomCode={room.code}
+            isHost={isHost}
+            playerCount={room.players.length}
+            players={room.players}
+            onStart={handleStart}
+            gamePath="stone-paper-scissor"
+          />
+        );
+
   }
 
   if (!gameState) {
