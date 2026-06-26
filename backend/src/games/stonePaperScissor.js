@@ -1,6 +1,6 @@
 // backend/src/games/stonePaperScissor.js
 
-export function createStonePaperScissorState(players, maxRounds = 3) {
+export function createStonePaperScissorState(players, maxRounds = 5) {
   return {
     players: players.map((p) => ({ id: p.id, name: p.name, score: 0, currentChoice: null })),
     currentRound: 1,
