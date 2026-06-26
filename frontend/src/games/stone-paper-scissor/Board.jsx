@@ -263,8 +263,11 @@ export default function Board() {
             gamePath="stone-paper-scissor"
           />
         );
+        console.log(room);
 
   }
+
+
 
   if (!gameState) {
     return <div className="text-center py-24 text-black font-black uppercase tracking-widest text-xl animate-pulse">Loading Match...</div>;
