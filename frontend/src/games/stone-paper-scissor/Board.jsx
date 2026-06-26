@@ -318,6 +318,7 @@ export default function Board() {
                 </AnimatePresence>
 
                 {/* Player fighter */}
+                {/* Player fighter */}
                 <motion.div
                   layout
                   transition={{ layout: { duration: 0.85, ease: [0.45, 0, 0.2, 1] } }}
@@ -333,35 +334,48 @@ export default function Board() {
                     <h3 className="text-sm sm:text-xl font-black uppercase">You</h3>
                   </div>
 
-                  {!me?.currentChoice ? (
-                    <div className="flex gap-2 sm:gap-3" role="list">
-                      {['stone', 'paper', 'scissor'].map(choice => (
-                        <motion.button
-                          key={choice}
-                          onClick={() => playMove(choice)}
-                          className="bg-gradient-to-br from-white to-gray-100 border-[3px] border-black p-2 sm:p-3 rounded shadow-[5px_5px_0px_#000] focus:outline-none focus:ring-4 focus:ring-indigo-200"
-                          whileHover={{ scale: 1.06, y: -4 }}
-                          whileTap={{ scale: 0.95 }}
-                          aria-label={`Play ${choice}`}
-                        >
-                          <div className="flex flex-col items-center">
-                            <IconBox choice={choice} className="w-10 h-10 sm:w-12 sm:h-12 mb-1" />
-                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest">{choice}</span>
-                          </div>
-                        </motion.button>
-                      ))}
-                    </div>
+                  {/* 1. Show the chosen icon OR a hidden '?' if no choice made yet */}
+                  <IconBox choice={me?.currentChoice || 'hidden'} />
+                  
+                  {me?.currentChoice ? (
+                    revealStage === 'idle' && (
+                      <p className="font-black text-green-500 text-[10px] sm:text-sm uppercase tracking-widest bg-black px-3 py-1 rounded mt-3">Choice Locked</p>
+                    )
                   ) : (
-                    <>
-                      <IconBox choice={me.currentChoice} />
-                      {revealStage === 'idle' && (
-                        <p className="font-black text-green-500 text-[10px] sm:text-sm uppercase tracking-widest bg-black px-3 py-1 rounded mt-3">Choice Locked</p>
-                      )}
-                    </>
+                    <p className="font-bold text-gray-500 uppercase mt-3 text-[10px] sm:text-sm animate-pulse">
+                      Your Turn...
+                    </p>
                   )}
                 </motion.div>
               </div>
             </motion.div>
+
+            {/* 2. THE NEW CHOOSING ACTION BAR - Moved below the arena! */}
+            {!me?.currentChoice && gameState.status === 'playing' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                className="mt-6 sm:mt-10 flex justify-center"
+              >
+                <div className="bg-gradient-to-r from-white to-gray-50 border-[4px] border-black shadow-[8px_8px_0px_#000] p-4 sm:p-6 rounded-xl rotate-1 flex gap-4 sm:gap-8">
+                  {['stone', 'paper', 'scissor'].map(choice => (
+                    <motion.button
+                      key={choice}
+                      onClick={() => playMove(choice)}
+                      className="bg-white border-[3px] border-black p-3 sm:p-5 rounded shadow-[5px_5px_0px_#000] focus:outline-none focus:ring-4 focus:ring-indigo-200"
+                      whileHover={{ scale: 1.1, y: -4 }}
+                      whileTap={{ scale: 0.95 }}
+                      aria-label={`Play ${choice}`}
+                    >
+                      <div className="flex flex-col items-center">
+                        <IconBox choice={choice} className="w-12 h-12 sm:w-16 sm:h-16 mb-2" />
+                        <span className="text-xs sm:text-sm font-black uppercase tracking-widest">{choice}</span>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
 
             {/* Round outcome banner */}
             <div className="mt-8 text-center min-h-[90px] flex flex-col items-center justify-center">
