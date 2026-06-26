@@ -81,6 +81,41 @@ io.on('connection', (socket) => {
     emitRoomUpdate(result.room);
   });
 
+  // --- PROXIMITY RADAR LISTENERS ---
+
+  socket.on('room:broadcast_location', (payload, callback) => {
+    const { roomCode, lat, lng, url } = payload;
+    
+    if (!roomCode || !lat || !lng || !url) {
+      if (callback) callback({ ok: false, error: 'Missing location data' });
+      return;
+    }
+    
+    // Attach the GPS coords to the room in memory
+    const success = roomManager.setRoomBroadcastLocation(roomCode, lat, lng, url);
+    if (callback) {
+      callback({ ok: success });
+    }
+  });
+
+  socket.on('room:find_nearby', (payload, callback) => {
+    const { lat, lng } = payload;
+    
+    if (!lat || !lng) {
+      if (callback) callback({ ok: false, error: 'Missing coordinates' });
+      return;
+    }
+
+    // Pass the receiver's coords to see if any room is within 25 meters
+    const nearbyRoom = roomManager.findNearbyRoom(lat, lng, 25); 
+    
+    if (nearbyRoom && nearbyRoom.broadcastLocation) {
+      if (callback) callback({ ok: true, roomUrl: nearbyRoom.broadcastLocation.url });
+    } else {
+      if (callback) callback({ ok: false, error: 'No nearby rooms found' });
+    }
+  });
+
   // --- SCRIBBLE SPECIFIC SOCKET EVENTS ---
   socket.on('game:selectWord', ({ word }, callback) => {
     if (!currentRoom || !playerId) return;

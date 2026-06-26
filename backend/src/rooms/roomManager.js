@@ -24,6 +24,61 @@ class RoomManager {
     return this.rooms.get(roomCode.toUpperCase()) ?? null;
   }
 
+  // --- PROXIMITY RADAR METHODS ---
+
+  setRoomBroadcastLocation(roomCode, lat, lng, url) {
+    const room = this.getRoom(roomCode);
+    if (room) {
+      // Save location and a timestamp to ignore old, dead broadcasts later
+      room.broadcastLocation = { lat, lng, url, timestamp: Date.now() };
+      return true;
+    }
+    return false;
+  }
+
+  findNearbyRoom(lat, lng, maxDistanceMeters = 25) {
+    let closestRoom = null;
+    let minDistance = Infinity;
+
+    for (const [code, room] of this.rooms.entries()) {
+      // Only look at rooms that are actively broadcasting and still waiting for players
+      if (room.broadcastLocation && room.status === 'waiting') {
+        
+        // Optional: Ignore broadcasts older than 15 minutes to prevent ghost rooms
+        if (Date.now() - room.broadcastLocation.timestamp > 15 * 60 * 1000) {
+          continue;
+        }
+
+        const dist = this._calculateDistance(lat, lng, room.broadcastLocation.lat, room.broadcastLocation.lng);
+        
+        // Find the absolute closest room within our radius
+        if (dist <= maxDistanceMeters && dist < minDistance) {
+          minDistance = dist;
+          closestRoom = room;
+        }
+      }
+    }
+    return closestRoom;
+  }
+
+  // The Haversine Formula (Calculates distance in meters between two coordinates)
+  _calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // Earth's radius in meters
+    const rad = Math.PI / 180;
+    const phi1 = lat1 * rad;
+    const phi2 = lat2 * rad;
+    const deltaPhi = (lat2 - lat1) * rad;
+    const deltaLambda = (lon2 - lon1) * rad;
+
+    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+              Math.cos(phi1) * Math.cos(phi2) *
+              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; 
+  }
+  // --------------------------------
+
 createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
     // Dynamically set limits based on the game type
     let limit = maxPlayers;

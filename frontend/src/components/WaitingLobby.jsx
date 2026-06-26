@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import QRCode from 'react-qr-code';
+import { emitWithAck } from '../lib/socket.js';
 
 export default function WaitingLobby({ roomCode, isHost, playerCount, players = [], onStart }) {
   const [copied, setCopied] = useState(false);
-  const [nfcStatus, setNfcStatus] = useState('');
-  const [nfcActive, setNfcActive] = useState(false);
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('');
 
-  // Safely get the URL
+  // Safely get the exact URL
   const roomUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   const copyLink = () => {
@@ -24,51 +25,48 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
           url: roomUrl,
         });
       } catch (err) {
-        console.log('User canceled share', err);
+        console.log('USER CANCELED SHARE', err);
       }
     } else {
       copyLink();
     }
   };
 
-  // The NFC Activation Logic
-  const activateNFC = useCallback(async () => {
-    if (!isHost || !('NDEFReader' in window) || nfcActive) return;
-
-    try {
-      const ndef = new NDEFReader();
-      await ndef.write({
-        records: [{ recordType: "url", data: roomUrl }]
-      });
-      
-      setNfcActive(true);
-      setNfcStatus('NFC Active: Bring phones together');
-    } catch (error) {
-      console.error("NFC activation failed:", error);
-      if (!nfcActive) {
-        setNfcStatus('Tap anywhere on screen to enable NFC');
-      }
+  // The Proximity Radar Broadcaster
+  const broadcastLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('GEOLOCATION NOT SUPPORTED BY BROWSER');
+      return;
     }
-  }, [isHost, roomUrl, nfcActive]);
 
-  // "Auto-Start" Hook: Triggers NFC on the very first screen interaction
-  useEffect(() => {
-    if (!isHost) return;
+    setLocationStatus('ACQUIRING GPS COORDINATES...');
+    setBroadcasting(true);
 
-    activateNFC();
-
-    const handleFirstInteraction = () => {
-      activateNFC();
-    };
-
-    document.addEventListener('click', handleFirstInteraction);
-    document.addEventListener('touchstart', handleFirstInteraction);
-
-    return () => {
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('touchstart', handleFirstInteraction);
-    };
-  }, [isHost, activateNFC]);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        setLocationStatus('BROADCASTING TO NEARBY PLAYERS...');
+        try {
+          // Send coordinates and room details to your backend
+          await emitWithAck('room:broadcast_location', {
+            roomCode: roomCode,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            url: roomUrl
+          });
+        } catch (error) {
+          console.error("BROADCAST FAILED:", error);
+          setLocationStatus('RADAR BROADCAST FAILED');
+          setBroadcasting(false);
+        }
+      },
+      (error) => {
+        console.error(error);
+        setLocationStatus('LOCATION PERMISSION DENIED');
+        setBroadcasting(false);
+      },
+      { enableHighAccuracy: true } // Forces GPS hardware for better precision
+    );
+  };
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] py-16 px-4">
@@ -81,11 +79,11 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
         <h2 className="text-[clamp(1.25rem,3vw,2rem)] font-black uppercase text-ink mb-2">
           Invite Friends
         </h2>
-        <p className="text-[clamp(0.875rem,1.8vw,1.125rem)] text-gray-800 mb-6 font-bold px-4">
-          Scan the QR, touch phones, or share the link to join!
+        <p className="text-[clamp(0.875rem,1.8vw,1.125rem)] text-gray-800 mb-6 font-bold px-4 uppercase">
+          Scan QR, Share Link, Or Broadcast Locally
         </p>
 
-        {/* QR Code Section matching sketch theme */}
+        {/* QR Code Section */}
         <div className="sketch-border bg-white p-4 mb-8 rotate-1 hover:rotate-0 transition-transform">
           <QRCode value={roomUrl} size={160} level="H" className="mx-auto" />
         </div>
@@ -101,35 +99,35 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
               className="input-field text-xs sm:text-sm text-center flex-1"
               onClick={(e) => e.target.select()}
             />
-            <button onClick={copyLink} className="sketch-button bg-sky-200 px-5 py-3 text-xs sm:text-sm shrink-0">
-              {copied ? 'Copied!' : 'Copy Link'}
+            <button onClick={copyLink} className="sketch-button bg-sky-200 px-5 py-3 text-xs sm:text-sm shrink-0 uppercase">
+              {copied ? 'COPIED!' : 'COPY LINK'}
             </button>
-            <button onClick={shareLink} className="sketch-button bg-green-300 px-5 py-3 text-xs sm:text-sm shrink-0">
-              Share
+            <button onClick={shareLink} className="sketch-button bg-green-300 px-5 py-3 text-xs sm:text-sm shrink-0 uppercase">
+              SHARE
             </button>
           </div>
 
           {isHost && (
             <button 
-              onClick={activateNFC} 
-              disabled={nfcActive}
-              className={`sketch-button w-full px-5 py-3 text-xs sm:text-sm transition-all ${
-                nfcActive 
+              onClick={broadcastLocation} 
+              disabled={broadcasting}
+              className={`sketch-button w-full px-5 py-3 text-xs sm:text-sm transition-all uppercase ${
+                broadcasting 
                   ? 'bg-purple-400 opacity-90 cursor-default hover:translate-y-0 hover:translate-x-0' 
                   : 'bg-purple-200'
               }`}
             >
-              {nfcActive ? 'NFC Broadcasting...' : 'Tap to Start NFC'}
+              {broadcasting ? 'RADAR ACTIVE...' : 'BROADCAST TO NEARBY PLAYERS'}
             </button>
           )}
 
         </div>
 
-        {/* NFC Status Indicator */}
+        {/* Location Status Indicator */}
         <div className="h-6 mb-6">
-          {nfcStatus && (
-            <p className={`font-black uppercase text-sm tracking-wide ${nfcActive ? 'text-green-600 animate-pulse' : 'text-purple-600'}`}>
-              {nfcStatus}
+          {locationStatus && (
+            <p className={`font-black uppercase text-sm tracking-wide ${broadcasting && locationStatus.includes('BROADCASTING') ? 'text-green-600 animate-pulse' : 'text-purple-600'}`}>
+              {locationStatus}
             </p>
           )}
         </div>
@@ -144,7 +142,7 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
               {players.map((player, idx) => (
                 <div
                   key={player.id || idx}
-                  className="sketch-border bg-green-200 px-3 py-1.5 text-sm text-ink font-bold flex items-center gap-2"
+                  className="sketch-border bg-green-200 px-3 py-1.5 text-sm text-ink font-bold flex items-center gap-2 uppercase"
                 >
                   <span className="inline-block h-2 w-2 bg-green-600 border-2 border-black" />
                   {player.name}
@@ -156,12 +154,12 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
 
         {/* Host Controls */}
         {isHost ? (
-          <button className="sketch-button bg-yellow-300 w-full sm:w-auto px-10 py-3" onClick={onStart} disabled={playerCount < 2}>
-            Start Game
+          <button className="sketch-button bg-yellow-300 w-full sm:w-auto px-10 py-3 uppercase" onClick={onStart} disabled={playerCount < 2}>
+            START GAME
           </button>
         ) : (
           <p className="text-gray-800 uppercase tracking-wide text-sm sm:text-base font-black">
-            Waiting for host to start...
+            WAITING FOR HOST TO START...
           </p>
         )}
 
