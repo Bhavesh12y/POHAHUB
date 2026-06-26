@@ -4,44 +4,31 @@ import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import rockImg from '../../images/rock.png';
+import paperImg from '../../images/paper.png';
+import scissorImg from '../../images/scissor.png';
 
 const ICONS = {
   stone: (
-    <svg viewBox="0 0 64 64" className="w-full h-full">
-      <defs>
-        <linearGradient id="gRock" x1="0" x2="1">
-          <stop offset="0" stopColor="#9ca3ff" />
-          <stop offset="1" stopColor="#6366f1" />
-        </linearGradient>
-      </defs>
-      <path fill="url(#gRock)" d="M8 36c0-12 8-20 20-20s20 8 28 20-8 20-28 20S8 48 8 36z" />
-    </svg>
+      <img 
+    src={rockImg} 
+    alt="Rock" 
+    className="w-full h-full object-contain" 
+  />
   ),
   paper: (
-    <svg viewBox="0 0 64 64" className="w-full h-full">
-      <defs>
-        <linearGradient id="gPaper" x1="0" x2="1">
-          <stop offset="0" stopColor="#fff7ed" />
-          <stop offset="1" stopColor="#f97316" />
-        </linearGradient>
-      </defs>
-      <rect x="10" y="8" width="44" height="48" rx="4" fill="url(#gPaper)" />
-      <line x1="18" y1="20" x2="46" y2="20" stroke="#fff" strokeWidth="2" />
-      <line x1="18" y1="28" x2="46" y2="28" stroke="#fff" strokeWidth="2" />
-    </svg>
+    <img 
+  src={paperImg} 
+  alt="Paper" 
+  className="w-full h-full object-contain" 
+/>
   ),
   scissor: (
-    <svg viewBox="0 0 64 64" className="w-full h-full">
-      <defs>
-        <linearGradient id="gScissor" x1="0" x2="1">
-          <stop offset="0" stopColor="#86efac" />
-          <stop offset="1" stopColor="#10b981" />
-        </linearGradient>
-      </defs>
-      <path d="M12 52 L28 36 L44 52" stroke="url(#gScissor)" strokeWidth="4" strokeLinecap="round" fill="none" />
-      <circle cx="20" cy="20" r="8" fill="url(#gScissor)" />
-      <circle cx="44" cy="20" r="8" fill="url(#gScissor)" />
-    </svg>
+      <img 
+    src={scissorImg} 
+    alt="Scissor" 
+    className="w-full h-full object-contain" 
+  />
   ),
   hidden: (
     <svg viewBox="0 0 64 64" className="w-full h-full">
@@ -264,7 +251,6 @@ export default function Board() {
           />
         );
         console.log(room);
-
   }
 
 
