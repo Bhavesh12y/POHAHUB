@@ -36,7 +36,7 @@ class RoomManager {
     return false;
   }
 
-findNearbyRoom(lat, lng, maxDistanceMeters = 25) {
+findNearbyRoom(lat, lng, maxDistanceMeters = 50000) {
     let closestRoom = null;
     let minDistance = Infinity;
 
