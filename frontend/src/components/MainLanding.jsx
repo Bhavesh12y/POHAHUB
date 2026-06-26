@@ -58,7 +58,7 @@ const GAMES = [
   },
   {
     id: 'stone-paper-scissor',
-    title: 'Stone Paper Scissor',
+    title: 'RockPaperScissor',
     description: 'Outsmart your opponent in this classic game of hand signs.',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/SPS2.png', // Or whichever image you prefer
     path: '/games/stone-paper-scissor',
