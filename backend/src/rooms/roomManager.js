@@ -36,28 +36,39 @@ class RoomManager {
     return false;
   }
 
-  findNearbyRoom(lat, lng, maxDistanceMeters = 25) {
+findNearbyRoom(lat, lng, maxDistanceMeters = 25) {
     let closestRoom = null;
     let minDistance = Infinity;
 
+    console.log(`\n[RADAR] Receiver searching near Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+
     for (const [code, room] of this.rooms.entries()) {
-      // Only look at rooms that are actively broadcasting and still waiting for players
       if (room.broadcastLocation && room.status === 'waiting') {
         
-        // Optional: Ignore broadcasts older than 15 minutes to prevent ghost rooms
         if (Date.now() - room.broadcastLocation.timestamp > 15 * 60 * 1000) {
+          console.log(`[RADAR] Ignoring room ${code} (Broadcast expired)`);
           continue;
         }
 
+        // Calculate the distance
         const dist = this._calculateDistance(lat, lng, room.broadcastLocation.lat, room.broadcastLocation.lng);
         
-        // Find the absolute closest room within our radius
+        // LOG THE EXACT DISTANCE!
+        console.log(`[RADAR] Room ${code} is broadcasting ${dist.toFixed(2)} meters away.`);
+
         if (dist <= maxDistanceMeters && dist < minDistance) {
           minDistance = dist;
           closestRoom = room;
         }
       }
     }
+
+    if (closestRoom) {
+      console.log(`[RADAR] MATCH FOUND! Sending user to Room ${closestRoom.code}\n`);
+    } else {
+      console.log(`[RADAR] Failed. No rooms found within ${maxDistanceMeters}m radius.\n`);
+    }
+
     return closestRoom;
   }
 
