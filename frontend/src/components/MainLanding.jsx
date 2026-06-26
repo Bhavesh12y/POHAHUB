@@ -118,7 +118,6 @@ export default function MainLanding() {
       async (position) => {
         setNearbyStatus('SCANNING RADAR FOR MATCHES...');
         try {
-          // Ask the server if any active room is broadcasting near these coordinates
           const res = await emitWithAck('room:find_nearby', {
             lat: position.coords.latitude,
             lng: position.coords.longitude
@@ -165,20 +164,11 @@ export default function MainLanding() {
         }
       `}</style>
 
-      {/* TOP ACTION BAR */}
-      <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-50">
-        <button 
-          onClick={() => setShowJoinModal(true)}
-          className="bg-black text-white px-6 py-3 font-black uppercase tracking-widest border-[3px] border-transparent shadow-[4px_4px_0px_rgba(0,0,0,0.3)] hover:bg-gray-800 transition-all rounded-sm hover:-translate-y-1 rotate-1"
-        >
-          JOIN EXISTING ROOM
-        </button>
-      </div>
-
       <div className="relative max-w-7xl mx-auto px-5 py-24 sm:py-28 z-10 w-full">
+        
+        {/* HERO SECTION */}
         <section className="mb-12 sm:mb-16 animate-sketch-pop text-center sm:text-left">
           
-          {/* Top Yellow Tag */}
           <div className="inline-block bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_#000] px-4 py-2 mb-6 -rotate-1">
             <span className="text-sm sm:text-base font-black uppercase tracking-widest text-black">
               Rooms, rivalries, and ridiculous comebacks
@@ -190,11 +180,20 @@ export default function MainLanding() {
             <span className="block text-pink-400">Start the room.</span>
           </h2>
 
-          <p className="mt-6 max-w-2xl text-[clamp(1rem,2vw,1.4rem)] font-bold text-gray-700 leading-relaxed uppercase tracking-wider">
+          <p className="mt-6 max-w-2xl text-[clamp(1rem,2vw,1.4rem)] font-bold text-gray-700 leading-relaxed uppercase tracking-wider mb-8">
             A bright notebook arcade for quick multiplayer matches with friends.
           </p>
+
+          {/* MOVED & RESTYLED BUTTON */}
+          <button 
+            onClick={() => setShowJoinModal(true)}
+            className="inline-block bg-sky-300 text-black border-[4px] border-black px-8 py-4 font-black uppercase tracking-widest text-lg shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all rotate-1"
+          >
+            JOIN EXISTING ROOM
+          </button>
         </section>
 
+        {/* GAMES GRID */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
           {GAMES.map((game, index) => {
             const CardWrapper = game.available ? Link : 'div';
@@ -249,60 +248,67 @@ export default function MainLanding() {
         </section>
       </div>
 
-      {/* THE MODAL: JOIN EXISTING ROOM */}
+      
+   {/* RESTYLED MODAL: JOIN EXISTING ROOM */}
+     {/* MODAL: JOIN EXISTING ROOM (AT TOP, NO DARK BACKGROUND) */}
       {showJoinModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-6 sm:p-10 max-w-md w-full rounded-xl -rotate-1 relative">
+        <div className="fixed inset-0 z-[100] overflow-y-auto pointer-events-none">
+          <div className="flex min-h-full items-start justify-center p-4 pt-20 sm:pt-24 pb-12">
             
-            <button 
-              onClick={closeMenu}
-              className="absolute top-4 right-4 bg-red-400 text-black border-[3px] border-black w-10 h-10 flex items-center justify-center font-black rounded-full shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-none"
-            >
-              X
-            </button>
+            {/* pointer-events-auto ensures the popup itself is still clickable, but the invisible background isn't */}
+            <div className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-6 sm:p-8 max-w-sm w-full relative -rotate-1 pointer-events-auto">
+              
+              <button 
+                onClick={closeMenu}
+                className="absolute top-4 right-4 bg-red-400 text-black border-[3px] border-black w-10 h-10 flex items-center justify-center font-black text-lg shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] z-10 transition-all"
+                aria-label="Close"
+              >
+                ✕
+              </button>
 
-            <h2 className="text-2xl sm:text-3xl font-black uppercase mb-6 tracking-tighter">
-              Join Match
-            </h2>
+              <h2 className="text-2xl sm:text-3xl font-black uppercase mb-8 tracking-tighter text-left pr-12">
+                Join Match
+              </h2>
 
-            {!joinMode && (
-              <div className="flex flex-col gap-4">
-                <button 
-                  onClick={() => setJoinMode('scan')}
-                  className="bg-sky-300 border-[3px] border-black p-5 text-lg font-black uppercase shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all rounded"
-                >
-                  SCAN QR CODE
-                </button>
-                <button 
-                  onClick={handleFindNearby}
-                  className="bg-purple-300 border-[3px] border-black p-5 text-lg font-black uppercase shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all rounded"
-                >
-                  FIND NEARBY PLAYER
-                </button>
-              </div>
-            )}
-
-            {joinMode === 'scan' && (
-              <div className="flex flex-col items-center">
-                <div className="w-full aspect-square border-[4px] border-black shadow-[6px_6px_0px_#000] rounded-lg overflow-hidden mb-4 bg-gray-200">
-                  <Scanner onScan={handleScan} />
+              {!joinMode && (
+                <div className="flex flex-col gap-4">
+                  <button 
+                    onClick={() => setJoinMode('scan')}
+                    className="bg-sky-300 border-[3px] border-black p-4 text-lg font-black uppercase shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all text-left flex justify-between items-center"
+                  >
+                    Scan QR Code  
+                  </button>
+                  <button 
+                    onClick={handleFindNearby}
+                    className="bg-purple-300 border-[3px] border-black p-4 text-lg font-black uppercase shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all text-left flex justify-between items-center"
+                  >
+                    Find Nearby  
+                  </button>
                 </div>
-                <p className="font-bold text-gray-500 uppercase tracking-widest text-sm mb-4">
-                  POINT CAMERA AT HOSTS SCREEN
-                </p>
-                {nearbyStatus && <p className="text-red-500 font-black uppercase">{nearbyStatus}</p>}
-              </div>
-            )}
+              )}
 
-            {joinMode === 'nearby' && (
-              <div className="text-center py-8">
-                <div className="inline-block w-16 h-16 border-8 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6"></div>
-                <p className="font-black text-lg uppercase tracking-widest text-purple-600">
-                  {nearbyStatus}
-                </p>
-              </div>
-            )}
+              {joinMode === 'scan' && (
+                <div className="flex flex-col items-center animate-sketch-pop">
+                  <div className="w-full aspect-square border-[4px] border-black shadow-[6px_6px_0px_#000] overflow-hidden mb-6 bg-gray-200 rotate-1">
+                    <Scanner onScan={handleScan} />
+                  </div>
+                  <p className="font-bold text-gray-500 uppercase tracking-widest text-sm mb-2 text-center">
+                    Point Camera at Host
+                  </p>
+                  {nearbyStatus && <p className="text-red-500 font-black uppercase text-center mt-2">{nearbyStatus}</p>}
+                </div>
+              )}
 
+              {joinMode === 'nearby' && (
+                <div className="text-center py-8 animate-sketch-pop">
+                  <div className="inline-block w-16 h-16 border-[6px] border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6"></div>
+                  <p className="font-black text-base sm:text-lg uppercase tracking-widest text-purple-600 px-4 leading-relaxed">
+                    {nearbyStatus}
+                  </p>
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
       )}
