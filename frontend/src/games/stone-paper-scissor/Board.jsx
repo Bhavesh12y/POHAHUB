@@ -88,7 +88,8 @@ export default function Board() {
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = sessionStorage.getItem('pohahub_username');
+    const username = localStorage.getItem('pohahub_username');
+    //const username = sessionStorage.getItem('pohahub_username');
     if (!username) return navigate(`/games/stone-paper-scissor?join=${roomCode}`);
 
     const syncRoom = async () => {
