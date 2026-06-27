@@ -4,33 +4,35 @@ import { connectSocket } from '../lib/socket.js';
 export default function VoiceChat({ roomCode }) {
   const [micOn, setMicOn] = useState(false);
   const [speakerOn, setSpeakerOn] = useState(true);
-  const [hasJoined, setHasJoined] = useState(false);
 
   const localStream = useRef(null);
   const peers = useRef({});
   const remoteAudios = useRef({});
   const socket = connectSocket();
 
-  // Free Google STUN server to help peers find each other
+  // We use a ref for the speaker state so the useEffect doesn't constantly re-trigger
+  const speakerOnRef = useRef(speakerOn);
+  useEffect(() => { speakerOnRef.current = speakerOn; }, [speakerOn]);
+
   const rtcConfig = {
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
   };
 
   useEffect(() => {
-    if (!hasJoined) return;
-
-    const createPeer = (peerId, initiator) => {
+    const createPeer = (peerId) => {
       const peer = new RTCPeerConnection(rtcConfig);
       peers.current[peerId] = peer;
 
-      // Attach local microphone audio to the connection
+      // 1. Tell the connection we want to RECEIVE audio, even if we have no mic yet!
+      peer.addTransceiver('audio', { direction: 'recvonly' });
+
+      // 2. If we already turned our mic on, add it to this new connection
       if (localStream.current) {
         localStream.current.getTracks().forEach(track => {
           peer.addTrack(track, localStream.current);
         });
       }
 
-      // Exchange network candidates to establish the P2P connection
       peer.onicecandidate = (event) => {
         if (event.candidate) {
           socket.emit('voice:signal', {
@@ -40,58 +42,68 @@ export default function VoiceChat({ roomCode }) {
         }
       };
 
-      // Play remote audio when received
       peer.ontrack = (event) => {
         if (!remoteAudios.current[peerId]) {
           const audio = new Audio();
-          audio.srcObject = event.streams[0];
+          // Fallback for older browsers that use event.track instead of event.streams
+          audio.srcObject = event.streams[0] || new MediaStream([event.track]);
           audio.autoplay = true;
-          audio.muted = !speakerOn;
+          audio.muted = !speakerOnRef.current;
           remoteAudios.current[peerId] = audio;
         }
       };
 
-      // The initiator creates the initial WebRTC offer
-      if (initiator) {
-        peer.createOffer().then(offer => {
-          peer.setLocalDescription(offer);
-          socket.emit('voice:signal', { targetId: peerId, signalData: offer });
-        });
-      }
+      // 3. AUTOMATIC RENEGOTIATION: This fires automatically when a track is added
+      peer.onnegotiationneeded = async () => {
+        try {
+          const offer = await peer.createOffer();
+          await peer.setLocalDescription(offer);
+          socket.emit('voice:signal', { targetId: peerId, signalData: peer.localDescription });
+        } catch (err) {
+          console.error("Negotiation error:", err);
+        }
+      };
 
       return peer;
     };
 
     const handleUserJoined = ({ socketId }) => {
-      createPeer(socketId, true);
+      createPeer(socketId); // Someone joined, create a connection
     };
 
     const handleSignal = async ({ senderId, signalData }) => {
       let peer = peers.current[senderId];
-      if (!peer) peer = createPeer(senderId, false);
+      if (!peer) peer = createPeer(senderId);
 
-      if (signalData.type === 'offer') {
-        await peer.setRemoteDescription(new RTCSessionDescription(signalData));
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-        socket.emit('voice:signal', { targetId: senderId, signalData: answer });
-      } else if (signalData.type === 'answer') {
-        await peer.setRemoteDescription(new RTCSessionDescription(signalData));
-      } else if (signalData.type === 'candidate') {
-        await peer.addIceCandidate(new RTCIceCandidate(signalData.candidate));
+      try {
+        if (signalData.type === 'offer') {
+          await peer.setRemoteDescription(new RTCSessionDescription(signalData));
+          const answer = await peer.createAnswer();
+          await peer.setLocalDescription(answer);
+          socket.emit('voice:signal', { targetId: senderId, signalData: peer.localDescription });
+        } else if (signalData.type === 'answer') {
+          await peer.setRemoteDescription(new RTCSessionDescription(signalData));
+        } else if (signalData.type === 'candidate') {
+          await peer.addIceCandidate(new RTCIceCandidate(signalData.candidate));
+        }
+      } catch (err) {
+        console.error("Signal handling error:", err);
       }
     };
 
     socket.on('voice:user_joined', handleUserJoined);
     socket.on('voice:signal', handleSignal);
 
+    // Join network IMMEDIATELY as a listener when the component mounts
+    socket.emit('voice:join', { roomCode });
+
     return () => {
       socket.off('voice:user_joined', handleUserJoined);
       socket.off('voice:signal', handleSignal);
     };
-  }, [hasJoined]);
+  }, [roomCode]); // Removed the 'hasJoined' block completely
 
-  // Clean up media streams and connections if component unmounts
+  // Cleanup on dismount
   useEffect(() => {
     return () => {
       Object.values(peers.current).forEach(peer => peer.close());
@@ -103,32 +115,40 @@ export default function VoiceChat({ roomCode }) {
 
   const initVoice = async () => {
     try {
-      // Pass these specific constraints to enhance audio quality
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          noiseSuppression: true,   // Blocks out background "air" and static
-          echoCancellation: true,   // Prevents feedback loops from the speakers
-          autoGainControl: true     // Normalizes volume so quiet voices are boosted
+          noiseSuppression: true,
+          echoCancellation: true,
+          autoGainControl: true
         } 
       });
       
       localStream.current = stream;
       setMicOn(true);
-      setHasJoined(true);
-      socket.emit('voice:join', { roomCode });
+
+      // IMPORTANT: Inject the new mic track into ALL existing connections!
+      Object.values(peers.current).forEach(peer => {
+        stream.getTracks().forEach(track => {
+          peer.addTrack(track, stream);
+        });
+      });
+      
     } catch (err) {
       console.error("Failed to access microphone", err);
       alert("Microphone permission denied.");
     }
   };
+
   const toggleMic = () => {
-    if (!hasJoined) {
-      initVoice(); // Ask for permission and join network on first click
+    // If stream doesn't exist, ask for permissions
+    if (!localStream.current) {
+      initVoice(); 
       return;
     }
+    // Otherwise, just soft-mute the track without breaking the network
     const audioTrack = localStream.current?.getAudioTracks()[0];
     if (audioTrack) {
-      audioTrack.enabled = !micOn; // Soft-mute without dropping the P2P connection
+      audioTrack.enabled = !micOn;
       setMicOn(!micOn);
     }
   };
@@ -136,7 +156,7 @@ export default function VoiceChat({ roomCode }) {
   const toggleSpeaker = () => {
     const newState = !speakerOn;
     setSpeakerOn(newState);
-    // Apply speaker mute/unmute to all active peers
+    // Apply speaker mute/unmute to all active peers immediately
     Object.values(remoteAudios.current).forEach(audio => {
       audio.muted = !newState;
     });
