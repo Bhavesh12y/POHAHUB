@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
+import VoiceChat from '../../components/VoiceChat';
 
 const COLS = 7;
 const ROWS = 6;
@@ -372,6 +373,8 @@ export default function ConnectFourBoard() {
                   {room.code}
                 </p>
               </div>
+              {/* INJECT VOICE CONTROLS HERE */}
+               <VoiceChat roomCode={room.code} />
               <div className="text-right">
                 <p className="text-xs font-bold uppercase text-gray-400 mb-1">Status</p>
                 <p className="font-bold text-[#facc15] text-[clamp(0.8rem,2vw,1rem)] uppercase">{statusMessage}</p>
