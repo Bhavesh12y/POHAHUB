@@ -74,7 +74,7 @@ const GAMES = [
     id: 'ludo',
     title: 'Ludo',
     description: 'Race your tokens home in this classic board game.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/9e805da7afa8433031d19b540fadda86bf2b3461/frontend/src/images/image.png',
     path: '/games/ludo',
     available: true,
     headerColor: 'bg-[#facc15]',
