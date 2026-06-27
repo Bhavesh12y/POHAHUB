@@ -1,9 +1,9 @@
 // backend/src/games/ludo.js
 
-const LUDO_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308']; // Red, Blue, Green, Yellow
-const START_OFFSETS = { '#ef4444': 0, '#3b82f6': 13, '#22c55e': 26, '#eab308': 39 };
+// FIX 1: Matched Frontend Color Order (Red, Green, Yellow, Blue)
+const LUDO_COLORS = ['#ef4444', '#22c55e', '#facc15', '#3b82f6']; 
+const START_OFFSETS = { '#ef4444': 0, '#22c55e': 13, '#facc15': 26, '#3b82f6': 39 };
 
-// Absolute board positions that are safe (Start squares + star squares)
 const SAFE_SQUARES = [0, 8, 13, 21, 26, 34, 39, 47];
 
 export const createLudoState = (players) => {
@@ -11,7 +11,7 @@ export const createLudoState = (players) => {
     players: players.map((p, i) => ({
       ...p,
       color: LUDO_COLORS[i % LUDO_COLORS.length],
-      // -1 = Base, 0 = Start, 1-51 = Main Board, 52-56 = Home Path, 57 = Finished
+      // -1 = Base, 0-50 = Main Board, 51-55 = Home Path, 56 = Finished
       tokens: [
         { id: 0, position: -1 },
         { id: 1, position: -1 },
@@ -25,6 +25,7 @@ export const createLudoState = (players) => {
     winner: null,
     diceRoll: null,
     hasRolled: false,
+    legalMoves: [], // Added to share clickable state with frontend
     consecutiveSixes: 0,
     message: 'Game started! Waiting for roll.',
     lastAction: null,
@@ -32,18 +33,17 @@ export const createLudoState = (players) => {
 };
 
 const getAbsolutePos = (color, pos) => {
-  if (pos < 0 || pos > 51) return null;
+  if (pos < 0 || pos > 50) return null; // FIX 2: Main board ends at 50
   return (pos + START_OFFSETS[color]) % 52;
 };
 
-// Check if a specific absolute position has a blockade (2+ tokens of the SAME color)
 const isBlockade = (state, absolutePos) => {
   if (absolutePos === null) return false;
   
   for (const player of state.players) {
     let count = 0;
     for (const token of player.tokens) {
-      if (token.position >= 0 && token.position <= 51) {
+      if (token.position >= 0 && token.position <= 50) {
         if (getAbsolutePos(player.color, token.position) === absolutePos) {
           count++;
         }
@@ -58,22 +58,18 @@ const getLegalMoves = (state, player, roll) => {
   const legalTokens = [];
   
   for (const token of player.tokens) {
-    if (token.position === 57) continue; // Finished
+    if (token.position === 56) continue; // Finished
 
     if (token.position === -1) {
-      // Rule: Roll 6 to leave base
       if (roll === 6) legalTokens.push(token.id);
       continue;
     }
 
     const targetPos = token.position + roll;
-    
-    // Rule: Must be exact roll to finish
-    if (targetPos > 57) continue;
+    if (targetPos > 56) continue; // Must be exact roll to finish
 
-    // Rule: Check for blockades along the path (Main board only)
     let blocked = false;
-    for (let step = token.position + 1; step <= Math.min(targetPos, 51); step++) {
+    for (let step = token.position + 1; step <= Math.min(targetPos, 50); step++) {
       const absStep = getAbsolutePos(player.color, step);
       if (isBlockade(state, absStep)) {
         blocked = true;
@@ -90,7 +86,8 @@ const getLegalMoves = (state, player, roll) => {
 const endTurn = (state) => {
   state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
   state.hasRolled = false;
-  state.diceRoll = null;
+  // FIX 3: Intentionally NOT clearing state.diceRoll here so the client can visually see skipped rolls
+  state.legalMoves = [];
   state.consecutiveSixes = 0;
 };
 
@@ -99,7 +96,7 @@ export const rollLudoDice = (state, playerId) => {
   
   const currentPlayer = state.players[state.currentPlayerIndex];
   if (currentPlayer.id !== playerId) return { ok: false, error: 'Not your turn' };
-  if (state.hasRolled) return { ok: false, error: 'Already rolled, must move a token' };
+  if (state.hasRolled) return { ok: false, error: 'Already rolled' };
 
   const roll = Math.floor(Math.random() * 6) + 1;
   state.diceRoll = roll;
@@ -114,22 +111,22 @@ export const rollLudoDice = (state, playerId) => {
       return { ok: true, state };
     }
   } else {
-    state.consecutiveSixes = 0; // Reset if not a 6
+    state.consecutiveSixes = 0;
   }
 
   const legalMoves = getLegalMoves(state, currentPlayer, roll);
+  state.legalMoves = legalMoves;
   
   if (legalMoves.length === 0) {
     state.message = `${currentPlayer.name} rolled a ${roll} but has no legal moves.`;
-    // If they rolled a 6 but can't move, they still get their extra turn
     if (roll !== 6) {
       endTurn(state);
     } else {
-      state.hasRolled = false; // Allow them to roll again
+      state.hasRolled = false;
     }
   }
 
-  return { ok: true, state, legalMoves };
+  return { ok: true, state };
 };
 
 export const moveLudoToken = (state, playerId, tokenId) => {
@@ -147,15 +144,13 @@ export const moveLudoToken = (state, playerId, tokenId) => {
   let captured = false;
 
   if (token.position === -1) {
-    // Coming out of base
     token.position = 0;
     state.message = `${currentPlayer.name} released a token to the start.`;
   } else {
     token.position += state.diceRoll;
     state.message = `${currentPlayer.name} moved a token ${state.diceRoll} spaces.`;
 
-    // Check Capture (Only on main board)
-    if (token.position <= 51) {
+    if (token.position <= 50) {
       const absPos = getAbsolutePos(currentPlayer.color, token.position);
       
       if (!SAFE_SQUARES.includes(absPos)) {
@@ -163,12 +158,11 @@ export const moveLudoToken = (state, playerId, tokenId) => {
           if (opp.id === currentPlayer.id) continue;
           
           let tokensOnSquare = opp.tokens.filter(t => 
-            t.position >= 0 && t.position <= 51 && getAbsolutePos(opp.color, t.position) === absPos
+            t.position >= 0 && t.position <= 50 && getAbsolutePos(opp.color, t.position) === absPos
           );
 
-          // Capture occurs if there is exactly 1 opponent token (not a blockade)
           if (tokensOnSquare.length === 1) {
-            tokensOnSquare[0].position = -1; // Send back to base
+            tokensOnSquare[0].position = -1;
             captured = true;
             extraTurn = true;
             state.message = `${currentPlayer.name} captured ${opp.name}'s token! Extra turn granted.`;
@@ -178,12 +172,10 @@ export const moveLudoToken = (state, playerId, tokenId) => {
     }
   }
 
-  // Check finished condition
-  if (token.position === 57) {
+  if (token.position === 56) {
     currentPlayer.finishedCount += 1;
     state.message = `${currentPlayer.name} got a token home!`;
     
-    // Win Condition
     if (currentPlayer.finishedCount === 4) {
       state.status = 'won';
       state.winner = currentPlayer;
@@ -192,10 +184,9 @@ export const moveLudoToken = (state, playerId, tokenId) => {
     }
   }
 
-  // Handle turn passing
   if (extraTurn || captured) {
-    state.hasRolled = false; // Player goes again
-    state.diceRoll = null;
+    state.hasRolled = false;
+    state.legalMoves = [];
   } else {
     endTurn(state);
   }
