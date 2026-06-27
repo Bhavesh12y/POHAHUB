@@ -299,7 +299,6 @@ export default function Board() {
         {/* LEFT COLUMN: GAME BOARD */}
         <div className="flex-1 w-full min-w-0">
           <div className="bg-gradient-to-r from-white to-gray-50 border-[4px] border-black shadow-[8px_8px_0px_#000] p-4 sm:p-6 rounded-lg -rotate-1 mb-8 flex justify-between items-center gap-4">
-             <VoiceChat roomCode={room.code} />
             <div>
               <p className="text-xs font-black tracking-widest text-gray-500 uppercase">Best of 5</p>
               <AnimatePresence mode="wait">
@@ -314,6 +313,8 @@ export default function Board() {
                 </motion.h2>
               </AnimatePresence>
             </div>
+
+            <VoiceChat roomCode={room.code} />
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-2">
                 <Avatar name={me?.name} size={30} />
