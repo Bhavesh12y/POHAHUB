@@ -114,8 +114,8 @@ export default function LudoBoard() {
   // Socket Connection & Event Handling
   useEffect(() => {
     const socket = connectSocket();
-    const username = sessionStorage.getItem('pohahub_username');
-    
+   // const username = sessionStorage.getItem('pohahub_username');
+    const username = localStorage.getItem('pohahub_username');
     if (!username) {
       navigate(`/games/ludo?join=${roomCode}`);
       return;
