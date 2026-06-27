@@ -15,6 +15,7 @@ import SnakeAndLadderBoard from './games/snake-and-ladder/board.jsx';
 import TambolaBoard from './games/tambola/board.jsx';
 import SPSLanding from './games/stone-paper-scissor/Landing.jsx';
 import SPSBoard from './games/stone-paper-scissor/Board.jsx';
+import LudoBoard from './games/ludo/Board.jsx';
 
 
 export default function App() {
