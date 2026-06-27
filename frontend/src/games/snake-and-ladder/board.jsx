@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
+import VoiceChat from '../../components/VoiceChat';
 
 // --- CHAT PANEL (With Scrollbar Fix & Crash Protection) ---
 function ChatPanel({ messages = [], onSend }) {

@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti';
 import rockImg from '../../images/rock.png';
 import paperImg from '../../images/paper1.png';
 import scissorImg from '../../images/scissor.png';
+import VoiceChat from '../../components/VoiceChat';
 
 const ICONS = {
   stone: (

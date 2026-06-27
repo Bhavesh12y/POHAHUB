@@ -3,6 +3,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
+import VoiceChat from '../../components/VoiceChat';
+
 
 // --- CHAT PANEL ---
 function ChatPanel({ messages = [], onSend }) {
@@ -370,6 +372,9 @@ export default function LudoBoard() {
             {room.status === 'waiting' ? 'Waiting for host...' : isMyTurn ? "🎲 Your Turn!" : `${gameState.players[gameState.currentPlayerIndex]?.name}'s Turn`}
           </p>
         </div>
+
+        {/* INJECT VOICE CONTROLS HERE */}
+        <VoiceChat roomCode={room.code} />
         
         {gameState?.message && (
           <div className="text-center animate-pop-in bg-gray-100 px-6 py-2 rounded border-[2px] border-black shadow-[2px_2px_0px_#000] rotate-1">

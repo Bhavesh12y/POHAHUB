@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { connectSocket } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
+import VoiceChat from '../../components/VoiceChat';
 
 // Extended claims with descriptions for the Info Modal
 const CLAIMS = [

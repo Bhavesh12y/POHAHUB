@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
+import VoiceChat from '../../components/VoiceChat';
 
 function ChatPanel({ messages, onSend, disabled }) {
   const [text, setText] = useState('');
@@ -335,6 +336,9 @@ export default function ScribbleBoard() {
             {gameState?.currentWord || "_ _ _ _ _"}
           </p>
         </div>
+
+        {/* INJECT VOICE CONTROLS HERE */}
+         <VoiceChat roomCode={room.code} />
 
         <div className="order-3 md:order-3 col-span-1 text-right mt-2 md:mt-0">
           <p className="text-[9px] sm:text-xs font-bold tracking-[0.2em] uppercase text-gray-400">Status</p>
