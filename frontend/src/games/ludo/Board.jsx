@@ -153,27 +153,35 @@ export default function LudoBoard() {
   const isHost = room?.hostId === myPlayerId;
   const isMyTurn = gameState?.players[gameState?.currentPlayerIndex]?.id === myPlayerId;
 
-  // Dice Animation Logic
+// Dice Animation Logic
   useEffect(() => {
+    let visualRoll;
     if (gameState?.hasRolled && gameState.diceRoll) {
       setIsRolling(true);
       setDiceHighlighted(false);
       let counter = 0;
-      const visualRoll = setInterval(() => {
+      visualRoll = setInterval(() => {
           setDiceDisplay(DICE_FACES[Math.floor(Math.random() * 6) + 1]);
           counter++;
           if (counter > 5) {
               clearInterval(visualRoll);
               setDiceDisplay(DICE_FACES[gameState.diceRoll]);
               setDiceHighlighted(true);
-              setTimeout(() => setIsRolling(false), 300);
+              setIsRolling(false);
           }
       }, 100);
-      return () => clearInterval(visualRoll);
     } else if (gameState && !gameState.hasRolled) {
-      setDiceDisplay('🎲');
+      // Show the last roll if a turn was skipped, otherwise default to 🎲
+      if (gameState.diceRoll) {
+        setDiceDisplay(DICE_FACES[gameState.diceRoll]);
+      } else {
+        setDiceDisplay('🎲');
+      }
       setDiceHighlighted(false);
+      setIsRolling(false);
     }
+    
+    return () => { if (visualRoll) clearInterval(visualRoll); };
   }, [gameState?.hasRolled, gameState?.diceRoll]);
 
   // Actions
@@ -202,7 +210,7 @@ export default function LudoBoard() {
     </div>
   );
 
-  // Group tokens for rendering
+// Group tokens for rendering
   const tokenPositions = {};
   if (gameState?.players) {
     gameState.players.forEach((p, pIdx) => {
@@ -210,11 +218,11 @@ export default function LudoBoard() {
         let x, y;
         if (token.position === -1) {
           [x, y] = BASES[pIdx][tIdx];
-        } else if (token.position >= 0 && token.position <= 51) {
+        } else if (token.position >= 0 && token.position <= 50) { // Limit adjusted
           [x, y] = PATH[(token.position + START_OFFSETS[pIdx]) % 52];
-        } else if (token.position >= 52 && token.position <= 56) {
-          [x, y] = HOME_PATHS[pIdx][token.position - 52];
-        } else if (token.position === 57) {
+        } else if (token.position >= 51 && token.position <= 55) { // Home path logic adjusted
+          [x, y] = HOME_PATHS[pIdx][token.position - 51]; 
+        } else if (token.position === 56) { // Finish limit adjusted
           x = 7; y = 7; // Center
         }
 
@@ -422,9 +430,10 @@ export default function LudoBoard() {
                       }
 
                       const cx = x * 10 + 5 + dx;
-                      const cy = y * 10 + 5 + dy;
-                      const isClickable = t.isMine && isMyTurn && gameState?.hasRolled && !isRolling;
+                        const cy = y * 10 + 5 + dy;
 
+                        // Now strictly validates against the server's legal moves
+                        const isClickable = t.isMine && isMyTurn && gameState?.hasRolled && !isRolling && gameState?.legalMoves?.includes(t.tokenId);
                       return (
                         <circle
                           key={`${t.pIdx}-${t.tokenId}`}
