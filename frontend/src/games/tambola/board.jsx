@@ -239,7 +239,7 @@ export default function TambolaBoard() {
         .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
       `}</style>
 
-      {/* ERROR TOAST Z-INDEX AND POSITION FIXED HERE (z-[999] top-24) */}
+      {/* ERROR TOAST */}
       {errorToast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-[#ef4444] border-[3px] border-black text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-black uppercase rounded shadow-[6px_6px_0px_#000] z-[999] animate-bounce whitespace-nowrap tracking-widest">
           {errorToast}
@@ -333,7 +333,7 @@ export default function TambolaBoard() {
               {lastDrawn}
             </div>
 
-            {/* 🔥 PREVIOUS DRAWS FEATURE ADDED HERE 🔥 */}
+            {/* PREVIOUS DRAWS FEATURE */}
             {gameState?.drawnNumbers?.length > 1 && (
               <div className="mt-4 pt-4 border-t-[2px] border-black/30 w-full">
                 <p className="text-[10px] uppercase font-black text-gray-400 mb-2 tracking-widest">Previous Draws</p>
@@ -390,7 +390,14 @@ export default function TambolaBoard() {
 
         <div className="w-full lg:w-2/4 flex flex-col gap-6 order-2">
           <div className="bg-[#3b82f6] border-[4px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full text-white">
-            <h2 className="text-2xl sm:text-3xl font-black mb-4 uppercase tracking-wider text-white" style={{ WebkitTextStroke: '1px black' }}>Your Ticket</h2>
+            
+            {/* INJECTED VOICE CONTROLS HERE */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-white" style={{ WebkitTextStroke: '1px black' }}>
+                Your Ticket
+              </h2>
+              <VoiceChat roomCode={room.code} />
+            </div>
             
             {me?.ticket ? (
               <div className="w-full pb-2">
