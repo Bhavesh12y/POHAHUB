@@ -220,7 +220,7 @@ export default function MainLanding() {
                   <img
                     src={game.image}
                     alt={`${game.title} preview`}
-                    className={`aspect-video w-full object-cover transition-transform duration-300 ${
+                    className={`aspect-video w-full object-contain bg-white p-2 transition-transform duration-300 ${
                       game.available ? 'group-hover:scale-[1.05]' : 'grayscale'
                     }`}
                   />
