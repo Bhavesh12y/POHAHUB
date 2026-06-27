@@ -103,7 +103,15 @@ export default function VoiceChat({ roomCode }) {
 
   const initVoice = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Pass these specific constraints to enhance audio quality
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          noiseSuppression: true,   // Blocks out background "air" and static
+          echoCancellation: true,   // Prevents feedback loops from the speakers
+          autoGainControl: true     // Normalizes volume so quiet voices are boosted
+        } 
+      });
+      
       localStream.current = stream;
       setMicOn(true);
       setHasJoined(true);
@@ -113,7 +121,6 @@ export default function VoiceChat({ roomCode }) {
       alert("Microphone permission denied.");
     }
   };
-
   const toggleMic = () => {
     if (!hasJoined) {
       initVoice(); // Ask for permission and join network on first click
