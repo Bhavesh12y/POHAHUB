@@ -76,7 +76,7 @@ const GAMES = [
     description: 'Race your tokens home in this classic board game.',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
     path: '/games/ludo',
-    available: false,
+    available: true,
     headerColor: 'bg-[#facc15]',
     buttonColor: 'bg-[#e5e7eb]',
     tilt: 'rotate-1',
