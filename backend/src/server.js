@@ -39,6 +39,19 @@ io.on('connection', (socket) => {
   let currentRoom = null;
   let playerId = null;
 
+  socket.on('voice:join', ({ roomCode }) => {
+    // Notify everyone else in the room that a user wants to connect voice
+    socket.to(roomCode).emit('voice:user_joined', { socketId: socket.id });
+  });
+
+  socket.on('voice:signal', (payload) => {
+    // Relay the WebRTC signaling data directly to the target user
+    io.to(payload.targetId).emit('voice:signal', {
+      senderId: socket.id,
+      signalData: payload.signalData
+    });
+  });
+
   socket.on('room:create', ({ gameType, playerName }, callback) => {
     playerId = socket.id;
     const room = roomManager.createRoom({ gameType, hostId: playerId, hostName: playerName });
