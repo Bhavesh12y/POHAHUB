@@ -4,7 +4,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 
-// --- CHAT PANEL (Reused from Stone Paper Scissor & Snake Ladder) ---
+// --- CHAT PANEL ---
 function ChatPanel({ messages = [], onSend }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
@@ -55,7 +55,6 @@ function ChatPanel({ messages = [], onSend }) {
 }
 
 // --- LUDO BOARD CONSTANTS & PATH MAPS ---
-// 15x15 Grid. Coordinates mapped to 52 steps of outer track.
 const PATH = [
   [1,6], [2,6], [3,6], [4,6], [5,6], // 0-4 (Left arm)
   [6,5], [6,4], [6,3], [6,2], [6,1], [6,0], // 5-10 (Top arm, up)
@@ -87,7 +86,7 @@ const BASES = [
 
 const START_OFFSETS = [0, 13, 26, 39];
 const SAFE_SQUARES = [0, 8, 13, 21, 26, 34, 39, 47];
-const PLAYER_COLORS = ['#ef4444', '#22c55e', '#facc15', '#3b82f6']; // Red, Green, Yellow, Blue
+const PLAYER_COLORS = ['#ef4444', '#22c55e', '#facc15', '#3b82f6']; 
 const DICE_FACES = ['❓', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
 const StarIcon = ({ cx, cy }) => (
@@ -111,10 +110,11 @@ export default function LudoBoard() {
   const [diceHighlighted, setDiceHighlighted] = useState(false);
   const [diceDisplay, setDiceDisplay] = useState('🎲');
 
-  // Socket Connection & Event Handling
+  // RULE 2 FIX: Local state to track "Ek Ek Krke" step animation
+  const [animatedTokens, setAnimatedTokens] = useState({});
+
   useEffect(() => {
     const socket = connectSocket();
-   // const username = sessionStorage.getItem('pohahub_username');
     const username = localStorage.getItem('pohahub_username');
     if (!username) {
       navigate(`/games/ludo?join=${roomCode}`);
@@ -153,7 +153,61 @@ export default function LudoBoard() {
   const isHost = room?.hostId === myPlayerId;
   const isMyTurn = gameState?.players[gameState?.currentPlayerIndex]?.id === myPlayerId;
 
-// Dice Animation Logic
+  // RULE 2 FIX: Step-by-Step Animation Logic
+  useEffect(() => {
+    if (!gameState?.players) return;
+    
+    let needsInterval = false;
+    const currentVisuals = { ...animatedTokens };
+
+    gameState.players.forEach((p, pIdx) => {
+      p.tokens.forEach(t => {
+        const key = `${pIdx}-${t.id}`;
+        const visualPos = currentVisuals[key];
+        
+        // Snap instantly for initial load, getting eaten (-1), or spawning out of base (0)
+        if (visualPos === undefined || t.position === -1 || (t.position === 0 && visualPos === -1)) {
+          currentVisuals[key] = t.position;
+        } else if (visualPos !== -1 && visualPos < t.position) {
+          needsInterval = true; // Needs walking step-by-step
+        } else if (visualPos > t.position) {
+          currentVisuals[key] = t.position; // Failsafe snap
+        }
+      });
+    });
+
+    if (!needsInterval) {
+       if (JSON.stringify(currentVisuals) !== JSON.stringify(animatedTokens)) {
+          setAnimatedTokens(currentVisuals);
+       }
+       return;
+    }
+
+    const interval = setInterval(() => {
+      setAnimatedTokens(prev => {
+        let isDone = true;
+        const nextState = { ...prev };
+        
+        gameState.players.forEach((p, pIdx) => {
+          p.tokens.forEach(t => {
+            const key = `${pIdx}-${t.id}`;
+            if (nextState[key] !== undefined && nextState[key] !== -1 && nextState[key] < t.position) {
+              nextState[key] += 1;
+              isDone = false;
+            }
+          });
+        });
+
+        if (isDone) clearInterval(interval);
+        return nextState;
+      });
+    }, 150); // Speed of the walk
+
+    return () => clearInterval(interval);
+  }, [gameState]);
+
+
+  // Dice & RULE 3 FIX: Auto-Move Logic
   useEffect(() => {
     let visualRoll;
     if (gameState?.hasRolled && gameState.diceRoll) {
@@ -168,10 +222,16 @@ export default function LudoBoard() {
               setDiceDisplay(DICE_FACES[gameState.diceRoll]);
               setDiceHighlighted(true);
               setIsRolling(false);
+
+              // RULE 3 FIX: Auto move if only 1 valid move
+              if (isMyTurn && gameState.legalMoves?.length === 1) {
+                  setTimeout(() => {
+                      handleMoveToken(gameState.legalMoves[0]);
+                  }, 400); // Wait slightly so user sees the dice result
+              }
           }
       }, 100);
     } else if (gameState && !gameState.hasRolled) {
-      // Show the last roll if a turn was skipped, otherwise default to 🎲
       if (gameState.diceRoll) {
         setDiceDisplay(DICE_FACES[gameState.diceRoll]);
       } else {
@@ -184,7 +244,6 @@ export default function LudoBoard() {
     return () => { if (visualRoll) clearInterval(visualRoll); };
   }, [gameState?.hasRolled, gameState?.diceRoll]);
 
-  // Actions
   const handleStart = () => emitWithAck('room:start', {});
   const handleChat = (message) => emitWithAck('chat:message', { message });
   
@@ -210,31 +269,37 @@ export default function LudoBoard() {
     </div>
   );
 
-// Group tokens for rendering
+  // Group tokens for rendering using animated state
   const tokenPositions = {};
   if (gameState?.players) {
     gameState.players.forEach((p, pIdx) => {
       p.tokens.forEach((token, tIdx) => {
         let x, y;
-        if (token.position === -1) {
+        const key = `${pIdx}-${token.id}`;
+        
+        // Use animated position instead of the instant backend position
+        const renderPos = animatedTokens[key] !== undefined ? animatedTokens[key] : token.position;
+
+        if (renderPos === -1) {
           [x, y] = BASES[pIdx][tIdx];
-        } else if (token.position >= 0 && token.position <= 50) { // Limit adjusted
-          [x, y] = PATH[(token.position + START_OFFSETS[pIdx]) % 52];
-        } else if (token.position >= 51 && token.position <= 55) { // Home path logic adjusted
-          [x, y] = HOME_PATHS[pIdx][token.position - 51]; 
-        } else if (token.position === 56) { // Finish limit adjusted
-          x = 7; y = 7; // Center
+        } else if (renderPos >= 0 && renderPos <= 50) { 
+          [x, y] = PATH[(renderPos + START_OFFSETS[pIdx]) % 52];
+        } else if (renderPos >= 51 && renderPos <= 55) { 
+          [x, y] = HOME_PATHS[pIdx][renderPos - 51]; 
+        } else if (renderPos >= 56) { 
+          x = 7; y = 7; 
         }
 
         if (x !== undefined && y !== undefined) {
-          const key = `${x},${y}`;
-          if (!tokenPositions[key]) tokenPositions[key] = [];
-          tokenPositions[key].push({
+          const locKey = `${x},${y}`;
+          if (!tokenPositions[locKey]) tokenPositions[locKey] = [];
+          tokenPositions[locKey].push({
             pIdx,
             tokenId: token.id,
             color: p.color || PLAYER_COLORS[pIdx],
             isMine: p.id === myPlayerId,
-            position: token.position
+            position: renderPos,
+            realPosition: token.position // Keep real for validation
           });
         }
       });
@@ -250,6 +315,9 @@ export default function LudoBoard() {
   } else {
       btnClass += " border-black text-black shadow-[4px_4px_0px_#000] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#000] cursor-pointer ";
   }
+
+  // RULE 4 FIX: Dice Box Background matches current player's color
+  const activePlayerColor = gameState?.players?.[gameState?.currentPlayerIndex]?.color || '#3b82f6';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 relative font-sans">
@@ -329,26 +397,21 @@ export default function LudoBoard() {
               <div className="relative w-full h-full border-[3px] border-black rounded bg-white shadow-[inset_2px_2px_0px_rgba(0,0,0,0.1)] overflow-hidden">
                 
                 <svg viewBox="0 0 150 150" className="w-full h-full">
-                  {/* Grid Background Lines (Optional clean look) */}
                   <rect width="150" height="150" fill="#fafafa" />
 
                   {/* BASES */}
-                  {/* Red Base (Top Left) */}
                   <g>
                     <rect x="0" y="0" width="60" height="60" fill={PLAYER_COLORS[0]} stroke="black" strokeWidth="0.5" />
                     <rect x="12" y="12" width="36" height="36" fill="white" stroke="black" strokeWidth="0.5" rx="3" />
                   </g>
-                  {/* Green Base (Top Right) */}
                   <g>
                     <rect x="90" y="0" width="60" height="60" fill={PLAYER_COLORS[1]} stroke="black" strokeWidth="0.5" />
                     <rect x="102" y="12" width="36" height="36" fill="white" stroke="black" strokeWidth="0.5" rx="3" />
                   </g>
-                  {/* Yellow Base (Bottom Right) */}
                   <g>
                     <rect x="90" y="90" width="60" height="60" fill={PLAYER_COLORS[2]} stroke="black" strokeWidth="0.5" />
                     <rect x="102" y="102" width="36" height="36" fill="white" stroke="black" strokeWidth="0.5" rx="3" />
                   </g>
-                  {/* Blue Base (Bottom Left) */}
                   <g>
                     <rect x="0" y="90" width="60" height="60" fill={PLAYER_COLORS[3]} stroke="black" strokeWidth="0.5" />
                     <rect x="12" y="102" width="36" height="36" fill="white" stroke="black" strokeWidth="0.5" rx="3" />
@@ -375,7 +438,6 @@ export default function LudoBoard() {
                       <g key={`path-${idx}`}>
                         <rect x={coord[0]*10} y={coord[1]*10} width="10" height="10" fill={fill} stroke="black" strokeWidth="0.5" />
                         {isSafe && <StarIcon cx={coord[0]*10+5} cy={coord[1]*10+5} />}
-                        {/* Start Arrows */}
                         {idx === 0 && <polygon points={`${coord[0]*10+2},${coord[1]*10+2} ${coord[0]*10+8},${coord[1]*10+5} ${coord[0]*10+2},${coord[1]*10+8}`} fill="black" opacity="0.2"/>}
                         {idx === 13 && <polygon points={`${coord[0]*10+2},${coord[1]*10+2} ${coord[0]*10+8},${coord[1]*10+2} ${coord[0]*10+5},${coord[1]*10+8}`} fill="black" opacity="0.2"/>}
                         {idx === 26 && <polygon points={`${coord[0]*10+8},${coord[1]*10+2} ${coord[0]*10+2},${coord[1]*10+5} ${coord[0]*10+8},${coord[1]*10+8}`} fill="black" opacity="0.2"/>}
@@ -393,13 +455,9 @@ export default function LudoBoard() {
 
                   {/* CENTER FINISH */}
                   <g>
-                    {/* Top Triangle (Green) */}
                     <polygon points="60,60 90,60 75,75" fill={PLAYER_COLORS[1]} stroke="black" strokeWidth="0.5" />
-                    {/* Right Triangle (Yellow) */}
                     <polygon points="90,60 90,90 75,75" fill={PLAYER_COLORS[2]} stroke="black" strokeWidth="0.5" />
-                    {/* Bottom Triangle (Blue) */}
                     <polygon points="60,90 90,90 75,75" fill={PLAYER_COLORS[3]} stroke="black" strokeWidth="0.5" />
-                    {/* Left Triangle (Red) */}
                     <polygon points="60,60 60,90 75,75" fill={PLAYER_COLORS[0]} stroke="black" strokeWidth="0.5" />
                   </g>
 
@@ -412,7 +470,6 @@ export default function LudoBoard() {
                       let dx = 0, dy = 0;
                       let scale = 1;
 
-                      // Clustering for overlaps
                       if (count > 1) {
                         const angle = (2 * Math.PI * i) / count;
                         const radius = count > 2 ? 2.5 : 1.5;
@@ -421,19 +478,20 @@ export default function LudoBoard() {
                         scale = 0.8;
                       }
 
-                      // Adjust finish overlap
-                      if (t.position === 57) {
-                        const finishOffsets = [[-3,0], [0,-3], [3,0], [0,3]]; // R, G, Y, B offsets inside center
+                      if (t.position >= 56) {
+                        const finishOffsets = [[-3,0], [0,-3], [3,0], [0,3]]; 
                         dx += finishOffsets[t.pIdx]?.[0] || 0;
                         dy += finishOffsets[t.pIdx]?.[1] || 0;
                         scale = 0.7;
                       }
 
                       const cx = x * 10 + 5 + dx;
-                        const cy = y * 10 + 5 + dy;
+                      const cy = y * 10 + 5 + dy;
 
-                        // Now strictly validates against the server's legal moves
-                        const isClickable = t.isMine && isMyTurn && gameState?.hasRolled && !isRolling && gameState?.legalMoves?.includes(t.tokenId);
+                      // Validate against backend's state, but only if token isn't visually mid-walk
+                      const isClickable = t.isMine && isMyTurn && gameState?.hasRolled && !isRolling && 
+                                          gameState?.legalMoves?.includes(t.tokenId) && t.position === t.realPosition;
+
                       return (
                         <circle
                           key={`${t.pIdx}-${t.tokenId}`}
@@ -443,7 +501,7 @@ export default function LudoBoard() {
                           strokeWidth={isClickable ? "1" : "0.6"}
                           style={{
                             cursor: isClickable ? 'pointer' : 'default',
-                            transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                            transition: 'cx 0.15s linear, cy 0.15s linear' // Smooth snapping for visual steps
                           }}
                           onClick={() => {
                             if (isClickable) handleMoveToken(t.tokenId);
@@ -462,7 +520,8 @@ export default function LudoBoard() {
           {/* DICE & PLAYER LIST */}
           {room.status === 'playing' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[#3b82f6] border-[3px] border-black p-6 rounded-lg flex flex-col items-center justify-center shadow-[6px_6px_0px_#000] -rotate-1">
+              {/* RULE 4 FIX: Dynamic background color */}
+              <div style={{ backgroundColor: activePlayerColor }} className="border-[3px] border-black p-6 rounded-lg flex flex-col items-center justify-center shadow-[6px_6px_0px_#000] -rotate-1 transition-colors duration-500">
                 <button 
                     onClick={rollDice} 
                     disabled={isButtonDisabled} 
