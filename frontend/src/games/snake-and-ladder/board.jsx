@@ -355,6 +355,7 @@ export default function SnakeAndLadderBoard() {
       {/* TOP STATUS BAR */}
       <div className="bg-white border-[3px] border-black p-4 sm:p-6 mb-6 flex flex-col md:flex-row justify-between items-center rounded-lg shadow-[8px_8px_0px_#000] gap-4 -rotate-1">
         <div className="text-center md:text-left">
+          <VoiceChat roomCode={room.code} />
           <p className="text-xs font-black tracking-widest uppercase text-gray-500 mb-1">Turn Status</p>
           <p className={`text-xl font-black uppercase ${isMyTurn ? 'text-[#3b82f6]' : 'text-black'}`}>
             {room.status === 'waiting' ? 'Waiting for host...' : isMyTurn ? "🎲 Your Turn!" : `${gameState.players[gameState.currentPlayerIndex]?.name}'s Turn`}
