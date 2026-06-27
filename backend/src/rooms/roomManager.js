@@ -5,6 +5,7 @@ import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } fro
 import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } from '../games/tambola.js';
 
 import { createStonePaperScissorState, playSpsMove, nextSpsRound, serializeSpsState } from '../games/stonePaperScissor.js';
+import { createLudoState, rollLudoDice, moveLudoToken, serializeLudoState } from '../games/ludo.js';
 const PLAYER_COLORS = ['red', 'yellow'];
 const PLAYER_SYMBOLS = ['X', 'O'];
 
@@ -95,7 +96,8 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
     let limit = maxPlayers;
     if (gameType === 'scribble') limit = 8;
     if (gameType === 'tambola') limit = 50; // Tambola gets a massive lobby!
-  if (gameType === 'stone-paper-scissor') limit = 2;
+    if (gameType === 'ludo') limit = 4;
+    if (gameType === 'stone-paper-scissor') limit = 2;
     const host = { id: hostId, name: hostName, socketId: null };
     const room = {
       code: this.generateRoomCode(),
@@ -104,6 +106,7 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
       status: 'waiting', gameState: null, createdAt: Date.now(),
     };
     this.rooms.set(room.code, room);
+    
     return room;
   }
 
@@ -274,6 +277,10 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     }else if (room.gameType === 'stone-paper-scissor') {
       room.gameState = createStonePaperScissorState(room.players.map((p) => ({ id: p.id, name: p.name }))); // Add this line
     }
+    else if (room.gameType === 'ludo') {
+      // Add this block
+      room.gameState = createLudoState(room.players.map((p) => ({ id: p.id, name: p.name })));
+    }
 
     room.status = 'playing';
     return { ok: true, room };
@@ -308,6 +315,14 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
         return nextSpsRound(room.gameState).ok ? { ok: true, room } : { ok: false };
       }
     }
+    if (room.gameType === 'ludo') {
+      if (payload.action === 'roll') {
+        return rollLudoDice(room.gameState, playerId).ok ? { ok: true, room } : { ok: false };
+      }
+      if (payload.action === 'move') {
+        return moveLudoToken(room.gameState, playerId, payload.tokenId).ok ? { ok: true, room } : { ok: false };
+      }
+    }
     return { ok: false, error: 'Unsupported game type' };
   }
 
@@ -328,6 +343,7 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     else if (room.gameState && room.gameType === 'snake-and-ladder') payload.gameState = serializeSnakeAndLadderState(room.gameState);
     else if (room.gameState && room.gameType === 'tambola') payload.gameState = serializeTambolaState(room.gameState);
     else if (room.gameState && room.gameType === 'stone-paper-scissor') payload.gameState = serializeSpsState(room.gameState);
+    else if (room.gameState && room.gameType === 'ludo') payload.gameState = serializeLudoState(room.gameState);
     return payload;
   }
 }

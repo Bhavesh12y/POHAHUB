@@ -16,6 +16,7 @@ import TambolaBoard from './games/tambola/board.jsx';
 import SPSLanding from './games/stone-paper-scissor/Landing.jsx';
 import SPSBoard from './games/stone-paper-scissor/Board.jsx';
 
+
 export default function App() {
   return (
     <Routes>
@@ -35,7 +36,9 @@ export default function App() {
         <Route path="games/tambola" element={<TambolaLanding />} />
         <Route path="games/tambola/room/:roomCode" element={<TambolaBoard />} />
         <Route path="games/stone-paper-scissor" element={<SPSLanding />} />
-<Route path="games/stone-paper-scissor/room/:roomCode" element={<SPSBoard />} />
+        <Route path="games/stone-paper-scissor/room/:roomCode" element={<SPSBoard />} />
+        <Route path="games/ludo" element={<LudoLanding />} />
+        <Route path="games/ludo/room/:roomCode" element={<LudoBoard />} />
       </Route>
     </Routes>
   );
