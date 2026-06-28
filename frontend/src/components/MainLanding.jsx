@@ -101,7 +101,7 @@ const SINGLE_PLAYER_GAMES = [
     description: 'Slide tiles and merge them to reach the 2048 tile.',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Update with actual image when ready
     path: '/games/2048',
-    available: false,
+    available: true,
     headerColor: 'bg-[#bef264]',
     buttonColor: 'bg-[#fcd34d]',
     tilt: '-rotate-1',
