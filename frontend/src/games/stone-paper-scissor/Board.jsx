@@ -251,7 +251,6 @@ export default function Board() {
             gamePath="stone-paper-scissor"
           />
         );
-        console.log(room);
   }
 
 

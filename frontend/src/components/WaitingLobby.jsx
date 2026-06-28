@@ -25,7 +25,7 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
           url: roomUrl,
         });
       } catch (err) {
-        console.log('USER CANCELED SHARE', err);
+        // Native share can be canceled by the user; keep the lobby quiet.
       }
     } else {
       copyLink();

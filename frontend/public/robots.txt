@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /games/*/room/
+
+Sitemap: https://pohahub.vercel.app/sitemap.xml

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from '@vercel/analytics/react';
 
 
 
@@ -16,9 +16,6 @@ export function useDesktopScalingFix() {
 
       const EXTRA_ZOOM_OUT = 0.90; 
       const pixelRatio = window.devicePixelRatio || 1;
-      
-      // 1. Debugging: Check the console to see what the browser is actually reporting
-      console.log(`[Scaling Debug] OS/Browser Scaling: ${pixelRatio * 100}%`);
 
       let targetZoom = EXTRA_ZOOM_OUT;
 
@@ -27,12 +24,8 @@ export function useDesktopScalingFix() {
         targetZoom = (1 / pixelRatio) * EXTRA_ZOOM_OUT;
       }
 
-      console.log(`[Scaling Debug] Applying Zoom Level: ${Math.round(targetZoom * 100)}%`);
-
-      // 2. Target the React root container instead of the body
       const targetElement = document.getElementById('root') || document.body;
 
-      // Method A: Standard Zoom (Using decimals)
       targetElement.style.zoom = targetZoom; 
       
       /* // Method B: The "Nuclear Option" (CSS Transform)
@@ -132,52 +125,59 @@ export default function Layout() {
       </main>
       <Analytics />
 
-      {/* FOOTER */}
-      <footer className="hidden">
-        <div className="max-w-7lg mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-black uppercase tracking-widest text-black">
-          <p>(c) {new Date().getFullYear()} Pohahub</p>
-          
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-            <span className="cursor-pointer hover:underline decoration-[3px] underline-offset-4">Terms & Conditions</span>
-            <span className="cursor-pointer hover:underline decoration-[3px] underline-offset-4">Privacy Policy</span>
-            <a
-              href="https://www.instagram.com/bhavesh12z"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#ef4444] hover:text-black underline decoration-[3px] underline-offset-4 transition-colors"
-            >
-              Contact Us
-            </a>
+      <footer className="border-t-[4px] border-black bg-white mt-12">
+        <div className="max-w-7xl mx-auto px-5 py-8 flex flex-col gap-6 text-sm font-black uppercase tracking-widest text-black">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <p>(c) {new Date().getFullYear()} Pohahub</p>
+            <nav aria-label="Legal pages" className="flex flex-wrap gap-4 sm:gap-6">
+              <Link to="/about" className="hover:underline decoration-[3px] underline-offset-4">
+                About
+              </Link>
+              <Link to="/contact" className="hover:underline decoration-[3px] underline-offset-4">
+                Contact
+              </Link>
+              <Link to="/privacy-policy" className="hover:underline decoration-[3px] underline-offset-4">
+                Privacy Policy
+              </Link>
+              <Link to="/terms" className="hover:underline decoration-[3px] underline-offset-4">
+                Terms
+              </Link>
+            </nav>
           </div>
+
+          {!isInGameRoom && (
+            <nav aria-label="Game guides" className="flex flex-wrap gap-4 sm:gap-6 text-xs">
+              <Link to="/connect-4" className="hover:underline decoration-[3px] underline-offset-4">
+                Connect 4 Guide
+              </Link>
+              <Link to="/tic-tac-toe" className="hover:underline decoration-[3px] underline-offset-4">
+                Tic Tac Toe Guide
+              </Link>
+              <Link to="/scribble" className="hover:underline decoration-[3px] underline-offset-4">
+                Scribble Guide
+              </Link>
+              <Link to="/snake-and-ladder" className="hover:underline decoration-[3px] underline-offset-4">
+                Snake & Ladder Guide
+              </Link>
+              <Link to="/tambola" className="hover:underline decoration-[3px] underline-offset-4">
+                Tambola Guide
+              </Link>
+              <Link to="/rock-paper-scissor" className="hover:underline decoration-[3px] underline-offset-4">
+                Rock Paper Scissor Guide
+              </Link>
+              <Link to="/ludo" className="hover:underline decoration-[3px] underline-offset-4">
+                Ludo Guide
+              </Link>
+              <Link to="/2048" className="hover:underline decoration-[3px] underline-offset-4">
+                2048 Guide
+              </Link>
+              <Link to="/chess" className="hover:underline decoration-[3px] underline-offset-4">
+                Chess Guide
+              </Link>
+            </nav>
+          )}
         </div>
       </footer>
-
-      <a
-  href="https://www.instagram.com/bhavesh12z"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="hidden md:block fixed bottom-2 right-2 z-50
-             text-[11px] sm:text-xs
-             font-black text-[#ef4444]
-             underline underline-offset-4"
->
-   Enjoying? Send me a Maggie
-</a>
-
-{/* <a
-  href="https://www.instagram.com/bhavesh12z"
-  target="_blank"
-  rel="noopener noreferrer"
-  // className="fixed bottom-3 right-3 z-50
-  //            bg-[#ffc0cb] text-black font-black text-xs sm:text-sm
-  //            border-[3px] border-black px-4 py-2
-  //            shadow-[4px_4px_0px_#000]
-  //            hover:translate-y-[2px]
-  //            hover:shadow-[2px_2px_0px_#000]
-  //            transition-all"
->
-  Enjoying? Send me a Maggie
-</a> */}
     </div>
   );
 }

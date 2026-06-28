@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+const ACK_TIMEOUT_MS = 5000;
 
 let socket = null;
 
@@ -28,9 +29,19 @@ export function disconnectSocket() {
   }
 }
 
-export function emitWithAck(event, payload) {
+export function emitWithAck(event, payload, timeoutMs = ACK_TIMEOUT_MS) {
   return new Promise((resolve) => {
     const s = connectSocket();
-    s.emit(event, payload, (response) => resolve(response ?? { ok: false, error: 'No response' }));
+    s.timeout(timeoutMs).emit(event, payload, (err, response) => {
+      if (err) {
+        resolve({
+          ok: false,
+          error: 'Connection timed out. Please check your network and try again.',
+        });
+        return;
+      }
+
+      resolve(response ?? { ok: false, error: 'No response from server.' });
+    });
   });
 }
