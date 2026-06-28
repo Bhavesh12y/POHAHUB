@@ -83,11 +83,50 @@ const GAMES = [
   },
 ];
 
+const SINGLE_PLAYER_GAMES = [
+  {
+    id: 'block-blaster',
+    title: 'Block Blaster',
+    description: 'Clear the board by placing and matching blocks.',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/original-c03c34a74dba4bb1c8010bec8c06e719.png', // Update with actual image when ready
+    path: '/games/block-blaster',
+    available: false,
+    headerColor: 'bg-[#c4b5fd]',
+    buttonColor: 'bg-[#6ee7b7]',
+    tilt: 'rotate-1',
+  },
+  {
+    id: '2048',
+    title: '2048',
+    description: 'Slide tiles and merge them to reach the 2048 tile.',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Update with actual image when ready
+    path: '/games/2048',
+    available: false,
+    headerColor: 'bg-[#bef264]',
+    buttonColor: 'bg-[#fcd34d]',
+    tilt: '-rotate-1',
+  },
+  {
+    id: 'dino',
+    title: 'Dino Run',
+    description: 'Jump over cacti and dodge obstacles in this endless runner.',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/scribble.png', // Update with actual image when ready
+    path: '/games/dino',
+    available: false,
+    headerColor: 'bg-[#93c5fd]',
+    buttonColor: 'bg-[#fca5a5]',
+    tilt: 'rotate-1',
+  }
+];
+
 export default function MainLanding() {
   const navigate = useNavigate();
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinMode, setJoinMode] = useState(''); // '' | 'scan' | 'nearby'
   const [nearbyStatus, setNearbyStatus] = useState('');
+  
+  // New state to toggle between game categories
+  const [gameMode, setGameMode] = useState('multiplayer'); // 'multiplayer' | 'singleplayer'
 
   // Handle successful QR Scan
   const handleScan = (result) => {
@@ -151,6 +190,8 @@ export default function MainLanding() {
     setNearbyStatus('');
   };
 
+  const displayedGames = gameMode === 'multiplayer' ? GAMES : SINGLE_PLAYER_GAMES;
+
   return (
     <div className="relative min-h-screen overflow-hidden font-sans text-black">
       <style>{`
@@ -167,7 +208,7 @@ export default function MainLanding() {
       <div className="relative max-w-7xl mx-auto px-5 py-24 sm:py-28 z-10 w-full">
         
         {/* HERO SECTION */}
-        <section className="mb-12 sm:mb-16 animate-sketch-pop text-center sm:text-left">
+        <section className="mb-10 sm:mb-14 animate-sketch-pop text-center sm:text-left">
           
           <div className="inline-block bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_#000] px-4 py-2 mb-6 -rotate-1">
             <span className="text-sm sm:text-base font-black uppercase tracking-widest text-black">
@@ -184,7 +225,6 @@ export default function MainLanding() {
             A bright notebook arcade for quick multiplayer matches with friends.
           </p>
 
-          {/* MOVED & RESTYLED BUTTON */}
           <button 
             onClick={() => setShowJoinModal(true)}
             className="inline-block bg-sky-300 text-black border-[4px] border-black px-8 py-4 font-black uppercase tracking-widest text-lg shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all rotate-1"
@@ -193,9 +233,33 @@ export default function MainLanding() {
           </button>
         </section>
 
+        {/* GAME MODE TOGGLE */}
+        <div className="flex justify-center sm:justify-start gap-4 mb-8 sm:mb-12 animate-sketch-pop">
+          <button
+            onClick={() => setGameMode('multiplayer')}
+            className={`border-[4px] border-black px-6 py-3 font-black uppercase tracking-widest text-sm sm:text-base transition-all ${
+              gameMode === 'multiplayer'
+                ? 'bg-pink-400 text-black shadow-[6px_6px_0px_#000] -rotate-1 scale-105'
+                : 'bg-white text-gray-600 shadow-[2px_2px_0px_#000] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] cursor-pointer'
+            }`}
+          >
+            Multiplayer
+          </button>
+          <button
+            onClick={() => setGameMode('singleplayer')}
+            className={`border-[4px] border-black px-6 py-3 font-black uppercase tracking-widest text-sm sm:text-base transition-all ${
+              gameMode === 'singleplayer'
+                ? 'bg-lime-400 text-black shadow-[6px_6px_0px_#000] rotate-1 scale-105'
+                : 'bg-white text-gray-600 shadow-[2px_2px_0px_#000] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] cursor-pointer'
+            }`}
+          >
+            Single Player
+          </button>
+        </div>
+
         {/* GAMES GRID */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
-          {GAMES.map((game, index) => {
+          {displayedGames.map((game, index) => {
             const CardWrapper = game.available ? Link : 'div';
             const delay = `${(index + 1) * 100}ms`;
 
@@ -248,14 +312,11 @@ export default function MainLanding() {
         </section>
       </div>
 
-      
-   {/* RESTYLED MODAL: JOIN EXISTING ROOM */}
-     {/* MODAL: JOIN EXISTING ROOM (AT TOP, NO DARK BACKGROUND) */}
+      {/* MODAL: JOIN EXISTING ROOM */}
       {showJoinModal && (
         <div className="fixed inset-0 z-[100] overflow-y-auto pointer-events-none">
           <div className="flex min-h-full items-start justify-center p-4 pt-20 sm:pt-24 pb-12">
             
-            {/* pointer-events-auto ensures the popup itself is still clickable, but the invisible background isn't */}
             <div className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-6 sm:p-8 max-w-sm w-full relative -rotate-1 pointer-events-auto">
               
               <button 
