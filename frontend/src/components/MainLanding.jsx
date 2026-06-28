@@ -74,7 +74,7 @@ const GAMES = [
     id: 'ludo',
     title: 'Ludo',
     description: 'Race your tokens home in this classic board game.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/9e805da7afa8433031d19b540fadda86bf2b3461/frontend/src/images/image.png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/ludo.png',
     path: '/games/ludo',
     available: true,
     headerColor: 'bg-[#facc15]',
@@ -99,7 +99,7 @@ const SINGLE_PLAYER_GAMES = [
     id: '2048',
     title: '2048',
     description: 'Slide tiles and merge them to reach the 2048 tile.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png', // Update with actual image when ready
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/2048.png', // Update with actual image when ready
     path: '/games/2048',
     available: true,
     headerColor: 'bg-[#bef264]',
