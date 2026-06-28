@@ -113,16 +113,6 @@ export default function ConnectFourBoard() {
   );
 
   useEffect(() => {
-    if (gameState) {
-      if (gameState.board) {
-        console.log('ConnectFourBoard gameState.board:', gameState.board);
-      } else {
-        console.warn('ConnectFourBoard received gameState without board:', gameState);
-      }
-    }
-  }, [gameState]);
-
-  useEffect(() => {
     const socket = connectSocket();
     const username = localStorage.getItem('pohahub_username');
 

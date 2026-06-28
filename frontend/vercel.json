@@ -1,4 +1,15 @@
 {
+  "headers": [
+    {
+      "source": "/games/:game/room/:roomCode",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
