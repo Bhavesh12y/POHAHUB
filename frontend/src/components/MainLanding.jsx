@@ -119,7 +119,7 @@ const SINGLE_PLAYER_GAMES = [
     description: 'Jump over cacti and dodge obstacles in this endless runner.',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/scribble.png',
     path: '/games/dino',
-    available: false,
+    available: true,
     headerColor: 'bg-[#93c5fd]',
     buttonColor: 'bg-[#fca5a5]',
     tilt: 'rotate-1',
