@@ -57,17 +57,25 @@ export default function Layout() {
 
   
 
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (isInGameRoom) {
-        e.preventDefault();
-        e.returnValue = 'Are you sure you want to leave? Your game progress will be lost.';
-      }
-    };
+ useEffect(() => {
+  if (!isInGameRoom) return;
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isInGameRoom]);
+  const handleBeforeUnload = (e) => {
+    // Required for Chrome, Edge, Firefox
+    e.preventDefault();
+
+    // Required for Chrome
+    e.returnValue = '';
+
+    return '';
+  };
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  };
+}, [isInGameRoom]);
 
   const handleNavigation = (e, path) => {
     if (isInGameRoom) {
