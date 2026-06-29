@@ -271,40 +271,21 @@ export default function BlockBlaster() {
   }, [generateShapes, checkGameOver]);
 
   // -- Coordinate-based Drag and Drop --
-const handlePointerDown = (e, idx) => {
+  const handlePointerDown = (e, idx) => {
+    // If the board is actively shaking (clearing a line) block the user from picking up a new shape
     if (shapesRef.current[idx] === null || gameOverRef.current || isShaking) return;
     
-    let visualLeft = e.clientX;
-    let visualTop = e.clientY;
-    
-    // Calculate precise initial position to avoid jumping
-    if (gridRef.current) {
-      const gridRect = gridRef.current.getBoundingClientRect();
-      const cellW = gridRect.width / GRID_SIZE;
-      const cellH = gridRect.height / GRID_SIZE;
-      const shape = shapesRef.current[idx];
-      const shapeW = shape.matrix[0].length * cellW;
-      const shapeH = shape.matrix.length * cellH;
-      
-      const isMobile = window.innerWidth < 640;
-      const offsetY = isMobile ? 45 : 20; // Tighter offset
-      
-      visualLeft = e.clientX - (shapeW / 2);
-      visualTop = e.clientY - shapeH - offsetY;
-    }
-
     dragStateRef.current = {
       isDragging: true,
       shapeIdx: idx,
       x: e.clientX,
       y: e.clientY,
-      visualLeft, visualTop, // Explicit pixel lock
       hoverR: null, hoverC: null,
       isValidHover: false
     };
 
     setDragRender({ ...dragStateRef.current });
-    document.body.style.overflow = 'hidden'; 
+    document.body.style.overflow = 'hidden'; // Lock mobile scroll
   };
 
   useEffect(() => {
@@ -323,23 +304,16 @@ const handlePointerDown = (e, idx) => {
 
       // --- NEW CODE ---
         // Dynamic mobile offset (distance from finger to the bottom of the shape)
-        // const isMobile = window.innerWidth < 640;
-        // const offsetY = isMobile ? 80 : 40;
+        const isMobile = window.innerWidth < 640;
+        const offsetY = isMobile ? 80 : 40;
 
+        // Target physical top-left of the shape based on the synchronized offset
+        const targetX = x - (shapeW / 2);
+        const targetY = y - shapeH - offsetY;
 
-        // // Target physical top-left of the shape based on the synchronized offset
-        // const targetX = x - (shapeW / 2);
-        // const targetY = y - shapeH - offsetY;
-
-        // Dynamic offset (tighter for better accuracy)
-      const isMobile = window.innerWidth < 640;
-      const offsetY = isMobile ? 45 : 20; 
-
-      // EXACT top-left pixel coordinates of the block
-      const visualLeft = x - (shapeW / 2);
-      const visualTop = y - shapeH - offsetY;
-      let c = Math.round((visualLeft - gridRect.left) / cellW);
-      let r = Math.round((visualTop - gridRect.top) / cellH);
+      // Coordinate Math (No elementFromPoint needed)
+      let c = Math.round((targetX - gridRect.left) / cellW);
+      let r = Math.round((targetY - gridRect.top) / cellH);
 
       // Give a little leeway so you don't have to be pixel perfect on edges
       const margin = 2;
@@ -468,25 +442,28 @@ const handlePointerDown = (e, idx) => {
         }
       `}</style>
 
-     {/* Floating Dragged Element (Uses Hard Pixel Lock) */}
+      {/* Floating Dragged Element (Uses Magnetic Snapping to Grid) */}
       {dragRender.isDragging && availableShapes[dragRender.shapeIdx] && (
-        <div 
-          className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)]"
-          style={{ 
-            left: dragRender.visualLeft, 
-            top: dragRender.visualTop,
-            // Notice: No transform translate here! JS is handling exact positioning.
-          }}
-        >
+        // --- NEW CODE ---
+            <div 
+            className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)] transition-transform duration-75 ease-out"
+            style={{ 
+                left: dragRender.x, 
+                top: dragRender.y,
+                // Match the JS logic perfectly: Center horizontally (-50%), shift up by shape height (-100%) + exact pixel offset
+                transform: `translate(-50%, calc(-100% - ${window.innerWidth < 640 ? 80 : 40}px))` 
+            }}
+            >
           <div className="flex flex-col gap-1 sm:gap-1.5">
             {availableShapes[dragRender.shapeIdx].matrix.map((row, r) => (
               <div key={r} className="flex gap-1 sm:gap-1.5">
                 {row.map((val, c) => {
                   if (!val) return <div key={c} className="w-8 h-8 sm:w-12 sm:h-12 bg-transparent" />;
                   
+                  // Color changes based on valid/invalid hover
                   let bgStyle = `${availableShapes[dragRender.shapeIdx].color} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]`;
                   if (dragRender.hoverR !== null && !dragRender.isValidHover) {
-                     bgStyle = 'bg-red-500 border-[2px] sm:border-[3px] border-black opacity-80'; 
+                     bgStyle = 'bg-red-500 border-[2px] sm:border-[3px] border-black opacity-80'; // Invalid red tint
                   }
                   return <div key={c} className={`w-8 h-8 sm:w-12 sm:h-12 transition-colors ${bgStyle}`} />;
                 })}
