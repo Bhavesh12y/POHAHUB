@@ -250,7 +250,7 @@ export default function BlockBlaster() {
         setBoard(finalBoard);
         setClearingCells([]);
         setIsShaking(false);
-      }, 200);
+      }, 500);
 
     } else {
       // No lines cleared, reset combo
@@ -302,13 +302,14 @@ export default function BlockBlaster() {
       const shapeW = shape.matrix[0].length * cellW;
       const shapeH = shape.matrix.length * cellH;
 
-      // Dynamic mobile offset (keeps shape above finger)
-      const isMobile = window.innerWidth < 640;
-      const offsetY = isMobile ? 80 : 30;
+      // --- NEW CODE ---
+        // Dynamic mobile offset (distance from finger to the bottom of the shape)
+        const isMobile = window.innerWidth < 640;
+        const offsetY = isMobile ? 80 : 40;
 
-      // Target physical center of where user is trying to place top-left of shape
-      const targetX = x - (shapeW / 2);
-      const targetY = y - offsetY - (shapeH / 2);
+        // Target physical top-left of the shape based on the synchronized offset
+        const targetX = x - (shapeW / 2);
+        const targetY = y - shapeH - offsetY;
 
       // Coordinate Math (No elementFromPoint needed)
       let c = Math.round((targetX - gridRect.left) / cellW);
@@ -362,29 +363,88 @@ export default function BlockBlaster() {
       document.body.style.overflow = '';
     };
   }, [placeShape]);
+ 
+  // Calculate predictive highlights (What happens IF we drop here?)
+  let predictedClearRows = [];
+  let predictedClearCols = [];
+
+  if (dragRender.isDragging && dragRender.isValidHover && dragRender.hoverR !== null && dragRender.hoverC !== null) {
+    const shape = availableShapes[dragRender.shapeIdx];
+    if (shape) {
+      let tempBoard = board.map(row => [...row]);
+      let canPredict = true;
+      
+      // Simulate placing the shape
+      for (let sr = 0; sr < shape.matrix.length; sr++) {
+        for (let sc = 0; sc < shape.matrix[0].length; sc++) {
+          if (shape.matrix[sr][sc] === 1) {
+            let tr = dragRender.hoverR + sr;
+            let tc = dragRender.hoverC + sc;
+            if (tr >= 0 && tr < GRID_SIZE && tc >= 0 && tc < GRID_SIZE) {
+              tempBoard[tr][tc] = shape.color; 
+            } else {
+              canPredict = false;
+            }
+          }
+        }
+      }
+
+      // If it fits, check for full lines in our simulated board
+      if (canPredict) {
+        for (let i = 0; i < GRID_SIZE; i++) {
+          if (tempBoard[i].every(cell => cell !== null)) predictedClearRows.push(i);
+        }
+        for (let j = 0; j < GRID_SIZE; j++) {
+          let isColFull = true;
+          for (let i = 0; i < GRID_SIZE; i++) {
+            if (tempBoard[i][j] === null) isColFull = false;
+          }
+          if (isColFull) predictedClearCols.push(j);
+        }
+      }
+    }
+  }
 
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none">
       
-      {/* Custom Styles for Animations */}
+     {/* Custom Styles for Animations */}
       <style>{`
         @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-40px) scale(1.2); opacity: 0; } }
         @keyframes boardShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-1deg); } 75% { transform: translateX(4px) rotate(1deg); } }
+        
+        /* NEW ANIMATIONS */
+        @keyframes blockPopClear {
+          0% { transform: scale(1); filter: brightness(1); }
+          30% { transform: scale(1.2); filter: brightness(1.5); z-index: 10; box-shadow: 0 0 15px rgba(255,255,255,1); border-color: white; }
+          100% { transform: scale(0) rotate(15deg); opacity: 0; filter: brightness(2); }
+        }
+        @keyframes pulseGlow {
+          0% { filter: brightness(1.1); }
+          100% { filter: brightness(1.5); border-color: white !important; box-shadow: inset 0 0 15px rgba(255,255,255,1), 0 0 10px rgba(255,255,255,0.8); z-index: 5; }
+        }
+        
         .animate-float { animation: floatUp 1s ease-out forwards; }
         .animate-shake { animation: boardShake 0.2s ease-in-out; }
+        
+        /* NEW CLASSES */
+        .animate-clear-pop { animation: blockPopClear 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .predictive-highlight { animation: pulseGlow 0.5s infinite alternate; border-color: white !important; }
       `}</style>
 
       {/* Floating Dragged Element (Uses Magnetic Snapping to Grid) */}
       {dragRender.isDragging && availableShapes[dragRender.shapeIdx] && (
-        <div 
-          className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)] transition-transform duration-75 ease-out"
-          style={{ 
-            left: dragRender.x, 
-            top: dragRender.y,
-            transform: 'translate(-50%, -130%)' // Dynamic offset handled here visually
-          }}
-        >
+        // --- NEW CODE ---
+            <div 
+            className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)] transition-transform duration-75 ease-out"
+            style={{ 
+                left: dragRender.x, 
+                top: dragRender.y,
+                // Match the JS logic perfectly: Center horizontally (-50%), shift up by shape height (-100%) + exact pixel offset
+                transform: `translate(-50%, calc(-100% - ${window.innerWidth < 640 ? 80 : 40}px))` 
+            }}
+            >
           <div className="flex flex-col gap-1 sm:gap-1.5">
             {availableShapes[dragRender.shapeIdx].matrix.map((row, r) => (
               <div key={r} className="flex gap-1 sm:gap-1.5">
@@ -491,20 +551,22 @@ export default function BlockBlaster() {
                 }
 
                 const isClearing = clearingCells.includes(`${rIdx}-${cIdx}`);
+                const isPredictedToClear = predictedClearRows.includes(rIdx) || predictedClearCols.includes(cIdx);
 
                 return (
                   <div 
                     key={`${rIdx}-${cIdx}`} 
-                    className={`w-8 h-8 sm:w-12 sm:h-12 transition-all duration-75 ease-in-out
+                    className={`w-8 h-8 sm:w-12 sm:h-12 transition-all duration-75 ease-in-out relative
                       ${cellColor 
                         ? `${cellColor} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]` 
                         : isGhostValid
-                          ? `${ghostColor} opacity-40 border-[2px] sm:border-[3px] border-black border-dashed`
+                          ? `${ghostColor} opacity-50 border-[2px] sm:border-[3px] border-black border-dashed`
                         : isGhostInvalid
                           ? 'bg-red-500 opacity-30 border-[2px] sm:border-[3px] border-red-900 border-dashed'
                           : 'bg-transparent border-[2px] border-dashed border-black/10'
                       }
-                      ${isClearing ? 'scale-0 opacity-0 bg-white transition-all duration-150' : 'scale-100 opacity-100'}
+                      ${isClearing ? 'animate-clear-pop origin-center' : 'scale-100 opacity-100'}
+                      ${isPredictedToClear && !isClearing ? 'predictive-highlight' : ''}
                     `}
                   />
                 )
