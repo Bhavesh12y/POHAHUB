@@ -320,8 +320,19 @@ export default function DinoDash() {
           
         </div>
 
-        <p className="mt-6 text-black text-center px-4 font-bold uppercase tracking-wider text-[11px] sm:text-sm bg-white border-[3px] border-black p-2 sm:p-3 shadow-[4px_4px_0_0_#000] transform rotate-1">
-          Tap or press Space/W/Up to jump!
+        {/* Massive Mobile Jump Button */}
+        <button 
+          onPointerDown={(e) => {
+            e.preventDefault(); // Prevents zoom/scroll side-effects on mobile
+            jump();
+          }}
+          className="w-full mt-6 bg-[#ff99c8] border-[4px] border-black shadow-[6px_6px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[6px] active:translate-x-[6px] transition-all text-black font-black py-4 sm:py-6 text-3xl sm:text-4xl uppercase tracking-widest cursor-pointer touch-manipulation block"
+        >
+          JUMP
+        </button>
+
+        <p className="mt-4 text-black text-center px-4 font-bold uppercase tracking-wider text-[10px] sm:text-xs opacity-70">
+          Keyboard: Space / W / Up Arrow
         </p>
 
       </div>

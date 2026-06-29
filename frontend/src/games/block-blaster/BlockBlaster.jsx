@@ -271,21 +271,40 @@ export default function BlockBlaster() {
   }, [generateShapes, checkGameOver]);
 
   // -- Coordinate-based Drag and Drop --
-  const handlePointerDown = (e, idx) => {
-    // If the board is actively shaking (clearing a line) block the user from picking up a new shape
+const handlePointerDown = (e, idx) => {
     if (shapesRef.current[idx] === null || gameOverRef.current || isShaking) return;
     
+    let visualLeft = e.clientX;
+    let visualTop = e.clientY;
+    
+    // Calculate precise initial position to avoid jumping
+    if (gridRef.current) {
+      const gridRect = gridRef.current.getBoundingClientRect();
+      const cellW = gridRect.width / GRID_SIZE;
+      const cellH = gridRect.height / GRID_SIZE;
+      const shape = shapesRef.current[idx];
+      const shapeW = shape.matrix[0].length * cellW;
+      const shapeH = shape.matrix.length * cellH;
+      
+      const isMobile = window.innerWidth < 640;
+      const offsetY = isMobile ? 45 : 20; // Tighter offset
+      
+      visualLeft = e.clientX - (shapeW / 2);
+      visualTop = e.clientY - shapeH - offsetY;
+    }
+
     dragStateRef.current = {
       isDragging: true,
       shapeIdx: idx,
       x: e.clientX,
       y: e.clientY,
+      visualLeft, visualTop, // Explicit pixel lock
       hoverR: null, hoverC: null,
       isValidHover: false
     };
 
     setDragRender({ ...dragStateRef.current });
-    document.body.style.overflow = 'hidden'; // Lock mobile scroll
+    document.body.style.overflow = 'hidden'; 
   };
 
   useEffect(() => {
@@ -304,16 +323,23 @@ export default function BlockBlaster() {
 
       // --- NEW CODE ---
         // Dynamic mobile offset (distance from finger to the bottom of the shape)
-        const isMobile = window.innerWidth < 640;
-        const offsetY = isMobile ? 80 : 40;
+        // const isMobile = window.innerWidth < 640;
+        // const offsetY = isMobile ? 80 : 40;
 
-        // Target physical top-left of the shape based on the synchronized offset
-        const targetX = x - (shapeW / 2);
-        const targetY = y - shapeH - offsetY;
 
-      // Coordinate Math (No elementFromPoint needed)
-      let c = Math.round((targetX - gridRect.left) / cellW);
-      let r = Math.round((targetY - gridRect.top) / cellH);
+        // // Target physical top-left of the shape based on the synchronized offset
+        // const targetX = x - (shapeW / 2);
+        // const targetY = y - shapeH - offsetY;
+
+        // Dynamic offset (tighter for better accuracy)
+      const isMobile = window.innerWidth < 640;
+      const offsetY = isMobile ? 45 : 20; 
+
+      // EXACT top-left pixel coordinates of the block
+      const visualLeft = x - (shapeW / 2);
+      const visualTop = y - shapeH - offsetY;
+      let c = Math.round((visualLeft - gridRect.left) / cellW);
+      let r = Math.round((visualTop - gridRect.top) / cellH);
 
       // Give a little leeway so you don't have to be pixel perfect on edges
       const margin = 2;
@@ -410,6 +436,7 @@ export default function BlockBlaster() {
     <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none">
       
      {/* Custom Styles for Animations */}
+    {/* Custom Styles for Animations */}
       <style>{`
         @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-40px) scale(1.2); opacity: 0; } }
         @keyframes boardShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-1deg); } 75% { transform: translateX(4px) rotate(1deg); } }
@@ -417,12 +444,14 @@ export default function BlockBlaster() {
         /* NEW ANIMATIONS */
         @keyframes blockPopClear {
           0% { transform: scale(1); filter: brightness(1); }
-          30% { transform: scale(1.2); filter: brightness(1.5); z-index: 10; box-shadow: 0 0 15px rgba(255,255,255,1); border-color: white; }
-          100% { transform: scale(0) rotate(15deg); opacity: 0; filter: brightness(2); }
+          30% { transform: scale(1.15); filter: brightness(1.4); z-index: 10; box-shadow: 0 0 20px rgba(255,255,255,0.9); border-color: white; }
+          100% { transform: scale(0.5) rotate(15deg); opacity: 0; filter: brightness(2); }
         }
-        @keyframes pulseGlow {
-          0% { filter: brightness(1.1); }
-          100% { filter: brightness(1.5); border-color: white !important; box-shadow: inset 0 0 15px rgba(255,255,255,1), 0 0 10px rgba(255,255,255,0.8); z-index: 5; }
+        
+        /* Smooth, premium breathing glow */
+        @keyframes smoothGlow {
+          0% { box-shadow: inset 0 0 5px rgba(255,255,255,0.2), 0 0 5px rgba(255,255,255,0.1); filter: brightness(1.05); }
+          100% { box-shadow: inset 0 0 20px rgba(255,255,255,0.7), 0 0 15px rgba(255,255,255,0.5); filter: brightness(1.25); }
         }
         
         .animate-float { animation: floatUp 1s ease-out forwards; }
@@ -430,31 +459,34 @@ export default function BlockBlaster() {
         
         /* NEW CLASSES */
         .animate-clear-pop { animation: blockPopClear 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-        .predictive-highlight { animation: pulseGlow 0.5s infinite alternate; border-color: white !important; }
+        
+        /* Applied the new glow with a much slower 1.5s ease-in-out */
+        .predictive-highlight { 
+          animation: smoothGlow 1.5s ease-in-out infinite alternate; 
+          border-color: rgba(255, 255, 255, 0.85) !important; 
+          z-index: 5; 
+        }
       `}</style>
 
-      {/* Floating Dragged Element (Uses Magnetic Snapping to Grid) */}
+     {/* Floating Dragged Element (Uses Hard Pixel Lock) */}
       {dragRender.isDragging && availableShapes[dragRender.shapeIdx] && (
-        // --- NEW CODE ---
-            <div 
-            className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)] transition-transform duration-75 ease-out"
-            style={{ 
-                left: dragRender.x, 
-                top: dragRender.y,
-                // Match the JS logic perfectly: Center horizontally (-50%), shift up by shape height (-100%) + exact pixel offset
-                transform: `translate(-50%, calc(-100% - ${window.innerWidth < 640 ? 80 : 40}px))` 
-            }}
-            >
+        <div 
+          className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)]"
+          style={{ 
+            left: dragRender.visualLeft, 
+            top: dragRender.visualTop,
+            // Notice: No transform translate here! JS is handling exact positioning.
+          }}
+        >
           <div className="flex flex-col gap-1 sm:gap-1.5">
             {availableShapes[dragRender.shapeIdx].matrix.map((row, r) => (
               <div key={r} className="flex gap-1 sm:gap-1.5">
                 {row.map((val, c) => {
                   if (!val) return <div key={c} className="w-8 h-8 sm:w-12 sm:h-12 bg-transparent" />;
                   
-                  // Color changes based on valid/invalid hover
                   let bgStyle = `${availableShapes[dragRender.shapeIdx].color} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]`;
                   if (dragRender.hoverR !== null && !dragRender.isValidHover) {
-                     bgStyle = 'bg-red-500 border-[2px] sm:border-[3px] border-black opacity-80'; // Invalid red tint
+                     bgStyle = 'bg-red-500 border-[2px] sm:border-[3px] border-black opacity-80'; 
                   }
                   return <div key={c} className={`w-8 h-8 sm:w-12 sm:h-12 transition-colors ${bgStyle}`} />;
                 })}
