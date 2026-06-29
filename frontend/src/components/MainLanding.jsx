@@ -97,7 +97,7 @@ const SINGLE_PLAYER_GAMES = [
     description: 'Clear the board by placing and matching blocks.',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/original-c03c34a74dba4bb1c8010bec8c06e719.png',
     path: '/games/block-blaster',
-    available: false,
+    available: true,
     headerColor: 'bg-[#c4b5fd]',
     buttonColor: 'bg-[#6ee7b7]',
     tilt: 'rotate-1',

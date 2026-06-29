@@ -23,6 +23,7 @@ const ScribbleBoard = lazy(() => import('./games/scribble/Board.jsx'));
 const SPSLanding = lazy(() => import('./games/stone-paper-scissor/Landing.jsx'));
 const SPSBoard = lazy(() => import('./games/stone-paper-scissor/Board.jsx'));
 const Game2048 = lazy(() => import('./games/2048/Game2048.jsx'));
+const BlockBlaster = lazy(() => import('./games/block-blaster/BlockBlaster.jsx'));
 
 function RouteFallback() {
   return (
@@ -96,6 +97,7 @@ export default function App() {
           <Route path="games/stone-paper-scissor/room/:roomCode" element={<SPSBoard />} />
 
           <Route path="games/2048" element={<Game2048 />} />
+          <Route path="games/block-blaster" element={<BlockBlaster />} />
 
           <Route
             path="*"
