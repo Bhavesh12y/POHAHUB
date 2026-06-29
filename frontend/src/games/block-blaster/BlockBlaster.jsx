@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Pre-defined block shapes and their specific theme colors
+// Added 'size' metadata for fair shape generation
 const SHAPES = [
-  { id: '1x1', matrix: [[1]], color: 'bg-[#ff99c8]' }, // Pink
-  { id: '2x2', matrix: [[1, 1], [1, 1]], color: 'bg-[#a9def9]' }, // Blue
-  { id: '3x3', matrix: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], color: 'bg-[#fcf6bd]' }, // Yellow
-  { id: 'h2', matrix: [[1, 1]], color: 'bg-[#d0f4de]' }, // Light Green
-  { id: 'v2', matrix: [[1], [1]], color: 'bg-[#d0f4de]' }, 
-  { id: 'h3', matrix: [[1, 1, 1]], color: 'bg-[#e4c1f9]' }, // Purple
-  { id: 'v3', matrix: [[1], [1], [1]], color: 'bg-[#e4c1f9]' },
-  { id: 'h4', matrix: [[1, 1, 1, 1]], color: 'bg-[#ffb5a7]' }, // Peach
-  { id: 'v4', matrix: [[1], [1], [1], [1]], color: 'bg-[#ffb5a7]' },
-  { id: 'L-right', matrix: [[1, 0], [1, 0], [1, 1]], color: 'bg-[#ffd166]' }, // Orange
-  { id: 'L-left', matrix: [[0, 1], [0, 1], [1, 1]], color: 'bg-[#06d6a0]' }, // Dark Green
-  { id: 'T-up', matrix: [[0, 1, 0], [1, 1, 1]], color: 'bg-[#118ab2]' }, // Dark Blue
+  { id: '1x1', matrix: [[1]], color: 'bg-[#ff99c8]', size: 'small' }, 
+  { id: '2x2', matrix: [[1, 1], [1, 1]], color: 'bg-[#a9def9]', size: 'medium' }, 
+  { id: '3x3', matrix: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], color: 'bg-[#fcf6bd]', size: 'large' }, 
+  { id: 'h2', matrix: [[1, 1]], color: 'bg-[#d0f4de]', size: 'small' }, 
+  { id: 'v2', matrix: [[1], [1]], color: 'bg-[#d0f4de]', size: 'small' }, 
+  { id: 'h3', matrix: [[1, 1, 1]], color: 'bg-[#e4c1f9]', size: 'medium' }, 
+  { id: 'v3', matrix: [[1], [1], [1]], color: 'bg-[#e4c1f9]', size: 'medium' },
+  { id: 'h4', matrix: [[1, 1, 1, 1]], color: 'bg-[#ffb5a7]', size: 'large' }, 
+  { id: 'v4', matrix: [[1], [1], [1], [1]], color: 'bg-[#ffb5a7]', size: 'large' },
+  { id: 'L-right', matrix: [[1, 0], [1, 0], [1, 1]], color: 'bg-[#ffd166]', size: 'medium' }, 
+  { id: 'L-left', matrix: [[0, 1], [0, 1], [1, 1]], color: 'bg-[#06d6a0]', size: 'medium' }, 
+  { id: 'T-up', matrix: [[0, 1, 0], [1, 1, 1]], color: 'bg-[#118ab2]', size: 'medium' }, 
 ];
 
 const GRID_SIZE = 8;
@@ -22,25 +22,50 @@ const GRID_SIZE = 8;
 export default function BlockBlaster() {
   const navigate = useNavigate();
   
-  const [board, setBoard] = useState(Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null)));
+  // -- Refs for Stale-State Prevention --
+  const gridRef = useRef(null);
+  const boardRef = useRef(Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null)));
+  const shapesRef = useRef([]);
+  const scoreRef = useRef(0);
+  const comboRef = useRef(1);
+  const gameOverRef = useRef(false);
+
+  // -- React State for Rendering --
+  const [board, setBoard] = useState(boardRef.current);
   const [score, setScore] = useState(0);
+  const [combo, setCombo] = useState(1);
   const [gameOver, setGameOver] = useState(false);
   const [availableShapes, setAvailableShapes] = useState([]);
+  const [clearingCells, setClearingCells] = useState([]);
+  const [isShaking, setIsShaking] = useState(false);
+  const [popups, setPopups] = useState([]);
+  let popupIdCounter = useRef(0);
   
-  // Custom Drag State
-  const [dragState, setDragState] = useState({
-    isDragging: false,
-    shapeIdx: null,
-    x: 0,
-    y: 0,
-    hoverR: null,
-    hoverC: null
-  });
-
-  // Initialize High Score from localStorage
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('blockblaster-highScore');
     return saved !== null ? parseInt(saved, 10) : 0;
+  });
+
+  // -- High Performance Drag State (Refs avoid React batching latency) --
+  const dragStateRef = useRef({
+    isDragging: false,
+    shapeIdx: null,
+    x: 0, 
+    y: 0,
+    hoverR: null,
+    hoverC: null,
+    isValidHover: false
+  });
+  
+  // Rendered drag state (syncs selectively with the ref)
+  const [dragRender, setDragRender] = useState({
+    isDragging: false,
+    shapeIdx: null,
+    x: 0, 
+    y: 0,
+    hoverR: null,
+    hoverC: null,
+    isValidHover: false
   });
 
   // Update High Score
@@ -51,33 +76,65 @@ export default function BlockBlaster() {
     }
   }, [score, highScore]);
 
-  // Generate 3 random shapes
-  const generateShapes = useCallback(() => {
-    const newShapes = Array(3).fill(null).map(() => {
-      const randomIdx = Math.floor(Math.random() * SHAPES.length);
-      return SHAPES[randomIdx];
-    });
-    setAvailableShapes(newShapes);
-  }, []);
-
-  useEffect(() => {
-    startNewGame();
-  }, [generateShapes]);
-
-  const startNewGame = () => {
-    setBoard(Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null)));
-    setScore(0);
-    setGameOver(false);
-    generateShapes();
+  // -- Helpers --
+  const triggerPopup = (text, type = 'normal') => {
+    const id = popupIdCounter.current++;
+    setPopups(prev => [...prev, { id, text, type }]);
+    setTimeout(() => {
+      setPopups(prev => prev.filter(p => p.id !== id));
+    }, 1000);
   };
 
+  const syncState = (newBoard, newShapes, newScore, newGameOver) => {
+    boardRef.current = newBoard;
+    shapesRef.current = newShapes;
+    scoreRef.current = newScore;
+    gameOverRef.current = newGameOver;
+    
+    setBoard(newBoard);
+    setAvailableShapes(newShapes);
+    setScore(newScore);
+    setGameOver(newGameOver);
+  };
+
+  // Smart Random Generation (Returns the generated array to avoid race conditions)
+  const generateShapes = useCallback(() => {
+    const smalls = SHAPES.filter(s => s.size === 'small');
+    const mediums = SHAPES.filter(s => s.size === 'medium');
+    const larges = SHAPES.filter(s => s.size === 'large');
+
+    // Pick at least 1 small, max 1 large
+    let newShapes = [];
+    newShapes.push(smalls[Math.floor(Math.random() * smalls.length)]);
+    newShapes.push(Math.random() > 0.5 ? mediums[Math.floor(Math.random() * mediums.length)] : larges[Math.floor(Math.random() * larges.length)]);
+    newShapes.push(SHAPES[Math.floor(Math.random() * SHAPES.length)]);
+    
+    // Shuffle
+    newShapes = newShapes.sort(() => Math.random() - 0.5);
+    
+    return newShapes; // Return it so placeShape can use it synchronously
+  }, []);
+
+  const startNewGame = useCallback(() => {
+    const emptyBoard = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
+    comboRef.current = 1;
+    setCombo(1);
+    
+    const initialShapes = generateShapes();
+    syncState(emptyBoard, initialShapes, 0, false);
+  }, [generateShapes]);
+
+  useEffect(() => { 
+    startNewGame(); 
+  }, [startNewGame]);
+
+  // -- Game Logic --
   const canPlaceShape = (currentBoard, shape, startR, startC) => {
+    if (startR === null || startC === null) return false;
     for (let r = 0; r < shape.matrix.length; r++) {
       for (let c = 0; c < shape.matrix[0].length; c++) {
         if (shape.matrix[r][c] === 1) {
-          // Check out of bounds
-          if (startR + r >= GRID_SIZE || startC + c >= GRID_SIZE) return false;
-          // Check collision
+          if (startR + r < 0 || startR + r >= GRID_SIZE || startC + c < 0 || startC + c >= GRID_SIZE) return false;
           if (currentBoard[startR + r][startC + c] !== null) return false;
         }
       }
@@ -92,24 +149,21 @@ export default function BlockBlaster() {
     for (let shape of remainingShapes) {
       for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
-          if (canPlaceShape(currentBoard, shape, r, c)) {
-            return false; 
-          }
+          if (canPlaceShape(currentBoard, shape, r, c)) return false; 
         }
       }
     }
     return true; 
   }, []);
 
-  // --- Core Placement Logic ---
   const placeShape = useCallback((r, c, shapeIndex) => {
-    const shape = availableShapes[shapeIndex];
-    if (!canPlaceShape(board, shape, r, c)) return;
+    const shape = shapesRef.current[shapeIndex];
+    if (!canPlaceShape(boardRef.current, shape, r, c)) return;
 
-    let newBoard = board.map(row => [...row]);
+    let newBoard = boardRef.current.map(row => [...row]);
     let blocksPlaced = 0;
     
-    // 1. Place the shape
+    // Place shape
     for (let sr = 0; sr < shape.matrix.length; sr++) {
       for (let sc = 0; sc < shape.matrix[0].length; sc++) {
         if (shape.matrix[sr][sc] === 1) {
@@ -119,7 +173,7 @@ export default function BlockBlaster() {
       }
     }
 
-    // 2. Check for completed rows/cols
+    // Check lines
     let rowsToClear = [];
     let colsToClear = [];
 
@@ -134,102 +188,168 @@ export default function BlockBlaster() {
       if (isColFull) colsToClear.push(j);
     }
 
-    // 3. Clear lines and calculate score
-    let scoreGained = blocksPlaced; 
-    
-    rowsToClear.forEach(rowIndex => {
-      for (let col = 0; col < GRID_SIZE; col++) newBoard[rowIndex][col] = null;
-      scoreGained += 10; 
-    });
-    
-    colsToClear.forEach(colIndex => {
-      for (let row = 0; row < GRID_SIZE; row++) newBoard[row][colIndex] = null;
-      scoreGained += 10; 
-    });
+    const totalLines = rowsToClear.length + colsToClear.length;
+    let newScore = scoreRef.current + blocksPlaced; // 1 point per block
 
-    if (rowsToClear.length + colsToClear.length > 1) {
-      scoreGained += (rowsToClear.length + colsToClear.length) * 5; 
-    }
+    if (totalLines > 0) {
+      // Line Score Scaling
+      const lineScores = { 1: 10, 2: 25, 3: 45, 4: 70, 5: 100, 6: 150 };
+      const baseLineScore = lineScores[Math.min(totalLines, 6)];
+      
+      const earned = baseLineScore * comboRef.current;
+      newScore += earned;
 
-    setBoard(newBoard);
-    setScore(prev => prev + scoreGained);
+      triggerPopup(`+${earned}`, 'score');
+      if (comboRef.current > 1) triggerPopup(`${comboRef.current}x COMBO!`, 'combo');
+      if (totalLines >= 3) triggerPopup('AWESOME!', 'praise');
 
-    // 4. Update available shapes & check game state
-    const newShapes = [...availableShapes];
-    newShapes[shapeIndex] = null;
-    setAvailableShapes(newShapes);
+      comboRef.current += 1;
+      setCombo(comboRef.current);
+      
+      // Calculate the final cleared board
+      let finalBoard = newBoard.map(row => [...row]);
+      let clearedIds = [];
+      rowsToClear.forEach(rowIndex => {
+        for (let col = 0; col < GRID_SIZE; col++) {
+          finalBoard[rowIndex][col] = null;
+          clearedIds.push(`${rowIndex}-${col}`);
+        }
+      });
+      colsToClear.forEach(colIndex => {
+        for (let row = 0; row < GRID_SIZE; row++) {
+          finalBoard[row][colIndex] = null;
+          clearedIds.push(`${row}-${colIndex}`);
+        }
+      });
 
-    if (newShapes.every(s => s === null)) {
-      generateShapes();
-    } else if (checkGameOver(newBoard, newShapes)) {
-      setGameOver(true);
-    }
-  }, [availableShapes, board, checkGameOver, generateShapes]);
-
-  // Check Game Over explicitly when new shapes are generated
-  useEffect(() => {
-    if (!gameOver && availableShapes.some(s => s !== null)) {
-      if (checkGameOver(board, availableShapes)) {
-        setGameOver(true);
+      // Calculate final shapes for this turn safely
+      let finalShapes = [...shapesRef.current];
+      finalShapes[shapeIndex] = null;
+      
+      if (finalShapes.every(s => s === null)) {
+        finalShapes = generateShapes(); // Fetch directly without overwriting state early
       }
-    }
-  }, [availableShapes, board, gameOver, checkGameOver]);
+      
+      let isOver = checkGameOver(finalBoard, finalShapes);
 
-  // --- Drag and Drop Logic ---
-  const handleDragStart = (e, idx) => {
-    if (availableShapes[idx] === null || gameOver) return;
+      // Sync non-board state immediately to prevent user interacting with outdated logic
+      shapesRef.current = finalShapes;
+      setAvailableShapes(finalShapes);
+      scoreRef.current = newScore;
+      setScore(newScore);
+      gameOverRef.current = isOver;
+      setGameOver(isOver);
+      
+      // Trigger animation
+      setClearingCells(clearedIds);
+      setIsShaking(true);
+      
+      // Sync the physical board after animation finishes
+      setTimeout(() => {
+        boardRef.current = finalBoard;
+        setBoard(finalBoard);
+        setClearingCells([]);
+        setIsShaking(false);
+      }, 500);
+
+    } else {
+      // No lines cleared, reset combo
+      comboRef.current = 1;
+      setCombo(1);
+      
+      let finalShapes = [...shapesRef.current];
+      finalShapes[shapeIndex] = null;
+      
+      if (finalShapes.every(s => s === null)) {
+        finalShapes = generateShapes();
+      }
+      
+      let isOver = checkGameOver(newBoard, finalShapes);
+      
+      syncState(newBoard, finalShapes, newScore, isOver);
+    }
+  }, [generateShapes, checkGameOver]);
+
+  // -- Coordinate-based Drag and Drop --
+  const handlePointerDown = (e, idx) => {
+    // If the board is actively shaking (clearing a line) block the user from picking up a new shape
+    if (shapesRef.current[idx] === null || gameOverRef.current || isShaking) return;
     
-    setDragState({
+    dragStateRef.current = {
       isDragging: true,
       shapeIdx: idx,
       x: e.clientX,
       y: e.clientY,
-      hoverR: null,
-      hoverC: null
-    });
+      hoverR: null, hoverC: null,
+      isValidHover: false
+    };
+
+    setDragRender({ ...dragStateRef.current });
+    document.body.style.overflow = 'hidden'; // Lock mobile scroll
   };
 
   useEffect(() => {
-    // Prevent mobile scrolling while dragging
-    if (dragState.isDragging) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    }
-
-    if (!dragState.isDragging) return;
-
     const handlePointerMove = (e) => {
-      // Find which grid cell we are hovering over using data attributes
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      let newHoverR = null;
-      let newHoverC = null;
+      if (!dragStateRef.current.isDragging || !gridRef.current) return;
+      
+      const x = e.clientX;
+      const y = e.clientY;
+      const gridRect = gridRef.current.getBoundingClientRect();
+      const cellW = gridRect.width / GRID_SIZE;
+      const cellH = gridRect.height / GRID_SIZE;
+      
+      const shape = shapesRef.current[dragStateRef.current.shapeIdx];
+      const shapeW = shape.matrix[0].length * cellW;
+      const shapeH = shape.matrix.length * cellH;
 
-      if (el && el.dataset.row !== undefined) {
-        const r = parseInt(el.dataset.row, 10);
-        const c = parseInt(el.dataset.col, 10);
-        if (canPlaceShape(board, availableShapes[dragState.shapeIdx], r, c)) {
-          newHoverR = r;
-          newHoverC = c;
-        }
+      // --- NEW CODE ---
+        // Dynamic mobile offset (distance from finger to the bottom of the shape)
+        const isMobile = window.innerWidth < 640;
+        const offsetY = isMobile ? 80 : 40;
+
+        // Target physical top-left of the shape based on the synchronized offset
+        const targetX = x - (shapeW / 2);
+        const targetY = y - shapeH - offsetY;
+
+      // Coordinate Math (No elementFromPoint needed)
+      let c = Math.round((targetX - gridRect.left) / cellW);
+      let r = Math.round((targetY - gridRect.top) / cellH);
+
+      // Give a little leeway so you don't have to be pixel perfect on edges
+      const margin = 2;
+      const isNearGrid = (
+        targetX >= gridRect.left - (cellW * margin) && 
+        targetX <= gridRect.right + (cellW * margin) && 
+        targetY >= gridRect.top - (cellH * margin) && 
+        targetY <= gridRect.bottom + (cellH * margin)
+      );
+
+      let isValid = false;
+      if (isNearGrid) {
+        isValid = canPlaceShape(boardRef.current, shape, r, c);
+      } else {
+        r = null; c = null;
       }
 
-      setDragState(prev => ({
-        ...prev,
-        x: e.clientX,
-        y: e.clientY,
-        hoverR: newHoverR,
-        hoverC: newHoverC
-      }));
+      dragStateRef.current = {
+        ...dragStateRef.current,
+        x, y, hoverR: r, hoverC: c, isValidHover: isValid
+      };
+      
+      setDragRender({ ...dragStateRef.current });
     };
 
     const handlePointerUp = () => {
-      if (dragState.hoverR !== null && dragState.hoverC !== null) {
-        placeShape(dragState.hoverR, dragState.hoverC, dragState.shapeIdx);
+      const state = dragStateRef.current;
+      if (state.isDragging) {
+        if (state.isValidHover && state.hoverR !== null && state.hoverC !== null) {
+          placeShape(state.hoverR, state.hoverC, state.shapeIdx);
+        }
+        
+        dragStateRef.current = { isDragging: false, shapeIdx: null, x: 0, y: 0, hoverR: null, hoverC: null, isValidHover: false };
+        setDragRender({ ...dragStateRef.current });
+        document.body.style.overflow = '';
       }
-      setDragState({ isDragging: false, shapeIdx: null, x: 0, y: 0, hoverR: null, hoverC: null });
     };
 
     window.addEventListener('pointermove', handlePointerMove, { passive: false });
@@ -241,41 +361,122 @@ export default function BlockBlaster() {
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
     };
-  }, [dragState.isDragging, dragState.shapeIdx, dragState.hoverR, dragState.hoverC, board, availableShapes, placeShape]);
+  }, [placeShape]);
+ 
+  // Calculate predictive highlights (What happens IF we drop here?)
+  let predictedClearRows = [];
+  let predictedClearCols = [];
+
+  if (dragRender.isDragging && dragRender.isValidHover && dragRender.hoverR !== null && dragRender.hoverC !== null) {
+    const shape = availableShapes[dragRender.shapeIdx];
+    if (shape) {
+      let tempBoard = board.map(row => [...row]);
+      let canPredict = true;
+      
+      // Simulate placing the shape
+      for (let sr = 0; sr < shape.matrix.length; sr++) {
+        for (let sc = 0; sc < shape.matrix[0].length; sc++) {
+          if (shape.matrix[sr][sc] === 1) {
+            let tr = dragRender.hoverR + sr;
+            let tc = dragRender.hoverC + sc;
+            if (tr >= 0 && tr < GRID_SIZE && tc >= 0 && tc < GRID_SIZE) {
+              tempBoard[tr][tc] = shape.color; 
+            } else {
+              canPredict = false;
+            }
+          }
+        }
+      }
+
+      // If it fits, check for full lines in our simulated board
+      if (canPredict) {
+        for (let i = 0; i < GRID_SIZE; i++) {
+          if (tempBoard[i].every(cell => cell !== null)) predictedClearRows.push(i);
+        }
+        for (let j = 0; j < GRID_SIZE; j++) {
+          let isColFull = true;
+          for (let i = 0; i < GRID_SIZE; i++) {
+            if (tempBoard[i][j] === null) isColFull = false;
+          }
+          if (isColFull) predictedClearCols.push(j);
+        }
+      }
+    }
+  }
 
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none">
       
-      {/* Floating Dragged Element */}
-      {dragState.isDragging && availableShapes[dragState.shapeIdx] && (
-        <div 
-          className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)]"
-          style={{ 
-            left: dragState.x, 
-            top: dragState.y,
-            // Offset heavily upward on mobile so the user's finger doesn't block the grid view
-            transform: 'translate(-50%, -130%)' 
-          }}
-        >
+     {/* Custom Styles for Animations */}
+      <style>{`
+        @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-40px) scale(1.2); opacity: 0; } }
+        @keyframes boardShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-1deg); } 75% { transform: translateX(4px) rotate(1deg); } }
+        
+        /* NEW ANIMATIONS */
+        @keyframes blockPopClear {
+          0% { transform: scale(1); filter: brightness(1); }
+          30% { transform: scale(1.2); filter: brightness(1.5); z-index: 10; box-shadow: 0 0 15px rgba(255,255,255,1); border-color: white; }
+          100% { transform: scale(0) rotate(15deg); opacity: 0; filter: brightness(2); }
+        }
+        @keyframes pulseGlow {
+          0% { filter: brightness(1.1); }
+          100% { filter: brightness(1.5); border-color: white !important; box-shadow: inset 0 0 15px rgba(255,255,255,1), 0 0 10px rgba(255,255,255,0.8); z-index: 5; }
+        }
+        
+        .animate-float { animation: floatUp 1s ease-out forwards; }
+        .animate-shake { animation: boardShake 0.2s ease-in-out; }
+        
+        /* NEW CLASSES */
+        .animate-clear-pop { animation: blockPopClear 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .predictive-highlight { animation: pulseGlow 0.5s infinite alternate; border-color: white !important; }
+      `}</style>
+
+      {/* Floating Dragged Element (Uses Magnetic Snapping to Grid) */}
+      {dragRender.isDragging && availableShapes[dragRender.shapeIdx] && (
+        // --- NEW CODE ---
+            <div 
+            className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)] transition-transform duration-75 ease-out"
+            style={{ 
+                left: dragRender.x, 
+                top: dragRender.y,
+                // Match the JS logic perfectly: Center horizontally (-50%), shift up by shape height (-100%) + exact pixel offset
+                transform: `translate(-50%, calc(-100% - ${window.innerWidth < 640 ? 80 : 40}px))` 
+            }}
+            >
           <div className="flex flex-col gap-1 sm:gap-1.5">
-            {availableShapes[dragState.shapeIdx].matrix.map((row, r) => (
+            {availableShapes[dragRender.shapeIdx].matrix.map((row, r) => (
               <div key={r} className="flex gap-1 sm:gap-1.5">
-                {row.map((val, c) => (
-                  <div 
-                    key={c} 
-                    className={`w-8 h-8 sm:w-12 sm:h-12 ${val ? `${availableShapes[dragState.shapeIdx].color} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]` : 'bg-transparent'}`} 
-                  />
-                ))}
+                {row.map((val, c) => {
+                  if (!val) return <div key={c} className="w-8 h-8 sm:w-12 sm:h-12 bg-transparent" />;
+                  
+                  // Color changes based on valid/invalid hover
+                  let bgStyle = `${availableShapes[dragRender.shapeIdx].color} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]`;
+                  if (dragRender.hoverR !== null && !dragRender.isValidHover) {
+                     bgStyle = 'bg-red-500 border-[2px] sm:border-[3px] border-black opacity-80'; // Invalid red tint
+                  }
+                  return <div key={c} className={`w-8 h-8 sm:w-12 sm:h-12 transition-colors ${bgStyle}`} />;
+                })}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div className="w-full max-w-[500px] p-4">
+      {/* Floating Popups */}
+      <div className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center">
+        {popups.map(popup => (
+          <div key={popup.id} className="absolute animate-float">
+            <span className={`font-black uppercase text-3xl drop-shadow-[2px_2px_0_#000] 
+              ${popup.type === 'combo' ? 'text-[#ffd166]' : popup.type === 'praise' ? 'text-[#06d6a0]' : 'text-[#ff99c8]'}`}>
+              {popup.text}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="w-full max-w-[500px] p-4 relative z-10">
         
         {/* Header */}
         <div className="flex flex-row justify-between items-center mb-6 sm:mb-8 border-b-[3px] border-black pb-4 gap-2">
@@ -303,18 +504,17 @@ export default function BlockBlaster() {
           >
             &larr; Back
           </button>
-          <button 
-            onClick={startNewGame} 
-            className="flex-1 bg-[#ffb5a7] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer"
-          >
-            Reset Game
-          </button>
+          
+          <div className="bg-white border-[3px] border-black shadow-[4px_4px_0_0_#000] font-bold py-2 px-4 text-sm sm:text-base uppercase text-center flex-1">
+            Combo: {combo}x
+          </div>
         </div>
 
         {/* Game Grid Container */}
-        <div className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-2 sm:p-4 relative mx-auto w-fit max-w-full mb-6">
+        <div className={`bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-2 sm:p-4 relative mx-auto w-fit max-w-full mb-6 ${isShaking ? 'animate-shake' : ''}`}>
+          
           {gameOver && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center border-[4px] border-black m-[-4px]">
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border-[4px] border-black m-[-4px]">
               <div className="bg-[#ef476f] border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 text-center transform -rotate-2">
                 <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 uppercase">Game Over!</h2>
                 <button 
@@ -327,40 +527,46 @@ export default function BlockBlaster() {
             </div>
           )}
           
-          {/* 8x8 Grid */}
-          <div className="grid grid-cols-8 gap-1 sm:gap-1.5 touch-none">
+          {/* 8x8 Grid Reference */}
+          <div ref={gridRef} className="grid grid-cols-8 gap-1 sm:gap-1.5 touch-none relative">
             {board.map((row, rIdx) => 
               row.map((cellColor, cIdx) => {
                 
-                // Determine if this cell is part of the current ghost placement indicator
-                let isGhost = false;
+                // Ghost logic
+                let isGhostValid = false;
+                let isGhostInvalid = false;
                 let ghostColor = '';
 
-                if (dragState.isDragging && dragState.hoverR !== null && dragState.hoverC !== null) {
-                  const shape = availableShapes[dragState.shapeIdx];
-                  const sr = rIdx - dragState.hoverR;
-                  const sc = cIdx - dragState.hoverC;
-                  
-                  if (sr >= 0 && sr < shape.matrix.length && sc >= 0 && sc < shape.matrix[0].length) {
-                    if (shape.matrix[sr][sc] === 1) {
-                      isGhost = true;
+                if (dragRender.isDragging && dragRender.hoverR !== null && dragRender.hoverC !== null) {
+                  const shape = availableShapes[dragRender.shapeIdx];
+                  if (shape) {
+                    const sr = rIdx - dragRender.hoverR;
+                    const sc = cIdx - dragRender.hoverC;
+                    if (sr >= 0 && sr < shape.matrix.length && sc >= 0 && sc < shape.matrix[0].length && shape.matrix[sr][sc] === 1) {
                       ghostColor = shape.color;
+                      if (dragRender.isValidHover) isGhostValid = true;
+                      else isGhostInvalid = true;
                     }
                   }
                 }
 
+                const isClearing = clearingCells.includes(`${rIdx}-${cIdx}`);
+                const isPredictedToClear = predictedClearRows.includes(rIdx) || predictedClearCols.includes(cIdx);
+
                 return (
                   <div 
                     key={`${rIdx}-${cIdx}`} 
-                    data-row={rIdx}
-                    data-col={cIdx}
-                    className={`w-8 h-8 sm:w-12 sm:h-12 transition-all duration-75 ease-in-out
+                    className={`w-8 h-8 sm:w-12 sm:h-12 transition-all duration-75 ease-in-out relative
                       ${cellColor 
                         ? `${cellColor} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]` 
-                        : isGhost
+                        : isGhostValid
                           ? `${ghostColor} opacity-50 border-[2px] sm:border-[3px] border-black border-dashed`
+                        : isGhostInvalid
+                          ? 'bg-red-500 opacity-30 border-[2px] sm:border-[3px] border-red-900 border-dashed'
                           : 'bg-transparent border-[2px] border-dashed border-black/10'
                       }
+                      ${isClearing ? 'animate-clear-pop origin-center' : 'scale-100 opacity-100'}
+                      ${isPredictedToClear && !isClearing ? 'predictive-highlight' : ''}
                     `}
                   />
                 )
@@ -378,19 +584,18 @@ export default function BlockBlaster() {
             >
               {shape !== null && (
                 <div 
-                  onPointerDown={(e) => handleDragStart(e, idx)}
+                  onPointerDown={(e) => handlePointerDown(e, idx)}
                   className={`transition-all duration-200 cursor-grab active:cursor-grabbing
-                    ${dragState.isDragging && dragState.shapeIdx === idx ? 'opacity-20 scale-90' : 'hover:scale-110'}
+                    ${dragRender.isDragging && dragRender.shapeIdx === idx ? 'opacity-20 scale-90' : 'hover:scale-110'}
                   `}
                 >
-                  <div className="flex flex-col gap-1 sm:gap-1.5">
+                  <div className="flex flex-col gap-1 sm:gap-1.5 pointer-events-none">
                     {shape.matrix.map((row, r) => (
-                      <div key={r} className="flex gap-1 sm:gap-1.5 pointer-events-none">
+                      <div key={r} className="flex gap-1 sm:gap-1.5">
                         {row.map((val, c) => (
                           <div 
                             key={c} 
-                            // Render mini versions of the blocks in the dock
-                            className={`w-5 h-5 sm:w-6 sm:h-6 ${val ? `${shape.color} border-[2px] border-black shadow-[2px_2px_0_0_#000]` : 'bg-transparent'}`} 
+                            className={`w-5 h-5 sm:w-6 sm:h-6 transition-all ${val ? `${shape.color} border-[2px] border-black shadow-[2px_2px_0_0_#000]` : 'bg-transparent'}`} 
                           />
                         ))}
                       </div>
@@ -401,10 +606,6 @@ export default function BlockBlaster() {
             </div>
           ))}
         </div>
-
-        <p className="mt-6 text-black text-center px-4 font-bold uppercase tracking-wider text-[11px] sm:text-sm bg-white border-[3px] border-black p-2 sm:p-3 shadow-[4px_4px_0_0_#000] transform rotate-1">
-          Hold and drag a shape to place it on the grid!
-        </p>
 
       </div>
     </div>
