@@ -117,7 +117,7 @@ const SINGLE_PLAYER_GAMES = [
     id: 'dino',
     title: 'Dino Run',
     description: 'Jump over cacti and dodge obstacles in this endless runner.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/dino.png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/dinorun.png',
     path: '/games/dino',
     available: true,
     headerColor: 'bg-[#93c5fd]',
