@@ -407,7 +407,15 @@ export default function BlockBlaster() {
 
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none">
+   <div
+  className="
+    flex flex-col
+    items-center
+    min-h-screen
+    pt-0
+    sm:justify-center
+  "
+>
       
      {/* Custom Styles for Animations */}
     {/* Custom Styles for Animations */}
@@ -458,14 +466,14 @@ export default function BlockBlaster() {
             {availableShapes[dragRender.shapeIdx].matrix.map((row, r) => (
               <div key={r} className="flex gap-1 sm:gap-1.5">
                 {row.map((val, c) => {
-                  if (!val) return <div key={c} className="w-8 h-8 sm:w-12 sm:h-12 bg-transparent" />;
+                  if (!val) return <div key={c} className="w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 bg-transparent" />;
                   
                   // Color changes based on valid/invalid hover
                   let bgStyle = `${availableShapes[dragRender.shapeIdx].color} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]`;
                   if (dragRender.hoverR !== null && !dragRender.isValidHover) {
                      bgStyle = 'bg-red-500 border-[2px] sm:border-[3px] border-black opacity-80'; // Invalid red tint
                   }
-                  return <div key={c} className={`w-8 h-8 sm:w-12 sm:h-12 transition-colors ${bgStyle}`} />;
+                  return <div key={c} className={`w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 transition-colors ${bgStyle}`} />;
                 })}
               </div>
             ))}
@@ -485,10 +493,10 @@ export default function BlockBlaster() {
         ))}
       </div>
 
-      <div className="w-full max-w-[500px] p-4 relative z-10">
+      <div className="w-full max-w-[500px] p-2 sm:p-4 relative z-10">
         
         {/* Header */}
-        <div className="flex flex-row justify-between items-center mb-6 sm:mb-8 border-b-[3px] border-black pb-4 gap-2">
+        <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 sm:pb-4 gap-2">
           <h1 className="text-3xl sm:text-5xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">
             Block<br/>Blaster
           </h1>
@@ -506,7 +514,7 @@ export default function BlockBlaster() {
         </div>
         
         {/* Controls */}
-        <div className="flex justify-between items-center mb-4 sm:mb-6 gap-4">
+        <div className="flex justify-between items-center mb-2 sm:mb-6 gap-4">
           <button 
             onClick={() => navigate('/')} 
             className="flex-1 bg-[#48cae4] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer"
@@ -520,7 +528,7 @@ export default function BlockBlaster() {
         </div>
 
         {/* Game Grid Container */}
-        <div className={`bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-2 sm:p-4 relative mx-auto w-fit max-w-full mb-6 ${isShaking ? 'animate-shake' : ''}`}>
+        <div className={`bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-1 sm:p-4 relative mx-auto w-fit max-w-full mb-3 sm:mb-6 ${isShaking ? 'animate-shake' : ''}`}>
           
           {gameOver && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border-[4px] border-black m-[-4px]">
@@ -565,7 +573,7 @@ export default function BlockBlaster() {
                 return (
                   <div 
                     key={`${rIdx}-${cIdx}`} 
-                    className={`w-8 h-8 sm:w-12 sm:h-12 transition-all duration-75 ease-in-out relative
+                    className={`w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 transition-all duration-75 ease-in-out relative
                       ${cellColor 
                         ? `${cellColor} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]` 
                         : isGhostValid
@@ -585,7 +593,7 @@ export default function BlockBlaster() {
         </div>
 
         {/* Block Dock (Spawn Area) */}
-        <div className="flex justify-around items-center bg-[#fcf6bd] border-[3px] border-black p-4 shadow-[4px_4px_0_0_#000] min-h-[140px]">
+        <div className="flex justify-around items-center bg-[#fcf6bd] border-[3px] border-black p-2 sm:p-4 shadow-[4px_4px_0_0_#000] h-[110px] sm:min-h-[140px]">
           {availableShapes.map((shape, idx) => (
             <div 
               key={idx} 
