@@ -121,6 +121,12 @@ const SINGLE_PLAYER_GAMES = [
     path: '/games/dino',
     available: true,
     headerColor: 'bg-[#93c5fd]',
+
+
+
+
+
+    
     buttonColor: 'bg-[#fca5a5]',
     tilt: 'rotate-1',
   },

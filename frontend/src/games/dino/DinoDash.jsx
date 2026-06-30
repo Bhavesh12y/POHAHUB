@@ -180,11 +180,11 @@ export default function DinoDash() {
   const showRightLeg = isRunning && (renderState.frames % 12 >= 6);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none">
-      <div className="w-full max-w-[500px] p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none pt-0">
+      <div className="w-full max-w-[500px] p-2 sm:p-4">
         
-        {/* Header */}
-        <div className="flex flex-row justify-between items-center mb-6 sm:mb-8 border-b-[3px] border-black pb-4 gap-2">
+        {/* Header - Tightened margins */}
+        <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 gap-2">
           <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">
             Dino<br/>Dash
           </h1>
@@ -201,8 +201,8 @@ export default function DinoDash() {
           </div>
         </div>
         
-        {/* Controls */}
-        <div className="flex justify-between items-center mb-4 sm:mb-6 gap-4">
+        {/* Controls - Tightened margins */}
+        <div className="flex justify-between items-center mb-2 sm:mb-6 gap-4">
           <button 
             onClick={() => navigate('/')} 
             className="flex-1 bg-[#48cae4] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer"
@@ -211,9 +211,9 @@ export default function DinoDash() {
           </button>
         </div>
 
-        {/* Game Area */}
+        {/* Game Area - Height set using vh to prevent scrolling while keeping it big */}
         <div 
-          className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] relative mx-auto w-full h-[250px] sm:h-[300px] mb-6 overflow-hidden cursor-pointer touch-manipulation group"
+          className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] relative mx-auto w-full h-[35vh] min-h-[220px] max-h-[300px] sm:h-[300px] mb-2 overflow-hidden cursor-pointer touch-manipulation group"
           onPointerDown={jump}
         >
           {/* Start Screen */}
@@ -320,18 +320,18 @@ export default function DinoDash() {
           
         </div>
 
-        {/* Massive Mobile Jump Button */}
+        {/* Massive Mobile Jump Button - Tightened margin */}
         <button 
           onPointerDown={(e) => {
-            e.preventDefault(); // Prevents zoom/scroll side-effects on mobile
+            e.preventDefault(); 
             jump();
           }}
-          className="w-full mt-6 bg-[#ff99c8] border-[4px] border-black shadow-[6px_6px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[6px] active:translate-x-[6px] transition-all text-black font-black py-4 sm:py-6 text-3xl sm:text-4xl uppercase tracking-widest cursor-pointer touch-manipulation block"
+          className="w-full mt-2 bg-[#ff99c8] border-[4px] border-black shadow-[6px_6px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[6px] active:translate-x-[6px] transition-all text-black font-black py-3 sm:py-6 text-2xl sm:text-4xl uppercase tracking-widest cursor-pointer touch-manipulation block"
         >
           JUMP
         </button>
 
-        <p className="mt-4 text-black text-center px-4 font-bold uppercase tracking-wider text-[10px] sm:text-xs opacity-70">
+        <p className="mt-2 text-black text-center px-4 font-bold uppercase tracking-wider text-[10px] sm:text-xs opacity-70">
           Keyboard: Space / W / Up Arrow
         </p>
 

@@ -225,11 +225,11 @@ export default function Game2048() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden">
-      <div className="w-full max-w-[500px] p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden pt-0">
+      <div className="w-full max-w-[500px] p-2 sm:p-4">
         
-        {/* Header - Adjusted for mobile fit */}
-        <div className="flex flex-row justify-between items-center mb-6 sm:mb-8 border-b-[3px] border-black pb-4 gap-2">
+        {/* Header - Tightened margins for mobile */}
+        <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 gap-2">
           <h1 className="text-4xl sm:text-6xl font-black text-black tracking-tighter uppercase shrink-0">2048</h1>
           
           <div className="flex gap-2 sm:gap-4 shrink-0">
@@ -246,8 +246,8 @@ export default function Game2048() {
           </div>
         </div>
         
-        {/* Controls */}
-        <div className="flex justify-between items-center mb-6 sm:mb-8 gap-4">
+        {/* Controls - Tightened margins */}
+        <div className="flex justify-between items-center mb-2 sm:mb-8 gap-4">
           <button 
             onClick={() => navigate('/')} 
             className="flex-1 bg-[#48cae4] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer"
@@ -258,16 +258,16 @@ export default function Game2048() {
             onClick={startNewGame} 
             className="flex-1 bg-[#ffb5a7] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer"
           >
-            Reset Game
+            Reset
           </button>
         </div>
 
-        {/* Game Grid Container */}
+        {/* Game Grid Container - Tightened padding */}
         <div 
-          className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-2 sm:p-4 touch-none select-none relative cursor-grab active:cursor-grabbing mx-auto w-fit max-w-full"
+          className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-1 sm:p-4 touch-none select-none relative cursor-grab active:cursor-grabbing mx-auto w-fit max-w-full"
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp} // Failsafe for mobile drag interruptions
+          onPointerCancel={handlePointerUp} 
         >
           {gameOver && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center border-[4px] border-black m-[-4px]">
@@ -283,13 +283,13 @@ export default function Game2048() {
             </div>
           )}
           
-          <div className="grid grid-cols-4 gap-2 sm:gap-3 pointer-events-none">
+          <div className="grid grid-cols-4 gap-1 sm:gap-3 pointer-events-none">
             {board.map((row, rIdx) => 
               row.map((cell, cIdx) => (
                 <div 
                   key={`${rIdx}-${cIdx}`} 
-                  // Scaled to w-16 h-16 (64px) for better tapping/swiping on mobile displays
-                  className={`w-16 h-16 sm:w-24 sm:h-24 text-2xl sm:text-4xl ${getTileStyle(cell)}`}
+                  // Scaled using vw for massive tiles that fit perfectly
+                  className={`w-[21vw] h-[21vw] max-w-[90px] max-h-[90px] sm:w-24 sm:h-24 text-2xl sm:text-4xl ${getTileStyle(cell)}`}
                 >
                   {cell !== 0 ? cell : ''}
                 </div>
@@ -298,7 +298,8 @@ export default function Game2048() {
           </div>
         </div>
 
-        <p className="mt-8 text-black text-center px-4 font-bold uppercase tracking-wider text-[11px] sm:text-base bg-[#fcf6bd] border-[3px] border-black p-2 sm:p-3 shadow-[4px_4px_0_0_#000] transform rotate-1">
+        {/* Footer text tightened */}
+        <p className="mt-4 text-black text-center px-4 font-bold uppercase tracking-wider text-[11px] sm:text-base bg-[#fcf6bd] border-[3px] border-black p-2 sm:p-3 shadow-[4px_4px_0_0_#000] transform rotate-1">
           Use Arrow Keys, WASD, or Swipe to merge!
         </p>
       </div>
