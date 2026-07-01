@@ -264,7 +264,13 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     if (room.gameType === 'connect-four') {
       room.gameState = createConnectFourState(room.players.map((p, i) => ({ ...p, color: PLAYER_COLORS[i] })));
     } else if (room.gameType === 'tic-tac-toe') {
-      room.gameState = createTicTacToeState(room.players.map((p, i) => ({ ...p, symbol: PLAYER_SYMBOLS[i] })));
+      // ✅ FIX: Grab the old starting index BEFORE overwriting the game state!
+      const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
+      
+      room.gameState = createTicTacToeState(
+        room.players.map((p, i) => ({ ...p, symbol: PLAYER_SYMBOLS[i] })),
+        previousStartingIndex // Pass it into your updated function
+      );
     } else if (room.gameType === 'scribble') {
       room.gameState = createScribbleState(room.players.map((p) => ({ id: p.id, name: p.name })));
     }else if (room.gameType === 'snake-and-ladder') {
