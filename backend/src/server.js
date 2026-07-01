@@ -131,17 +131,29 @@ io.on('connection', (socket) => {
   });
 
   // 2. Submit, Sort, and Save to Firestore
+  // 2. Submit, Sort, and Save to Firestore (UPDATED TO PREVENT DUPLICATES)
   socket.on('leaderboard:submit', async ({ gameId, name, score }, callback) => {
     try {
       const docRef = db.collection('leaderboards').doc(gameId);
       
-      // Run inside a transaction to prevent race conditions if two players win at the exact same second
+      // Run inside a transaction to prevent race conditions
       await db.runTransaction(async (transaction) => {
         const doc = await transaction.get(docRef);
         let scores = doc.exists ? doc.data().scores : [];
         
-        // Push the new score
-        scores.push({ name, score, id: socket.id + Date.now() });
+        // --- NEW LOGIC: Check if the player is already on the board ---
+        const existingPlayerIndex = scores.findIndex(entry => entry.name === name);
+
+        if (existingPlayerIndex !== -1) {
+          // The player is already on the leaderboard.
+          // Only update their score if the NEW score is higher than their OLD score.
+          if (score > scores[existingPlayerIndex].score) {
+            scores[existingPlayerIndex].score = score;
+          }
+        } else {
+          // The player is not on the board yet, add them as a new entry.
+          scores.push({ name, score, id: socket.id + Date.now() });
+        }
         
         // Sort highest to lowest and slice the Top 3
         scores.sort((a, b) => b.score - a.score);
