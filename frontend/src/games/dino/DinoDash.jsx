@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { connectSocket, emitWithAck } from '../../lib/socket.js';
 
 export default function DinoDash() {
   const navigate = useNavigate();
   
-  // Game State Refs (using refs for the 60fps game loop physics to avoid React batching lag)
+  // Game State Refs
   const physicsRef = useRef({
     dinoY: 0,
     velocityY: 0,
@@ -13,11 +14,11 @@ export default function DinoDash() {
     frames: 0,
     isGameOver: false,
     isPlaying: false,
-    speed: 0, // Started slower
-    nextSpawnFrame: 0 // New logic for smart obstacle spawning
+    speed: 0, 
+    nextSpawnFrame: 0 
   });
 
-  // Render State (syncs with refs to update the screen)
+  // Render State
   const [renderState, setRenderState] = useState({
     dinoY: 0,
     obstacles: [],
@@ -27,10 +28,12 @@ export default function DinoDash() {
     isPlaying: false
   });
 
-  const [highScore, setHighScore] = useState(() => {
-    const saved = localStorage.getItem('dinodash-highScore');
-    return saved !== null ? parseInt(saved, 10) : 0;
-  });
+  // -- GLOBAL LEADERBOARD STATE --
+  const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
+  const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
+  
+  const playerName = localStorage.getItem('pohahub-player-name') || 'Player';
+  const globalHighScore = globalLeaderboard.length > 0 ? globalLeaderboard[0].score : 0;
 
   const requestRef = useRef();
 
@@ -38,9 +41,40 @@ export default function DinoDash() {
   const GRAVITY = 0.7;
   const JUMP_POWER = 13;
   const MAX_SPEED = 14; 
-  const GAME_SPEED_MULTIPLIER = 0.003; // Smooth gradual increase
+  const GAME_SPEED_MULTIPLIER = 0.003; 
+
+  // -- FETCH AND SYNC LEADERBOARD --
+  useEffect(() => {
+    emitWithAck('leaderboard:get', 'dino').then((res) => {
+      if (res?.ok) setGlobalLeaderboard(res.leaderboard);
+    });
+
+    const handleLeaderboardUpdate = (newLeaderboard) => {
+      setGlobalLeaderboard(newLeaderboard);
+    };
+
+    const s = connectSocket();
+    s.on('leaderboard:update:dino', handleLeaderboardUpdate);
+
+    return () => {
+      s.off('leaderboard:update:dino', handleLeaderboardUpdate);
+    };
+  }, []);
+
+  // -- SUBMIT SCORE ON GAME OVER --
+  useEffect(() => {
+    if (renderState.isGameOver && !hasSubmittedScore && renderState.score > 0) {
+      setHasSubmittedScore(true);
+      emitWithAck('leaderboard:submit', { 
+        gameId: 'dino', 
+        name: playerName, 
+        score: renderState.score 
+      });
+    }
+  }, [renderState.isGameOver, hasSubmittedScore, renderState.score, playerName]);
 
   const startGame = () => {
+    setHasSubmittedScore(false); // Reset for new game
     physicsRef.current = {
       dinoY: 0,
       velocityY: 0,
@@ -50,7 +84,7 @@ export default function DinoDash() {
       isGameOver: false,
       isPlaying: true,
       speed: 4, 
-      nextSpawnFrame: 50 // Initial gap before first spawn
+      nextSpawnFrame: 50 
     };
     updateRenderState();
   };
@@ -73,7 +107,6 @@ export default function DinoDash() {
       else startGame();
       return;
     }
-    // Only jump if on the ground
     if (state.dinoY === 0) {
       state.velocityY = JUMP_POWER;
     }
@@ -84,14 +117,12 @@ export default function DinoDash() {
 
     if (state.isPlaying && !state.isGameOver) {
       state.frames++;
-      state.score += (state.speed * 0.02); // Score scales slightly with speed
+      state.score += (state.speed * 0.02); 
       
-      // Gradually increase speed up to a cap
       if (state.speed < MAX_SPEED) {
         state.speed += GAME_SPEED_MULTIPLIER;
       }
 
-      // Gravity & Jumping
       state.dinoY += state.velocityY;
       state.velocityY -= GRAVITY;
 
@@ -100,38 +131,33 @@ export default function DinoDash() {
         state.velocityY = 0;
       }
 
-      // Smart Obstacle Generation
       if (state.frames >= state.nextSpawnFrame) {
-        // Different variations of cacti
         const obstacleTypes = [
           { width: 22, height: 40, type: 'small' },
           { width: 28, height: 55, type: 'large' },
-          { width: 45, height: 45, type: 'double' } // Two small ones together
+          { width: 45, height: 45, type: 'double' } 
         ];
         
         const config = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
         
         state.obstacles.push({
           id: state.frames,
-          x: 550, // Spawn just offscreen right
+          x: 550, 
           width: config.width,
           height: config.height,
           type: config.type
         });
 
-        // Dynamic spacing based on current speed (faster speed = obstacles spawn closer together)
         const baseGap = Math.max(35, 100 - (state.speed * 5)); 
         const randomVariance = Math.random() * 40;
         state.nextSpawnFrame = state.frames + baseGap + randomVariance;
       }
 
-      // Move and Filter Obstacles
       state.obstacles.forEach(obs => {
         obs.x -= state.speed;
       });
       state.obstacles = state.obstacles.filter(obs => obs.x > -60);
 
-      // Collision Detection (AABB)
       const dinoBox = { x: 40, y: state.dinoY, width: 40, height: 40 }; 
       for (let obs of state.obstacles) {
         const obsBox = { x: obs.x, y: 0, width: obs.width, height: obs.height };
@@ -143,11 +169,6 @@ export default function DinoDash() {
         ) {
           state.isGameOver = true;
           state.isPlaying = false;
-          
-          if (Math.floor(state.score) > highScore) {
-            setHighScore(Math.floor(state.score));
-            localStorage.setItem('dinodash-highScore', Math.floor(state.score).toString());
-          }
         }
       }
 
@@ -155,7 +176,7 @@ export default function DinoDash() {
     }
 
     requestRef.current = requestAnimationFrame(gameLoop);
-  }, [highScore]);
+  }, []);
 
   useEffect(() => {
     requestRef.current = requestAnimationFrame(gameLoop);
@@ -174,16 +195,15 @@ export default function DinoDash() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [jump]);
 
-  // Determine which legs are showing based on frame count (running animation)
   const isRunning = renderState.isPlaying && renderState.dinoY === 0;
   const showLeftLeg = isRunning && (renderState.frames % 12 < 6);
   const showRightLeg = isRunning && (renderState.frames % 12 >= 6);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none pt-0">
+    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none py-10">
       <div className="w-full max-w-[500px] p-2 sm:p-4">
         
-        {/* Header - Tightened margins */}
+        {/* Header */}
         <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 gap-2">
           <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">
             Dino<br/>Dash
@@ -195,13 +215,13 @@ export default function DinoDash() {
               <div className="text-lg sm:text-2xl font-black leading-tight">{renderState.score}</div>
             </div>
             <div className="bg-[#ffd166] border-[3px] border-black shadow-[2px_2px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] px-2 sm:px-4 py-1 sm:py-2 text-black text-center min-w-[70px] sm:min-w-[90px]">
-              <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Best</div>
-              <div className="text-lg sm:text-2xl font-black leading-tight">{highScore}</div>
+              <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Top</div>
+              <div className="text-lg sm:text-2xl font-black leading-tight">{globalHighScore}</div>
             </div>
           </div>
         </div>
         
-        {/* Controls - Tightened margins */}
+        {/* Controls */}
         <div className="flex justify-between items-center mb-2 sm:mb-6 gap-4">
           <button 
             onClick={() => navigate('/')} 
@@ -211,12 +231,11 @@ export default function DinoDash() {
           </button>
         </div>
 
-        {/* Game Area - Height set using vh to prevent scrolling while keeping it big */}
+        {/* Game Area */}
         <div 
           className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] relative mx-auto w-full h-[35vh] min-h-[220px] max-h-[300px] sm:h-[300px] mb-2 overflow-hidden cursor-pointer touch-manipulation group"
           onPointerDown={jump}
         >
-          {/* Start Screen */}
           {!renderState.isPlaying && !renderState.isGameOver && (
             <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/40 backdrop-blur-[2px]">
               <div className="bg-[#fcf6bd] border-[3px] border-black shadow-[4px_4px_0_0_#000] p-4 text-center transform -rotate-2 animate-pulse transition-transform group-hover:scale-105">
@@ -225,7 +244,6 @@ export default function DinoDash() {
             </div>
           )}
 
-          {/* Game Over Screen */}
           {renderState.isGameOver && (
             <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-30 flex flex-col items-center justify-center">
               <div className="bg-[#ef476f] border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 text-center transform -rotate-2">
@@ -240,22 +258,21 @@ export default function DinoDash() {
             </div>
           )}
 
-          {/* Background Elements (Animated Sky) */}
+          {/* Background Elements */}
           <div className={`absolute top-6 w-16 h-6 bg-[#a9def9] rounded-full opacity-40 transition-all duration-1000 ${renderState.isPlaying ? 'animate-[slide_10s_linear_infinite]' : 'left-10'}`} style={{ animationDuration: '8s' }}></div>
           <div className={`absolute top-12 w-24 h-8 bg-[#a9def9] rounded-full opacity-40 transition-all duration-1000 ${renderState.isPlaying ? 'animate-[slide_12s_linear_infinite_reverse]' : 'right-10'}`} style={{ animationDuration: '12s' }}></div>
 
           {/* Ground */}
           <div className="absolute bottom-0 w-full h-3 border-t-[4px] border-black bg-black"></div>
 
-          {/* THE DINO (Character composed of CSS) */}
+          {/* THE DINO */}
           <div 
             className="absolute left-[40px] w-[40px] h-[40px] bg-[#ef476f] border-[3px] border-black z-20 transition-transform duration-75"
             style={{ 
-              bottom: `${renderState.dinoY + 12}px`, // +12px accounts for the ground height
+              bottom: `${renderState.dinoY + 12}px`, 
               boxShadow: renderState.dinoY > 0 ? '6px 6px 0 0 rgba(0,0,0,0.2)' : '0px 0px 0 0 rgba(0,0,0,0)' 
             }}
           >
-            {/* Dino Eye */}
             <div className="absolute top-1 right-2 w-[10px] h-[10px] bg-white border-[2px] border-black flex items-center justify-center">
                {renderState.isGameOver ? (
                  <span className="text-[8px] font-black leading-none pb-[1px]">x</span>
@@ -264,36 +281,29 @@ export default function DinoDash() {
                )}
             </div>
 
-            {/* Snout Details (Teeth/Smile) */}
             <div className="absolute top-4 right-[-3px] w-[6px] h-[3px] bg-black"></div>
-            
-            {/* Little T-Rex Arm */}
             <div className="absolute top-[22px] right-[4px] w-[10px] h-[6px] border-[3px] border-l-0 border-t-0 border-black rounded-br-sm"></div>
 
-            {/* Back Spikes (Outside hitbox) */}
             <div className="absolute top-0 left-[-6px] w-[8px] h-[8px] bg-[#ef476f] border-[3px] border-r-0 border-b-0 border-black transform -rotate-45"></div>
             <div className="absolute top-[12px] left-[-6px] w-[8px] h-[8px] bg-[#ef476f] border-[3px] border-r-0 border-b-0 border-black transform -rotate-45"></div>
             <div className="absolute top-[24px] left-[-6px] w-[8px] h-[8px] bg-[#ef476f] border-[3px] border-r-0 border-b-0 border-black transform -rotate-45"></div>
 
-            {/* Running Legs */}
             <div className={`absolute -bottom-[12px] left-[6px] w-[6px] h-[10px] bg-[#ef476f] border-[3px] border-t-0 border-black ${!showLeftLeg && renderState.isPlaying ? 'h-[4px] -bottom-[6px]' : ''}`}></div>
             <div className={`absolute -bottom-[12px] right-[10px] w-[6px] h-[10px] bg-[#ef476f] border-[3px] border-t-0 border-black ${!showRightLeg && renderState.isPlaying ? 'h-[4px] -bottom-[6px]' : ''}`}></div>
           </div>
 
-          {/* OBSTACLES (Cacti) */}
+          {/* OBSTACLES */}
           {renderState.obstacles.map(obs => (
             <div 
               key={obs.id}
               className="absolute flex items-end justify-center z-10"
               style={{
                 left: `${obs.x}px`,
-                bottom: '12px', // Rest on the ground
+                bottom: '12px',
                 width: `${obs.width}px`,
                 height: `${obs.height}px`
               }}
             >
-              {/* Render Different Types of Cacti based on type config */}
-              
               {obs.type === 'small' && (
                 <div className="w-full h-full bg-[#06d6a0] border-[3px] border-black rounded-t-md relative">
                    <div className="absolute top-2 -left-[6px] w-[10px] h-[14px] border-[3px] border-r-0 border-black rounded-l-sm"></div>
@@ -320,7 +330,7 @@ export default function DinoDash() {
           
         </div>
 
-        {/* Massive Mobile Jump Button - Tightened margin */}
+        {/* Jump Button */}
         <button 
           onPointerDown={(e) => {
             e.preventDefault(); 
@@ -331,9 +341,48 @@ export default function DinoDash() {
           JUMP
         </button>
 
-        <p className="mt-2 text-black text-center px-4 font-bold uppercase tracking-wider text-[10px] sm:text-xs opacity-70">
+        <p className="mt-2 mb-8 text-black text-center px-4 font-bold uppercase tracking-wider text-[10px] sm:text-xs opacity-70">
           Keyboard: Space / W / Up Arrow
         </p>
+
+        {/* --- GLOBAL TOP 3 LEADERBOARD --- */}
+        <div className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 w-full transform -rotate-1">
+          <h3 className="text-xl sm:text-2xl font-black uppercase text-black mb-4 flex items-center justify-between">
+            <span>Global Top 3</span>
+          </h3>
+          
+          {globalLeaderboard.length === 0 ? (
+            <div className="bg-gray-100 border-[3px] border-dashed border-gray-400 p-4 text-center">
+              <p className="font-bold text-gray-500 uppercase tracking-widest">No scores yet. Take the crown!</p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {globalLeaderboard.map((entry, idx) => {
+                const rankColors = ['bg-[#ffd166]', 'bg-[#d0f4de]', 'bg-[#ffb5a7]'];
+                const bgColor = rankColors[idx] || 'bg-white';
+                
+                return (
+                  <li 
+                    key={entry.id || idx} 
+                    className={`${bgColor} border-[3px] border-black p-3 sm:p-4 shadow-[4px_4px_0_0_#000] flex justify-between items-center transition-transform hover:-translate-y-1`}
+                  >
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <span className="text-lg sm:text-xl font-black bg-white border-[2px] border-black rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shadow-[2px_2px_0_0_#000]">
+                        #{idx + 1}
+                      </span>
+                      <span className="font-black uppercase text-base sm:text-lg tracking-wider">
+                        {entry.name}
+                      </span>
+                    </div>
+                    <span className="font-black text-xl sm:text-2xl">
+                      {entry.score}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
       </div>
     </div>
