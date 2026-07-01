@@ -10,13 +10,15 @@ const WIN_LINES = [
   [2, 4, 6],
 ];
 
-
-
-export function createTicTacToeState(players) {
-   const startIndex = Math.floor(Math.random() * players.length); 
+export function createTicTacToeState(players, previousStartingIndex = null) {
+  const startIndex = previousStartingIndex !== null 
+    ? (previousStartingIndex + 1) % players.length 
+    : 0; 
+  
   return {
     board: Array(BOARD_SIZE).fill(null),
     players: players.map((p) => ({ id: p.id, name: p.name, symbol: p.symbol })),
+    startingIndex: startIndex, 
     currentTurnIndex: startIndex, 
     winner: null,
     winningCells: [],
@@ -85,6 +87,7 @@ export function serializeTicTacToeState(state) {
   return {
     board: state.board,
     players: state.players,
+    startingIndex: state.startingIndex,
     currentTurnIndex: state.currentTurnIndex,
     currentPlayerId: getCurrentPlayer(state)?.id ?? null,
     winner: state.winner,
