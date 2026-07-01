@@ -47,7 +47,18 @@ export default function BlockBlaster() {
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
   
   const playerName = localStorage.getItem('pohahub-player-name') || 'Player';
-  const globalHighScore = globalLeaderboard.length > 0 ? globalLeaderboard[0].score : 0;
+ const [localHighScore, setLocalHighScore] = useState(() => {
+    const saved = localStorage.getItem('blockblaster-highScore');
+    return saved !== null ? parseInt(saved, 10) : 0;
+  });
+
+  // Track personal best locally
+  useEffect(() => {
+    if (score > localHighScore) {
+      setLocalHighScore(score);
+      localStorage.setItem('blockblaster-highScore', score.toString());
+    }
+  }, [score, localHighScore]);
 
   // -- High Performance Drag State --
   const dragStateRef = useRef({
@@ -487,8 +498,8 @@ export default function BlockBlaster() {
               <div className="text-lg sm:text-2xl font-black leading-tight">{score}</div>
             </div>
             <div className="bg-[#ffd166] border-[3px] border-black shadow-[2px_2px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] px-2 sm:px-4 py-1 sm:py-2 text-black text-center min-w-[70px] sm:min-w-[90px]">
-              <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Top</div>
-              <div className="text-lg sm:text-2xl font-black leading-tight">{globalHighScore}</div>
+              <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">High Score</div>
+              <div className="text-lg sm:text-2xl font-black leading-tight">{localHighScore}</div>
             </div>
           </div>
         </div>
