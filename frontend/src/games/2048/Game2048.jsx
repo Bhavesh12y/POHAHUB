@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { connectSocket, emitWithAck } from '../../lib/socket.js'; // <-- FIXED IMPORT
 
 const getTileStyle = (val) => {
   const baseStyle = "border-[3px] sm:border-4 border-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] select-none flex items-center justify-center font-black transition-all duration-150 ease-in-out ";
@@ -27,27 +28,52 @@ export default function Game2048() {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   
-  // Initialize High Score from localStorage
-  const [highScore, setHighScore] = useState(() => {
-    const saved = localStorage.getItem('2048-highScore');
-    return saved !== null ? parseInt(saved, 10) : 0;
-  });
+  // --- GLOBAL LEADERBOARD STATE ---
+  const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
+  const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
+  
+  const playerName = localStorage.getItem('pohahub-player-name') || 'Player';
+  const globalHighScore = globalLeaderboard.length > 0 ? globalLeaderboard[0].score : 0;
 
   // Unified drag/swipe state
   const [dragStart, setDragStart] = useState(null);
-  const minSwipeDistance = 25; // Lowered slightly for better mobile responsiveness
+  const minSwipeDistance = 25;
 
   useEffect(() => {
     startNewGame();
   }, []);
 
-  // Update High Score whenever current score exceeds it
+  // --- FIXED: FETCH AND SYNC LEADERBOARD ---
   useEffect(() => {
-    if (score > highScore) {
-      setHighScore(score);
-      localStorage.setItem('2048-highScore', score.toString());
+    // 1. Fetch initial scores
+    emitWithAck('leaderboard:get', '2048').then((res) => {
+      if (res?.ok) setGlobalLeaderboard(res.leaderboard);
+    });
+
+    const handleLeaderboardUpdate = (newLeaderboard) => {
+      setGlobalLeaderboard(newLeaderboard);
+    };
+
+    // 2. Properly get the socket instance and listen
+    const s = connectSocket();
+    s.on('leaderboard:update:2048', handleLeaderboardUpdate);
+
+    return () => {
+      s.off('leaderboard:update:2048', handleLeaderboardUpdate);
+    };
+  }, []);
+
+  // --- SUBMIT SCORE ON GAME OVER ---
+  useEffect(() => {
+    if (gameOver && !hasSubmittedScore && score > 0) {
+      setHasSubmittedScore(true);
+      emitWithAck('leaderboard:submit', { 
+        gameId: '2048', 
+        name: playerName, 
+        score: score 
+      });
     }
-  }, [score, highScore]);
+  }, [gameOver, hasSubmittedScore, score, playerName]);
 
   const startNewGame = () => {
     let newBoard = Array(4).fill().map(() => Array(4).fill(0));
@@ -56,6 +82,7 @@ export default function Game2048() {
     setBoard(newBoard);
     setScore(0);
     setGameOver(false);
+    setHasSubmittedScore(false);
   };
 
   const addRandomTile = (grid) => {
@@ -178,10 +205,8 @@ export default function Game2048() {
     return { newBoard, scoreInc };
   }, []);
 
-  // --- Keyboard Handling (Crucial for testing/desktop users) ---
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Prevent default scrolling for arrow keys while playing
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault();
       }
@@ -196,7 +221,6 @@ export default function Game2048() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [processMove, moveLeft, moveRight, moveUp, moveDown]);
 
-  // --- Pointer (Touch/Mouse) Handling ---
   const handlePointerDown = (e) => {
     e.target.setPointerCapture(e.pointerId);
     setDragStart({ x: e.clientX, y: e.clientY });
@@ -225,10 +249,10 @@ export default function Game2048() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden pt-0">
+    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden py-10">
       <div className="w-full max-w-[500px] p-2 sm:p-4">
         
-        {/* Header - Tightened margins for mobile */}
+        {/* Header */}
         <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 gap-2">
           <h1 className="text-4xl sm:text-6xl font-black text-black tracking-tighter uppercase shrink-0">2048</h1>
           
@@ -240,13 +264,13 @@ export default function Game2048() {
             </div>
             {/* High Score Box */}
             <div className="bg-[#ffd166] border-[3px] border-black shadow-[2px_2px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] px-2 sm:px-4 py-1 sm:py-2 text-black text-center min-w-[70px] sm:min-w-[90px]">
-              <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Best</div>
-              <div className="text-lg sm:text-2xl font-black leading-tight">{highScore}</div>
+              <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Top</div>
+              <div className="text-lg sm:text-2xl font-black leading-tight">{globalHighScore}</div>
             </div>
           </div>
         </div>
         
-        {/* Controls - Tightened margins */}
+        {/* Controls */}
         <div className="flex justify-between items-center mb-2 sm:mb-8 gap-4">
           <button 
             onClick={() => navigate('/')} 
@@ -262,7 +286,7 @@ export default function Game2048() {
           </button>
         </div>
 
-        {/* Game Grid Container - Tightened padding */}
+        {/* Game Grid Container */}
         <div 
           className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-1 sm:p-4 touch-none select-none relative cursor-grab active:cursor-grabbing mx-auto w-fit max-w-full"
           onPointerDown={handlePointerDown}
@@ -288,7 +312,6 @@ export default function Game2048() {
               row.map((cell, cIdx) => (
                 <div 
                   key={`${rIdx}-${cIdx}`} 
-                  // Scaled using vw for massive tiles that fit perfectly
                   className={`w-[21vw] h-[21vw] max-w-[90px] max-h-[90px] sm:w-24 sm:h-24 text-2xl sm:text-4xl ${getTileStyle(cell)}`}
                 >
                   {cell !== 0 ? cell : ''}
@@ -298,10 +321,50 @@ export default function Game2048() {
           </div>
         </div>
 
-        {/* Footer text tightened */}
-        <p className="mt-4 text-black text-center px-4 font-bold uppercase tracking-wider text-[11px] sm:text-base bg-[#fcf6bd] border-[3px] border-black p-2 sm:p-3 shadow-[4px_4px_0_0_#000] transform rotate-1">
+        {/* Footer text */}
+        <p className="mt-4 mb-8 text-black text-center px-4 font-bold uppercase tracking-wider text-[11px] sm:text-base bg-[#fcf6bd] border-[3px] border-black p-2 sm:p-3 shadow-[4px_4px_0_0_#000] transform rotate-1">
           Use Arrow Keys, WASD, or Swipe to merge!
         </p>
+
+        {/* --- GLOBAL TOP 3 LEADERBOARD (BELOW THE GAME) --- */}
+        <div className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 w-full transform -rotate-1">
+          <h3 className="text-xl sm:text-2xl font-black uppercase text-black mb-4 flex items-center justify-between">
+            <span>Global Top 3</span>
+          </h3>
+          
+          {globalLeaderboard.length === 0 ? (
+            <div className="bg-gray-100 border-[3px] border-dashed border-gray-400 p-4 text-center">
+              <p className="font-bold text-gray-500 uppercase tracking-widest">No scores yet. Take the crown!</p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {globalLeaderboard.map((entry, idx) => {
+                const rankColors = ['bg-[#ffd166]', 'bg-[#d0f4de]', 'bg-[#ffb5a7]'];
+                const bgColor = rankColors[idx] || 'bg-white';
+                
+                return (
+                  <li 
+                    key={entry.id || idx} 
+                    className={`${bgColor} border-[3px] border-black p-3 sm:p-4 shadow-[4px_4px_0_0_#000] flex justify-between items-center transition-transform hover:-translate-y-1`}
+                  >
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <span className="text-lg sm:text-xl font-black bg-white border-[2px] border-black rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shadow-[2px_2px_0_0_#000]">
+                        #{idx + 1}
+                      </span>
+                      <span className="font-black uppercase text-base sm:text-lg tracking-wider">
+                        {entry.name}
+                      </span>
+                    </div>
+                    <span className="font-black text-xl sm:text-2xl">
+                      {entry.score}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
       </div>
     </div>
   );

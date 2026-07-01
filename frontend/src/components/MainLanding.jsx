@@ -154,6 +154,8 @@ export default function MainLanding() {
   const [joinMode, setJoinMode] = useState('');
   const [nearbyStatus, setNearbyStatus] = useState('');
   const [gameMode, setGameMode] = useState('multiplayer');
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [playerNameInput, setPlayerNameInput] = useState('');
 
   const handleScan = (result) => {
     if (result && result[0]) {
@@ -165,6 +167,24 @@ export default function MainLanding() {
       } catch (e) {
         setNearbyStatus('INVALID QR CODE SCANNED');
       }
+    }
+  };
+
+  const handleSinglePlayerClick = () => {
+    const storedName = localStorage.getItem('pohahub-player-name');
+    if (storedName) {
+      setGameMode('singleplayer');
+    } else {
+      setShowNameModal(true);
+    }
+  };
+
+  const handleSaveName = (e) => {
+    e.preventDefault();
+    if (playerNameInput.trim()) {
+      localStorage.setItem('pohahub-player-name', playerNameInput.trim());
+      setShowNameModal(false);
+      setGameMode('singleplayer');
     }
   };
 
@@ -213,6 +233,8 @@ export default function MainLanding() {
     setJoinMode('');
     setNearbyStatus('');
   };
+
+
 
   const displayedGames = gameMode === 'multiplayer' ? GAMES : SINGLE_PLAYER_GAMES;
 
@@ -283,15 +305,15 @@ export default function MainLanding() {
               Multiplayer
             </button>
             <button
-              onClick={() => setGameMode('singleplayer')}
-              className={`border-[4px] border-black px-6 py-3 font-black uppercase tracking-widest text-sm sm:text-base transition-all ${
-                gameMode === 'singleplayer'
-                  ? 'bg-lime-400 text-black shadow-[6px_6px_0px_#000] rotate-1 scale-105'
-                  : 'bg-white text-gray-600 shadow-[2px_2px_0px_#000] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] cursor-pointer'
-              }`}
-            >
-              Single Player
-            </button>
+                onClick={handleSinglePlayerClick}
+                className={`border-[4px] border-black px-6 py-3 font-black uppercase tracking-widest text-sm sm:text-base transition-all ${
+                  gameMode === 'singleplayer'
+                    ? 'bg-lime-400 text-black shadow-[6px_6px_0px_#000] rotate-1 scale-105'
+                    : 'bg-white text-gray-600 shadow-[2px_2px_0px_#000] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] cursor-pointer'
+                }`}
+              >
+                Single Player
+              </button>
           </div>
 
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
@@ -414,6 +436,43 @@ export default function MainLanding() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+        {/* --- NAME PROMPT MODAL --- */}
+        {showNameModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-[#a9def9] border-[4px] border-black shadow-[8px_8px_0px_#000] p-6 sm:p-8 max-w-sm w-full relative rotate-1 animate-sketch-pop pointer-events-auto">
+              <button
+                onClick={() => setShowNameModal(false)}
+                className="absolute top-4 right-4 bg-white text-black border-[3px] border-black w-8 h-8 flex items-center justify-center font-black text-lg shadow-[2px_2px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[0px_0px_0px_#000] transition-all"
+              >
+                X
+              </button>
+              <h2 className="text-2xl font-black uppercase mb-4 tracking-normal text-left">
+                Who's Playing?
+              </h2>
+              <p className="font-bold text-black mb-6 text-sm uppercase tracking-wide">
+                Enter your name to compete on the global leaderboard!
+              </p>
+              <form onSubmit={handleSaveName} className="flex flex-col gap-4">
+                <input
+                  type="text"
+                  placeholder="ENTER NAME..."
+                  maxLength={12}
+                  value={playerNameInput}
+                  onChange={(e) => setPlayerNameInput(e.target.value)}
+                  className="w-full border-[3px] border-black px-4 py-3 font-black uppercase text-lg focus:outline-none focus:shadow-[4px_4px_0_0_#000] transition-shadow"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={!playerNameInput.trim()}
+                  className="bg-[#facc15] disabled:opacity-50 disabled:cursor-not-allowed text-black border-[3px] border-black px-6 py-3 font-black uppercase tracking-widest text-lg shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all"
+                >
+                  Let's Go!
+                </button>
+              </form>
             </div>
           </div>
         )}

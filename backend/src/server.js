@@ -4,6 +4,19 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { roomManager } from './rooms/roomManager.js';
 import { endScribbleTurn, revealHint } from './games/scribble.js';
+import { readFileSync } from "fs";
+import admin from "firebase-admin";
+
+
+const serviceAccount = JSON.parse(
+  readFileSync(new URL('../serviceAccountKey.json', import.meta.url))
+);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
 
 const PORT = process.env.PORT || 3001;
 const CLIENT_ORIGINS = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
@@ -26,6 +39,13 @@ const io = new Server(httpServer, {
   },
 });
 
+  // --- GLOBAL SINGLE PLAYER LEADERBOARDS ---
+  const globalLeaderboards = {
+    '2048': [],
+    'block-blaster': [],
+    'dino': []
+  };
+
 // THIS FUNCTION SECURELY FIXES THE VIEWER-ID BUG!
 function emitRoomUpdate(room) {
   room.players.forEach((player) => {
@@ -38,6 +58,7 @@ function emitRoomUpdate(room) {
 io.on('connection', (socket) => {
   let currentRoom = null;
   let playerId = null;
+
 
   socket.on('voice:join', ({ roomCode }) => {
     // Notify everyone else in the room that a user wants to connect voice
@@ -92,6 +113,52 @@ io.on('connection', (socket) => {
     if (!result.ok) return callback?.({ ok: false, error: result.error });
     callback?.({ ok: true });
     emitRoomUpdate(result.room);
+  });
+
+  // --- SINGLE PLAYER LEADERBOARD EVENTS ---
+  // --- FIREBASE SINGLE PLAYER LEADERBOARDS ---
+  
+  // 1. Fetch the Top 3 from Firestore
+  socket.on('leaderboard:get', async (gameId, callback) => {
+    try {
+      const doc = await db.collection('leaderboards').doc(gameId).get();
+      const leaderboard = doc.exists ? doc.data().scores : [];
+      callback?.({ ok: true, leaderboard });
+    } catch (error) {
+      console.error("Firebase Read Error:", error);
+      callback?.({ ok: false, error: 'Failed to fetch leaderboard' });
+    }
+  });
+
+  // 2. Submit, Sort, and Save to Firestore
+  socket.on('leaderboard:submit', async ({ gameId, name, score }, callback) => {
+    try {
+      const docRef = db.collection('leaderboards').doc(gameId);
+      
+      // Run inside a transaction to prevent race conditions if two players win at the exact same second
+      await db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(docRef);
+        let scores = doc.exists ? doc.data().scores : [];
+        
+        // Push the new score
+        scores.push({ name, score, id: socket.id + Date.now() });
+        
+        // Sort highest to lowest and slice the Top 3
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, 3);
+        
+        // Save back to Firestore
+        transaction.set(docRef, { scores });
+        
+        // Broadcast the live update to all players looking at that game
+        io.emit(`leaderboard:update:${gameId}`, scores);
+      });
+      
+      callback?.({ ok: true });
+    } catch (error) {
+      console.error("Firebase Write Error:", error);
+      callback?.({ ok: false, error: 'Failed to save score' });
+    }
   });
 
   // --- PROXIMITY RADAR LISTENERS ---
