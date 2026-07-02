@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { absoluteUrl, defaultSeo } from '../config/seo.js';
@@ -11,6 +11,7 @@ const Scanner = lazy(() =>
 );
 
 const GAMES = [
+  // ... (Keep your GAMES array the same)
   {
     id: 'connect-four',
     title: 'Connect 4',
@@ -88,9 +89,22 @@ const GAMES = [
     buttonColor: 'bg-[#e5e7eb]',
     tilt: 'rotate-1',
   },
+   {
+    id: 'air-hockey',
+    title: 'Air Hockey',
+    description: 'Slide, strike, and score in fast-paced 1v1 Air Hockey!',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/airhockey.png',
+    path: '/games/air-hockey',
+    available: true,
+    headerColor: 'bg-[#facc15]',
+    buttonColor: 'bg-[#e5e7eb]',
+    tilt: 'rotate-1',
+  },
+
 ];
 
 const SINGLE_PLAYER_GAMES = [
+  // ... (Keep your SINGLE_PLAYER_GAMES array the same)
   {
     id: 'block-blaster',
     title: 'Block Blaster',
@@ -121,12 +135,6 @@ const SINGLE_PLAYER_GAMES = [
     path: '/games/dino',
     available: true,
     headerColor: 'bg-[#93c5fd]',
-
-
-
-
-
-    
     buttonColor: 'bg-[#fca5a5]',
     tilt: 'rotate-1',
   },
@@ -134,16 +142,17 @@ const SINGLE_PLAYER_GAMES = [
 
 function CloseIcon() {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="4"
-      strokeLinecap="round"
-    >
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round">
       <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
+// Added Pencil SVG for the edit button
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
     </svg>
   );
 }
@@ -156,6 +165,9 @@ export default function MainLanding() {
   const [gameMode, setGameMode] = useState('multiplayer');
   const [showNameModal, setShowNameModal] = useState(false);
   const [playerNameInput, setPlayerNameInput] = useState('');
+  
+  // Track player name in state so it updates the UI immediately
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem('pohahub-player-name') || '');
 
   const handleScan = (result) => {
     if (result && result[0]) {
@@ -171,8 +183,7 @@ export default function MainLanding() {
   };
 
   const handleSinglePlayerClick = () => {
-    const storedName = localStorage.getItem('pohahub-player-name');
-    if (storedName) {
+    if (playerName) {
       setGameMode('singleplayer');
     } else {
       setShowNameModal(true);
@@ -182,7 +193,9 @@ export default function MainLanding() {
   const handleSaveName = (e) => {
     e.preventDefault();
     if (playerNameInput.trim()) {
-      localStorage.setItem('pohahub-player-name', playerNameInput.trim());
+      const newName = playerNameInput.trim();
+      localStorage.setItem('pohahub-player-name', newName);
+      setPlayerName(newName); // Update local state immediately
       setShowNameModal(false);
       setGameMode('singleplayer');
     }
@@ -234,13 +247,12 @@ export default function MainLanding() {
     setNearbyStatus('');
   };
 
-
-
   const displayedGames = gameMode === 'multiplayer' ? GAMES : SINGLE_PLAYER_GAMES;
 
   return (
     <>
       <Helmet>
+        {/* ... (Keep your SEO config the same) ... */}
         <title>{defaultSeo.title}</title>
         <meta name="description" content={defaultSeo.description} />
         <link rel="canonical" href={absoluteUrl('/')} />
@@ -316,6 +328,25 @@ export default function MainLanding() {
               </button>
           </div>
 
+          {/* New Personal Greeting Header for Single Player */}
+          {gameMode === 'singleplayer' && playerName && (
+            <div className="flex justify-center sm:justify-start items-center gap-3 mb-6 animate-sketch-pop">
+              <h3 className="text-2xl sm:text-3xl font-black uppercase tracking-normal text-black bg-[#a9def9] border-[3px] border-black px-4 py-1 shadow-[4px_4px_0px_#000] -rotate-1">
+                hi.. {playerName}
+              </h3>
+              <button
+                onClick={() => {
+                  setPlayerNameInput(playerName); // Pre-fill their existing name
+                  setShowNameModal(true); // Open the modal
+                }}
+                className="bg-[#facc15] text-black border-[3px] border-black p-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all rotate-2"
+                aria-label="Edit Name"
+              >
+                <PencilIcon />
+              </button>
+            </div>
+          )}
+
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
             {displayedGames.map((game, index) => {
               const CardWrapper = game.available ? Link : 'div';
@@ -370,7 +401,9 @@ export default function MainLanding() {
           </section>
         </div>
 
+        {/* --- MODALS BELOW --- */}
         {showJoinModal && (
+
           <div className="fixed inset-0 z-[100] overflow-y-auto pointer-events-none">
             <div className="flex min-h-full items-start justify-center p-4 pt-20 sm:pt-24 pb-12">
               <div className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-6 sm:p-8 max-w-sm w-full relative -rotate-1 pointer-events-auto">
@@ -439,6 +472,7 @@ export default function MainLanding() {
             </div>
           </div>
         )}
+        
         {/* --- NAME PROMPT MODAL --- */}
         {showNameModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">

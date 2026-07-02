@@ -25,6 +25,11 @@ const SPSBoard = lazy(() => import('./games/stone-paper-scissor/Board.jsx'));
 const Game2048 = lazy(() => import('./games/2048/Game2048.jsx'));
 const BlockBlaster = lazy(() => import('./games/block-blaster/BlockBlaster.jsx'));
 const Dino = lazy(() => import('./games/dino/DinoDash.jsx'));
+
+const AirHockeyLanding = lazy(() => import('./games/air-hockey/Landing.jsx'));
+
+const AirHockeyRoom = lazy(() => import("./games/air-hockey/AirHockeyBoard.jsx"));
+
 function RouteFallback() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-6">
@@ -69,6 +74,10 @@ export default function App() {
           <Route path="rock-paper-scissor" element={<GameSeoPage slug="rock-paper-scissor" />} />
           <Route path="stone-paper-scissor" element={<GameSeoPage slug="rock-paper-scissor" />} />
           <Route path="2048" element={<GameSeoPage slug="2048" />} />
+
+
+          <Route path="games/air-hockey" element={<AirHockeyLanding />} />
+          <Route path="/games/air-hockey/room/:roomCode" element={<AirHockeyRoom />} />
 
           <Route path="privacy-policy" element={<TrustPage page="privacy-policy" />} />
           <Route path="terms" element={<TrustPage page="terms" />} />

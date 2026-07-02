@@ -6,6 +6,8 @@ import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } f
 
 import { createStonePaperScissorState, playSpsMove, nextSpsRound, serializeSpsState } from '../games/stonePaperScissor.js';
 import { createLudoState, rollLudoDice, moveLudoToken, serializeLudoState } from '../games/ludo.js';
+
+
 const PLAYER_COLORS = ['red', 'yellow'];
 const PLAYER_SYMBOLS = ['X', 'O'];
 
@@ -98,6 +100,7 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
     if (gameType === 'tambola') limit = 50; // Tambola gets a massive lobby!
     if (gameType === 'ludo') limit = 4;
     if (gameType === 'stone-paper-scissor') limit = 2;
+    if (gameType === 'air-hockey') limit = 2;
     const host = { id: hostId, name: hostName, socketId: null };
     const room = {
       code: this.generateRoomCode(),
@@ -287,6 +290,11 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
       // Add this block
       room.gameState = createLudoState(room.players.map((p) => ({ id: p.id, name: p.name })));
     }
+    else if (room.gameType === 'air-hockey') {
+      // We don't create a static state here. The AirHockeyGame class 
+      // will handle the real-time state inside server.js.
+      room.gameState = { status: 'starting' }; 
+    }
 
     room.status = 'playing';
     return { ok: true, room };
@@ -350,6 +358,7 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     else if (room.gameState && room.gameType === 'tambola') payload.gameState = serializeTambolaState(room.gameState);
     else if (room.gameState && room.gameType === 'stone-paper-scissor') payload.gameState = serializeSpsState(room.gameState);
     else if (room.gameState && room.gameType === 'ludo') payload.gameState = serializeLudoState(room.gameState);
+    else if (room.gameState && room.gameType === 'air-hockey') payload.gameState = room.gameState;
     return payload;
   }
 }
