@@ -22,6 +22,8 @@ function ChatPanel({ messages = [], onSend, disabled }) {
     setText('');
   };
 
+
+
   return (
     <div className="flex flex-col w-full h-[400px] lg:h-[550px] shrink-0 bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
       <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold uppercase tracking-widest text-xs text-gray-200 bg-[#222] shrink-0">
@@ -96,6 +98,19 @@ export default function AirHockeyBoard() {
       navigate(`/games/air-hockey?join=${roomCode}`);
       return;
     }
+
+      useEffect(() => {
+    // Wait until the room status is upgraded to 'playing'
+    if (isPlaying && connected && room?.code && myPlayerId) {
+      const socket = connectSocket();
+      
+      // Tell the server we are ready to join the physics engine
+      socket.emit('joinAirHockey', { 
+        roomId: room.code, 
+        playerInfo: { id: myPlayerId } 
+      });
+    }
+  }, [isPlaying, connected, room?.code, myPlayerId]);
 
     const syncRoom = async () => {
       if (!username || !roomCode) return;
@@ -257,10 +272,19 @@ export default function AirHockeyBoard() {
     if (!result.ok) setError(result.error);
   };
 
+// --- UPDATE THIS IN AirHockeyBoard.jsx ---
+
   const handlePlayAgain = async () => {
     setError('');
     const result = await emitWithAck('game:reset', {});
-    if (!result.ok) setError(result.error || 'Failed to start a new game');
+    
+    if (result.ok) {
+      const socket = connectSocket();
+      // Inform the active physics engine to reset scores and trigger startCountdown()
+      socket.emit('airHockeyRematch', roomCode);
+    } else {
+      setError(result.error || 'Failed to start a new game');
+    }
   };
 
   const handleChat = async (message) => {
