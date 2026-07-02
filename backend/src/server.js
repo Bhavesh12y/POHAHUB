@@ -6,6 +6,7 @@ import { roomManager } from './rooms/roomManager.js';
 import { endScribbleTurn, revealHint } from './games/scribble.js';
 import { readFileSync } from "fs";
 import admin from "firebase-admin";
+import  AirHockeyGame  from './games/airHockey.js';
 
 
 const serviceAccount = JSON.parse(
@@ -114,6 +115,35 @@ io.on('connection', (socket) => {
     callback?.({ ok: true });
     emitRoomUpdate(result.room);
   });
+
+  // --- AIR HOCKEY REAL-TIME EVENTS ---
+
+  socket.on('joinAirHockey', ({ roomId, playerInfo }) => {
+    const room = roomManager.getRoom(roomId);
+    if (room && room.gameType === 'air-hockey') {
+      // Instantiate the physics engine for this room if it doesn't exist yet
+      if (!room.gameInstance) {
+        room.gameInstance = new AirHockeyGame(roomId, io);
+      }
+      room.gameInstance.addPlayer(socket.id, playerInfo.id);
+    }
+  });
+
+  socket.on('airHockeyMove', ({ roomId, position }) => {
+    const room = roomManager.getRoom(roomId);
+    if (room && room.gameInstance) {
+      room.gameInstance.handlePlayerMove(socket.id, position);
+    }
+  });
+
+  socket.on('airHockeyRematch', (roomId) => {
+    const room = roomManager.getRoom(roomId);
+    if (room && room.gameInstance) {
+      room.gameInstance.handleRematch();
+    }
+  });
+
+
 
   // --- SINGLE PLAYER LEADERBOARD EVENTS ---
   // --- FIREBASE SINGLE PLAYER LEADERBOARDS ---
@@ -281,13 +311,37 @@ io.on('connection', (socket) => {
     callback?.({ ok: true });
   });
 
+  // socket.on('disconnect', () => {
+  //   if (!currentRoom || !playerId) return;
+  //   const result = roomManager.leaveRoom(currentRoom, playerId);
+  //   if (!result) return;
+  //   if (result.deleted) io.to(currentRoom).emit('room:closed', { reason: 'All players left' });
+  //   else emitRoomUpdate(result.room);
+  // });
+  // ... existing socket events ...
+
   socket.on('disconnect', () => {
     if (!currentRoom || !playerId) return;
+    const room = roomManager.getRoom(currentRoom);
+
+    // If a player disconnects from an active Air Hockey game, notify physics engine
+    if (room && room.gameType === 'air-hockey' && room.gameInstance) {
+      room.gameInstance.removePlayer(socket.id);
+    }
+
     const result = roomManager.leaveRoom(currentRoom, playerId);
     if (!result) return;
-    if (result.deleted) io.to(currentRoom).emit('room:closed', { reason: 'All players left' });
-    else emitRoomUpdate(result.room);
+    
+    if (result.deleted) {
+      // CLEAR INTERVALS TO PREVENT MEMORY LEAKS
+      if (room && room.gameInstance) room.gameInstance.destroy(); 
+      io.to(currentRoom).emit('room:closed', { reason: 'All players left' });
+    } else {
+      emitRoomUpdate(result.room);
+    }
   });
+
+// ... rest of server.js
   
 });
 

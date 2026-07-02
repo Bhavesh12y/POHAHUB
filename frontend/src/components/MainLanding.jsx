@@ -89,6 +89,18 @@ const GAMES = [
     buttonColor: 'bg-[#e5e7eb]',
     tilt: 'rotate-1',
   },
+   {
+    id: 'air-hockey',
+    title: 'Air Hockey',
+    description: 'Slide, strike, and score in fast-paced 1v1 Air Hockey!',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/airhockey.png',
+    path: '/games/air-hockey',
+    available: true,
+    headerColor: 'bg-[#facc15]',
+    buttonColor: 'bg-[#e5e7eb]',
+    tilt: 'rotate-1',
+  },
+
 ];
 
 const SINGLE_PLAYER_GAMES = [
