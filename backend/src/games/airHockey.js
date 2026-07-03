@@ -163,30 +163,40 @@ export default class AirHockeyGame {
         this.checkStrikerCollision('p2');
     }
 
-    checkStrikerCollision(playerRole) {
-        const striker = this.state.strikers[playerRole];
-        const puck = this.state.puck;
+checkStrikerCollision(playerRole) {
+        const striker = this.state.strikers[playerRole]; //[cite: 11]
+        const puck = this.state.puck; //[cite: 11]
         
-        const dx = puck.x - striker.x;
-        const dy = puck.y - striker.y;
-        const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 0.01);
-        const minDist = PUCK_RADIUS + STRIKER_RADIUS;
+        const dx = puck.x - striker.x; //[cite: 11]
+        const dy = puck.y - striker.y; //[cite: 11]
+        const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 0.01); //[cite: 11]
+        const minDist = PUCK_RADIUS + STRIKER_RADIUS; //[cite: 11]
 
         if (distance < minDist) {
-            const overlap = minDist - distance;
-            puck.x += (dx / distance) * overlap;
-            puck.y += (dy / distance) * overlap;
+            const overlap = minDist - distance; //[cite: 11]
+            puck.x += (dx / distance) * overlap; //[cite: 11]
+            puck.y += (dy / distance) * overlap; //[cite: 11]
 
+            // --- NEW: APPLY STRIKER MOMENTUM ---
             const angle = Math.atan2(dy, dx);
-            const speed = Math.max(Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy), 5);
             
-            puck.vx = Math.cos(angle) * (speed + 4); 
-            puck.vy = Math.sin(angle) * (speed + 4);
+            // Calculate how fast the player was swiping
+            const strikerSpeed = Math.hypot(striker.vx || 0, striker.vy || 0);
+            const basePuckSpeed = Math.max(Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy), 5);
+            
+            // Add 80% of the striker's physical speed to the puck for a snappy hit
+            const newSpeed = basePuckSpeed + (strikerSpeed * 0.8) + 4;
+            
+            puck.vx = Math.cos(angle) * newSpeed;
+            puck.vy = Math.sin(angle) * newSpeed;
+            // -----------------------------------
             
             const currentSpeed = Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy);
-            if (currentSpeed > 16) {
-                puck.vx = (puck.vx / currentSpeed) * 16;
-                puck.vy = (puck.vy / currentSpeed) * 16;
+            
+            // Increased the speed limit slightly from 16 to 22 so hard hits feel better
+            if (currentSpeed > 22) {
+                puck.vx = (puck.vx / currentSpeed) * 22;
+                puck.vy = (puck.vy / currentSpeed) * 22;
             }
         }
     }
@@ -216,25 +226,28 @@ export default class AirHockeyGame {
         };
     }
 
-    handlePlayerMove(socketId, position) {
-        // Receives an absolute target position in the server's fixed
-        // coordinate space. The client computes this from drag DELTAS
-        // relative to the grab point (hold-to-drag, not snap-to-cursor),
-        // and for P2 it has already un-rotated the point back into this
-        // fixed space before sending — so no change is needed here. We
-        // still clamp defensively regardless of what the client sends.
+handlePlayerMove(socketId, position) {
         const player = this.players[socketId];
         if (!player || this.state.status !== 'playing') return;
 
         let { x, y } = position;
-        x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, x));
+        x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, x)); //[cite: 11]
         
         if (player.role === 'p1') {
-            y = Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, y));
+            y = Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, y)); //[cite: 11]
         } else {
-            y = Math.max(STRIKER_RADIUS, Math.min(GAME_HEIGHT / 2 - STRIKER_RADIUS, y));
+            y = Math.max(STRIKER_RADIUS, Math.min(GAME_HEIGHT / 2 - STRIKER_RADIUS, y)); //[cite: 11]
         }
-        this.state.strikers[player.role] = { x, y };
+
+        // --- NEW: TRACK STRIKER VELOCITY ---
+        const oldX = this.state.strikers[player.role].x;
+        const oldY = this.state.strikers[player.role].y;
+        const vx = x - oldX;
+        const vy = y - oldY;
+        // -----------------------------------
+
+        // Save the velocity (vx, vy) alongside the coordinates
+        this.state.strikers[player.role] = { x, y, vx, vy };
     }
 
     handleRematch() {
