@@ -653,7 +653,7 @@ export default function AirHockeyBoard() {
 
     // 30Hz network throttle, unchanged from before.
     const now = Date.now();
-    if (now - lastMoveEmit.current < 33) return;
+    if (now - lastMoveEmit.current < 16) return;
     lastMoveEmit.current = now;
 
     const socket = connectSocket();
