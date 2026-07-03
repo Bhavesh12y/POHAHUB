@@ -164,68 +164,50 @@ export default class AirHockeyGame {
     }
 
 checkStrikerCollision(playerRole) {
-        const striker = this.state.strikers[playerRole]; //[cite: 11]
-        const puck = this.state.puck; //[cite: 11]
+        const striker = this.state.strikers[playerRole];
+        const puck = this.state.puck;
         
-        const dx = puck.x - striker.x; //[cite: 11]
-        const dy = puck.y - striker.y; //[cite: 11]
-        const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 0.01); //[cite: 11]
-        const minDist = PUCK_RADIUS + STRIKER_RADIUS; //[cite: 11]
+        const dx = puck.x - striker.x;
+        const dy = puck.y - striker.y;
+        const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 0.01);
+        const minDist = PUCK_RADIUS + STRIKER_RADIUS;
 
         if (distance < minDist) {
-            const overlap = minDist - distance; //[cite: 11]
-            puck.x += (dx / distance) * overlap; //[cite: 11]
-            puck.y += (dy / distance) * overlap; //[cite: 11]
-
-            // --- NEW: APPLY STRIKER MOMENTUM ---
-            const angle = Math.atan2(dy, dx);
-            
-            // Calculate how fast the player was swiping
-            const strikerSpeed = Math.hypot(striker.vx || 0, striker.vy || 0);
-            const basePuckSpeed = Math.max(Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy), 5);
-            
-            // Add 80% of the striker's physical speed to the puck for a snappy hit
-            const newSpeed = basePuckSpeed + (strikerSpeed * 0.8) + 4;
-            
-            puck.vx = Math.cos(angle) * newSpeed;
-            puck.vy = Math.sin(angle) * newSpeed;
-            // -----------------------------------
-            
-            const currentSpeed = Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy);
-            
-            // Increased the speed limit slightly from 16 to 22 so hard hits feel better
-            if (currentSpeed > 22) {
-                puck.vx = (puck.vx / currentSpeed) * 22;
-                puck.vy = (puck.vy / currentSpeed) * 22;
-            }
-        }if (distance < minDist) {
+            // 1. Resolve Overlap (Push puck out so it doesn't get trapped/overlay)
             const overlap = minDist - distance;
-            puck.x += (dx / distance) * overlap;
-            puck.y += (dy / distance) * overlap;
-
-            // --- FIX: REALISTIC MOMENTUM TRANSFER ---
-            const angle = Math.atan2(dy, dx);
+            const nx = dx / distance; // Normal X
+            const ny = dy / distance; // Normal Y
             
-            // 1. Calculate striker speed, but CLAMP it to a max of 15 
-            // to prevent network teleports from launching the puck.
+            puck.x += nx * overlap;
+            puck.y += ny * overlap;
+
+            // 2. True Geometric Reflection
+            // Calculate the dot product of the puck's velocity against the collision normal
+            const dotProduct = (puck.vx * nx + puck.vy * ny);
+            
+            // Reflect the puck's base velocity off the circular striker
+            let newVx = puck.vx - 2 * dotProduct * nx;
+            let newVy = puck.vy - 2 * dotProduct * ny;
+
+            // 3. Apply Striker Momentum
+            // Clamp speed to prevent massive network teleports from launching the puck
             const rawStrikerSpeed = Math.hypot(striker.vx || 0, striker.vy || 0);
             const clampedStrikerSpeed = Math.min(rawStrikerSpeed, 15);
             
-            const basePuckSpeed = Math.max(Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy), 3);
+            // Transfer energy in the direction of the hit
+            newVx += nx * (clampedStrikerSpeed * 0.6);
+            newVy += ny * (clampedStrikerSpeed * 0.6);
+
+            puck.vx = newVx;
+            puck.vy = newVy;
             
-            // 2. Softer transfer (0.5 instead of 0.8) and lower flat boost (+3 instead of +4)
-            const newSpeed = basePuckSpeed + (clampedStrikerSpeed * 0.5) + 3;
+            // 4. Strict Speed Limit
+            const currentSpeed = Math.hypot(puck.vx, puck.vy);
+            const MAX_SPEED = 18;
             
-            puck.vx = Math.cos(angle) * newSpeed;
-            puck.vy = Math.sin(angle) * newSpeed;
-            // ----------------------------------------
-            
-            const currentSpeed = Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy);
-            
-            // 3. Lower the absolute max speed limit from 22 down to 18
-            if (currentSpeed > 18) {
-                puck.vx = (puck.vx / currentSpeed) * 18;
-                puck.vy = (puck.vy / currentSpeed) * 18;
+            if (currentSpeed > MAX_SPEED) {
+                puck.vx = (puck.vx / currentSpeed) * MAX_SPEED;
+                puck.vy = (puck.vy / currentSpeed) * MAX_SPEED;
             }
         }
     }
