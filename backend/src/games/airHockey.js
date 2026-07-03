@@ -230,18 +230,19 @@ checkStrikerCollision(playerRole) {
         }
     }
 
-    handleGoal(scorer) {
+handleGoal(scorer) {
         this.state.score[scorer]++;
         if (this.state.score[scorer] >= MAX_SCORE) {
             this.state.status = 'finished';
             this.state.winner = scorer;
+            
+            // FIX: Broadcast the final state so the client receives the 5th point
+            this.broadcastState(); 
+            
             if (this.gameInterval) clearInterval(this.gameInterval);
             if (this.networkInterval) clearInterval(this.networkInterval);
             this.io.to(this.roomId).emit('gameOver', this.state);
         } else {
-            // The client uses this event to freeze the puck at its last
-            // position and play a local "falling into the hole" shrink
-            // animation before the reset snapshot below arrives.
             this.io.to(this.roomId).emit('goalAnimation', scorer);
             this.startCountdown(); 
         }

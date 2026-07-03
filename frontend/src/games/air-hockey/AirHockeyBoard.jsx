@@ -413,6 +413,10 @@ export default function AirHockeyBoard() {
       setTimeout(() => navigate('/games/air-hockey'), 2000);
     };
 
+    const onGameOver = (state) => {
+      setUiState({ score: state.score, status: state.status, winner: state.winner });
+    };
+
     // NEW: the server assigns our side (p1/p2) right after we join. This
     // drives the 180° flip and input inversion for P2 (Requirement 2).
     const onAirHockeyRole = ({ role }) => setMyRole(role);
@@ -477,6 +481,7 @@ export default function AirHockeyBoard() {
     socket.on('gameState', onHighFreqGameState);
     socket.on('countdown', onCountdown);
     socket.on('goalAnimation', onGoalAnimation);
+    socket.on('gameOver', onGameOver);
 
     if (socket.connected) {
       setConnected(true);
@@ -495,6 +500,7 @@ export default function AirHockeyBoard() {
       socket.off('gameState', onHighFreqGameState);
       socket.off('countdown', onCountdown);
       socket.off('goalAnimation', onGoalAnimation);
+      socket.off('gameOver', onGameOver);
     };
   }, [roomCode, navigate, location.state]);
 
