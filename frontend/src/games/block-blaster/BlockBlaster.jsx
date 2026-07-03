@@ -82,23 +82,37 @@ export default function BlockBlaster() {
   });
 
   // -- FETCH AND SYNC LEADERBOARD --
+  // -- FETCH AND SYNC LEADERBOARD --
   useEffect(() => {
-    emitWithAck('leaderboard:get', 'block-blaster').then((res) => {
-      if (res?.ok) setGlobalLeaderboard(res.leaderboard);
-    });
+    const s = connectSocket();
+
+    const fetchLeaderboard = () => {
+      emitWithAck('leaderboard:get', 'dino').then((res) => {
+        if (res?.ok) setGlobalLeaderboard(res.leaderboard);
+      });
+    };
 
     const handleLeaderboardUpdate = (newLeaderboard) => {
       setGlobalLeaderboard(newLeaderboard);
     };
 
-    const s = connectSocket();
-    s.on('leaderboard:update:block-blaster', handleLeaderboardUpdate);
+    // 1. Listen for real-time updates from other players
+    s.on('leaderboard:update:dino', handleLeaderboardUpdate);
+
+    // 2. Fetch initial data safely
+    if (s.connected) {
+      // If the socket is already ready, fetch immediately
+      fetchLeaderboard();
+    } else {
+      // If it's still connecting, wait for the 'connect' event
+      s.on('connect', fetchLeaderboard);
+    }
 
     return () => {
-      s.off('leaderboard:update:block-blaster', handleLeaderboardUpdate);
+      s.off('leaderboard:update:dino', handleLeaderboardUpdate);
+      s.off('connect', fetchLeaderboard);
     };
   }, []);
-
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       // Cancel the event
