@@ -5,6 +5,15 @@ const STRIKER_RADIUS = 25;
 const GOAL_WIDTH = 120;
 const MAX_SCORE = 7;
 
+// COORDINATE SPACE CONTRACT:
+// This simulation is intentionally FIXED and is never rotated — P1's
+// striker always lives in the bottom half of the board (y: 300-600) and
+// P2's striker always lives in the top half (y: 0-300). For the "relative
+// perspective" feature, the CLIENT (AirHockeyBoard.jsx) is responsible for
+// rotating its own <canvas> rendering 180° — and inverting its own pointer
+// input — only when it is P2, so both players visually play "up the board"
+// from the bottom of their own screen. The server doesn't need to know or
+// care about any of that; it just keeps simulating this same fixed space.
 export default class AirHockeyGame {
     constructor(roomId, io) {
         this.roomId = roomId;
@@ -41,6 +50,14 @@ export default class AirHockeyGame {
         
         const role = Object.keys(this.players).length === 0 ? 'p1' : 'p2';
         this.players[socketId] = { id: playerId, role };
+
+        // NEW: tell this specific socket which side it was assigned. The
+        // client needs this to decide whether to flip its canvas 180°,
+        // whether to invert drag input, and which entry in
+        // `state.strikers` is "theirs" for client-side prediction. Every
+        // socket auto-joins a room named after its own id in Socket.IO,
+        // so `io.to(socketId)` reaches only the player who just joined.
+        this.io.to(socketId).emit('airHockeyRole', { role });
         
         if (Object.keys(this.players).length === 2) {
             this.startCountdown();
@@ -65,11 +82,18 @@ export default class AirHockeyGame {
         if (this.countdownInterval) clearInterval(this.countdownInterval);
     }
 
+    // NEW: single place that broadcasts the authoritative game state.
+    // Used by both the countdown reset and the 30Hz network loop below,
+    // so there's one source of truth for what a "gameState" payload is.
+    broadcastState() {
+        this.io.to(this.roomId).emit('gameState', this.state);
+    }
+
     startCountdown() {
         this.state.status = 'countdown';
         if (this.countdownInterval) clearInterval(this.countdownInterval);
         this.resetPuck();
-        this.io.to(this.roomId).emit('gameState', this.state);
+        this.broadcastState();
         
         let count = 3;
         this.countdownInterval = setInterval(() => {
@@ -94,9 +118,13 @@ export default class AirHockeyGame {
         }, 1000 / 60);
 
         // FIX: 30 FPS Network update loop
+        // (The client fills the gaps between these 30Hz snapshots with
+        // interpolation — see the render loop in AirHockeyBoard.jsx —
+        // so we get smooth 60fps visuals without flooding the socket
+        // with a full 60Hz payload.)
         this.networkInterval = setInterval(() => {
             if (this.state.status !== 'playing') return;
-            this.io.to(this.roomId).emit('gameState', this.state);
+            this.broadcastState();
         }, 1000 / 30);
     }
 
@@ -172,6 +200,9 @@ export default class AirHockeyGame {
             if (this.networkInterval) clearInterval(this.networkInterval);
             this.io.to(this.roomId).emit('gameOver', this.state);
         } else {
+            // The client uses this event to freeze the puck at its last
+            // position and play a local "falling into the hole" shrink
+            // animation before the reset snapshot below arrives.
             this.io.to(this.roomId).emit('goalAnimation', scorer);
             this.startCountdown(); 
         }
@@ -186,6 +217,12 @@ export default class AirHockeyGame {
     }
 
     handlePlayerMove(socketId, position) {
+        // Receives an absolute target position in the server's fixed
+        // coordinate space. The client computes this from drag DELTAS
+        // relative to the grab point (hold-to-drag, not snap-to-cursor),
+        // and for P2 it has already un-rotated the point back into this
+        // fixed space before sending — so no change is needed here. We
+        // still clamp defensively regardless of what the client sends.
         const player = this.players[socketId];
         if (!player || this.state.status !== 'playing') return;
 

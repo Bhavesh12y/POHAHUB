@@ -4,6 +4,256 @@ import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
 
+// These MUST exactly mirror the authoritative constants in the backend
+// (airHockey.js) — the server is the single source of truth for physics;
+// the client only uses these for input math and drawing.
+const GAME_WIDTH = 400;
+const GAME_HEIGHT = 600;
+const PUCK_RADIUS = 15;
+const STRIKER_RADIUS = 25;
+const GOAL_WIDTH = 120;
+const GRAB_RADIUS = STRIKER_RADIUS * 1.8; // generous "am I on my striker?" tolerance, tuned for touch
+const GOAL_DROP_MS = 450; // duration of the puck's "falling into the hole" animation
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// ---------------------------------------------------------------------
+// Input helpers (pure functions, no component state — kept outside the
+// component so they aren't recreated on every render)
+// ---------------------------------------------------------------------
+
+function getCanvasPoint(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY,
+  };
+}
+
+// Requirement 2: P2's canvas is rendered rotated 180°, so a raw click on
+// their screen must be mirrored on both axes to land on the correct
+// physics coordinate in the server's fixed coordinate space.
+function toServerSpace(raw, role) {
+  return role === 'p2'
+    ? { x: GAME_WIDTH - raw.x, y: GAME_HEIGHT - raw.y }
+    : { x: raw.x, y: raw.y };
+}
+
+// Mirrors the server's own clamping in handlePlayerMove, so what we
+// predict locally never visibly disagrees with what the server allows.
+function clampStriker(pos, role) {
+  const x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, pos.x));
+  const y = role === 'p1'
+    ? Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, pos.y))
+    : Math.max(STRIKER_RADIUS, Math.min(GAME_HEIGHT / 2 - STRIKER_RADIUS, pos.y));
+  return { x, y };
+}
+
+// ---------------------------------------------------------------------
+// Drawing helpers (pure functions of ctx + data, no React/component
+// state). Kept outside the component so they're defined once, not on
+// every render.
+// ---------------------------------------------------------------------
+
+function drawBoardSurface(ctx, canvas) {
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Table "felt": a dark vertical gradient instead of a flat fill, so
+  // the board has depth before anything else is drawn on top of it.
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#0b1220');
+  bg.addColorStop(0.5, '#111827');
+  bg.addColorStop(1, '#0b1220');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  // Subtle vignette to draw the eye toward center ice.
+  const vignette = ctx.createRadialGradient(w / 2, h / 2, h * 0.15, w / 2, h / 2, h * 0.7);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  // Requirement 5: premium glowing dashed center line + face-off circle,
+  // arcade-cabinet styling instead of a flat painted stripe.
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = '#22d3ee';
+  ctx.strokeStyle = 'rgba(34,211,238,0.75)';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([10, 8]);
+  ctx.beginPath();
+  ctx.moveTo(12, h / 2);
+  ctx.lineTo(w - 12, h / 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  ctx.arc(w / 2, h / 2, 55, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(w / 2, h / 2, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#22d3ee';
+  ctx.shadowBlur = 12;
+  ctx.fill();
+  ctx.restore();
+
+  // Outer rail.
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(4, 4, w - 8, h - 8);
+}
+
+// Requirement 3: goals rendered as physical "holes" carved into the
+// board (radial cavity gradient + glow + raised rim) instead of flat
+// painted rectangles.
+function drawGoalHole(ctx, canvas, { y, color }) {
+  const cx = canvas.width / 2;
+  const halfW = GOAL_WIDTH / 2;
+  const depth = 22;
+
+  ctx.save();
+
+  // The cavity itself: a dark radial gradient standing in for an
+  // inner-shadowed hole (canvas has no native inset-shadow primitive).
+  const cavity = ctx.createRadialGradient(cx, y, 3, cx, y, halfW);
+  cavity.addColorStop(0, '#020617');
+  cavity.addColorStop(0.55, '#0f172a');
+  cavity.addColorStop(1, 'rgba(15, 23, 42, 0)');
+  ctx.beginPath();
+  ctx.ellipse(cx, y, halfW, depth, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cavity;
+  ctx.fill();
+
+  // Ambient glow spilling from inside the hole in the team's color, as
+  // if lit from underneath — sells the "puck drops in" feeling.
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = color;
+  ctx.strokeStyle = `${color}66`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(cx, y, halfW - 3, depth - 5, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Raised rim highlight so the hole reads as carved into the table
+  // rather than drawn on top of it.
+  ctx.strokeStyle = 'rgba(226,232,240,0.5)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(cx, y, halfW, depth, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// Requirement 5: fading motion trail behind a fast-moving puck.
+function drawPuckTrail(ctx, trail) {
+  if (!trail || trail.length < 2) return;
+  ctx.save();
+  for (let i = 0; i < trail.length; i++) {
+    const p = trail[i];
+    const t = (i + 1) / trail.length; // older points are smaller/fainter
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(148, 197, 255, ${t * 0.25})`;
+    ctx.arc(p.x, p.y, PUCK_RADIUS * (0.35 + 0.5 * t), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Requirement 5: neon glow via shadowBlur/shadowColor on the strikers.
+function drawStriker(ctx, pos, color) {
+  if (!pos) return;
+  ctx.save();
+  ctx.shadowBlur = 22;
+  ctx.shadowColor = color;
+
+  const grad = ctx.createRadialGradient(pos.x - 8, pos.y - 8, 4, pos.x, pos.y, STRIKER_RADIUS);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.35, color);
+  grad.addColorStop(1, color);
+
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, STRIKER_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#0f172a';
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Requirement 5: neon glow on the puck. Accepts scale/alpha so the same
+// function can render the shrinking "fell into the hole" goal animation.
+function drawPuck(ctx, pos, { scale = 1, alpha = 1 } = {}) {
+  if (!pos || scale <= 0) return;
+  const r = PUCK_RADIUS * scale;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.shadowBlur = 26 * scale;
+  ctx.shadowColor = '#38bdf8';
+
+  const grad = ctx.createRadialGradient(pos.x - 5, pos.y - 5, 1, pos.x, pos.y, Math.max(r, 0.01));
+  grad.addColorStop(0, '#334155');
+  grad.addColorStop(1, '#020617');
+
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.shadowBlur = 14 * scale;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#38bdf8';
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Assembles one full frame. `role` is the local player's own role
+// ('p1' | 'p2' | null before it's known yet).
+function renderGame({ puck, strikers, role, trail, drop }, canvas) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  // --- Requirement 2: Relative Perspective Rendering ------------------
+  // Server physics never changes (P1 always bottom, P2 always top). We
+  // only rotate the DRAWING 180° about the board's center, and only for
+  // the player who is P2, so every player visually plays "up the board"
+  // from the bottom of their own screen.
+  if (role === 'p2') {
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(Math.PI);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+  }
+
+  drawBoardSurface(ctx, canvas);
+  drawGoalHole(ctx, canvas, { y: 0, color: '#ef4444' });            // top goal — P1 scores here
+  drawGoalHole(ctx, canvas, { y: canvas.height, color: '#3b82f6' }); // bottom goal — P2 scores here
+  drawPuckTrail(ctx, trail);
+
+  drawStriker(ctx, strikers.p1, '#3b82f6');
+  drawStriker(ctx, strikers.p2, '#ef4444');
+
+  if (drop) {
+    // Requirement 3: shrink + fade the puck at its last position instead
+    // of letting it teleport straight back to center on a goal.
+    drawPuck(ctx, drop, { scale: 1 - drop.progress, alpha: 1 - drop.progress });
+  } else if (puck) {
+    drawPuck(ctx, puck);
+  }
+
+  ctx.restore();
+}
+
 // Reusable Chat Panel
 function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
@@ -76,15 +326,34 @@ export default function AirHockeyBoard() {
   const [error, setError] = useState('');
 
   const canvasRef = useRef(null);
-  const gameStateRef = useRef(null); 
+  const gameStateRef = useRef(null);        // latest authoritative server state
+  const prevGameStateRef = useRef(null);    // previous server state, lerp source
+  const currStateTimeRef = useRef(0);       // performance.now() when gameStateRef was set
+  const prevStateTimeRef = useRef(0);       // performance.now() when prevGameStateRef was set
+  const myStrikerRef = useRef(null);        // client-predicted position of MY OWN striker
+  const myRoleRef = useRef(null);           // 'p1' | 'p2' — mirrors myRole state, for use in handlers
+  const isDraggingRef = useRef(false);
+  const dragPointerIdRef = useRef(null);
+  const dragOriginRef = useRef({ x: 0, y: 0 });     // raw pointer position at grab time
+  const strikerOriginRef = useRef({ x: 0, y: 0 });  // striker position at grab time
+  const puckTrailRef = useRef([]);
+  const goalDropRef = useRef(null);
   const lastMoveEmit = useRef(0); // For network throttling
+
   const [uiState, setUiState] = useState({ score: { p1: 0, p2: 0 }, status: 'playing' });
   const [countdown, setCountdown] = useState(null);
   const [showGoal, setShowGoal] = useState(false);
+  const [myRole, setMyRole] = useState(null); // 'p1' | 'p2', assigned by the server on join
 
   const myPlayerId = room?.viewerId;
   const isPlaying = room?.status === 'playing';
   const isHost = room?.hostId === myPlayerId;
+
+  // Keep the ref in sync so render/pointer callbacks always see the
+  // latest role without needing to be recreated every render.
+  useEffect(() => {
+    myRoleRef.current = myRole;
+  }, [myRole]);
 
   // FIX: Extracted inner useEffect to top level
   useEffect(() => {
@@ -144,8 +413,40 @@ export default function AirHockeyBoard() {
       setTimeout(() => navigate('/games/air-hockey'), 2000);
     };
 
+    // NEW: the server assigns our side (p1/p2) right after we join. This
+    // drives the 180° flip and input inversion for P2 (Requirement 2).
+    const onAirHockeyRole = ({ role }) => setMyRole(role);
+
     const onHighFreqGameState = (state) => {
+      const now = performance.now();
+      const previous = gameStateRef.current;
+
+      // A status change (e.g. playing -> countdown right after a goal)
+      // means positions just hard-reset server-side. Snap instead of
+      // lerping across that jump, so the puck doesn't visibly "slide"
+      // back to center. Timestamps below are captured with
+      // performance.now() on THIS client at receive time — never the
+      // server's own clock — so there's no clock-sync assumption baked
+      // into the interpolation math in the render loop.
+      const hardReset = !previous || previous.status !== state.status;
+
+      prevGameStateRef.current = hardReset ? state : previous;
+      prevStateTimeRef.current = hardReset ? now : currStateTimeRef.current;
+      currStateTimeRef.current = now;
       gameStateRef.current = state;
+
+      if (hardReset) {
+        puckTrailRef.current = [];
+      }
+
+      // Keep our own striker synced to the server EXCEPT mid-drag, where
+      // local prediction should win so the player's own input is never
+      // fought by a slightly-lagging echo of itself (Requirement 4).
+      const role = myRoleRef.current;
+      if (role && !isDraggingRef.current) {
+        myStrikerRef.current = { ...state.strikers[role] };
+      }
+
       setUiState((prev) => {
         if (prev.status !== state.status || prev.score.p1 !== state.score.p1 || prev.score.p2 !== state.score.p2) {
           return { score: state.score, status: state.status, winner: state.winner };
@@ -157,6 +458,13 @@ export default function AirHockeyBoard() {
     const onCountdown = (count) => setCountdown(count === 0 ? null : count);
     const onGoalAnimation = () => {
       setShowGoal(true);
+      // Freeze the puck at its last known spot and let the render loop
+      // play a brief shrink-and-fade "falling into the hole" animation
+      // there (Requirement 3), instead of it just popping to center.
+      const lastPuck = gameStateRef.current?.puck;
+      if (lastPuck) {
+        goalDropRef.current = { x: lastPuck.x, y: lastPuck.y, start: performance.now() };
+      }
       setTimeout(() => setShowGoal(false), 1500);
     };
 
@@ -165,6 +473,7 @@ export default function AirHockeyBoard() {
     socket.on('room:update', onRoomUpdate);
     socket.on('chat:message', onChatMessage);
     socket.on('room:closed', onRoomClosed);
+    socket.on('airHockeyRole', onAirHockeyRole);
     socket.on('gameState', onHighFreqGameState);
     socket.on('countdown', onCountdown);
     socket.on('goalAnimation', onGoalAnimation);
@@ -182,76 +491,177 @@ export default function AirHockeyBoard() {
       socket.off('room:update', onRoomUpdate);
       socket.off('chat:message', onChatMessage);
       socket.off('room:closed', onRoomClosed);
+      socket.off('airHockeyRole', onAirHockeyRole);
       socket.off('gameState', onHighFreqGameState);
       socket.off('countdown', onCountdown);
       socket.off('goalAnimation', onGoalAnimation);
     };
   }, [roomCode, navigate, location.state]);
 
+  // Requirement 4: 60fps render loop that interpolates the puck and the
+  // opponent's striker between 30Hz server snapshots, while the local
+  // player's own striker renders instantly from client-side prediction.
   useEffect(() => {
     let animationId;
+
     const renderLoop = () => {
-      if (gameStateRef.current && canvasRef.current && isPlaying) {
-        renderGame(gameStateRef.current, canvasRef.current);
+      const canvas = canvasRef.current;
+      const state = gameStateRef.current;
+
+      if (canvas && state && isPlaying) {
+        const role = myRoleRef.current;
+        let puckToRender = state.puck;
+        let strikersToRender = state.strikers;
+        let trailToRender = [];
+
+        if (role) {
+          const prevState = prevGameStateRef.current || state;
+          const span = Math.max(currStateTimeRef.current - prevStateTimeRef.current, 1);
+          const t = Math.min(Math.max((performance.now() - currStateTimeRef.current) / span, 0), 1);
+
+          const opponentRole = role === 'p1' ? 'p2' : 'p1';
+          puckToRender = {
+            x: lerp(prevState.puck.x, state.puck.x, t),
+            y: lerp(prevState.puck.y, state.puck.y, t),
+          };
+          strikersToRender = {
+            [opponentRole]: {
+              x: lerp(prevState.strikers[opponentRole].x, state.strikers[opponentRole].x, t),
+              y: lerp(prevState.strikers[opponentRole].y, state.strikers[opponentRole].y, t),
+            },
+            // Client-side prediction: MY striker renders from local input
+            // immediately, without waiting on a server round-trip.
+            [role]: myStrikerRef.current || state.strikers[role],
+          };
+
+          // Puck motion trail, only while it's actually moving fast.
+          const speed = Math.hypot(state.puck.vx, state.puck.vy);
+          if (speed > 3) {
+            puckTrailRef.current.push({ x: puckToRender.x, y: puckToRender.y });
+            if (puckTrailRef.current.length > 10) puckTrailRef.current.shift();
+          } else {
+            puckTrailRef.current.length = 0;
+          }
+          trailToRender = puckTrailRef.current;
+        }
+
+        // Goal "drop" animation overrides the live puck for a brief
+        // moment right after a goal (Requirement 3).
+        let dropToRender = null;
+        const drop = goalDropRef.current;
+        if (drop) {
+          const elapsed = performance.now() - drop.start;
+          if (elapsed < GOAL_DROP_MS) {
+            dropToRender = { x: drop.x, y: drop.y, progress: elapsed / GOAL_DROP_MS };
+          } else {
+            goalDropRef.current = null;
+          }
+        }
+
+        renderGame(
+          {
+            puck: dropToRender ? null : puckToRender,
+            strikers: strikersToRender,
+            role,
+            trail: trailToRender,
+            drop: dropToRender,
+          },
+          canvas
+        );
       }
+
       animationId = requestAnimationFrame(renderLoop);
     };
+
     renderLoop();
     return () => cancelAnimationFrame(animationId);
   }, [isPlaying]);
 
-  const handlePointerMove = (e) => {
-    if (!gameStateRef.current || gameStateRef.current.status !== 'playing' || !isPlaying) return;
-    
-    // FIX: 30Hz Network Throttle to prevent server flooding
-    const now = Date.now();
-    if (now - lastMoveEmit.current < 33) return; 
-    lastMoveEmit.current = now;
-
+  // Requirement 1: grab-to-drag. Only starts a drag if the pointer landed
+  // on (or very near) the player's own striker.
+  const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const role = myRoleRef.current;
+    const state = gameStateRef.current;
+    if (!canvas || !role || !state || state.status !== 'playing') return;
 
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const raw = getCanvasPoint(e, canvas);
+    const target = toServerSpace(raw, role);
+    const current = myStrikerRef.current || state.strikers[role];
 
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    const distance = Math.hypot(target.x - current.x, target.y - current.y);
+    if (distance > GRAB_RADIUS) return; // missed the striker — ignore, no snapping
 
-    const socket = connectSocket();
-    socket.emit('airHockeyMove', { roomId: roomCode, position: { x, y } });
+    isDraggingRef.current = true;
+    dragPointerIdRef.current = e.pointerId;
+    dragOriginRef.current = raw;
+    strikerOriginRef.current = { ...current };
+    canvas.setPointerCapture?.(e.pointerId);
   };
 
-  const renderGame = (state, canvas) => {
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height / 2);
-    ctx.lineTo(canvas.width, canvas.height / 2);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, 50, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = '#ef4444'; 
-    ctx.fillRect(canvas.width / 2 - 60, 0, 120, 15);
-    ctx.fillStyle = '#3b82f6'; 
-    ctx.fillRect(canvas.width / 2 - 60, canvas.height - 15, 120, 15);
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.arc(state.puck.x, state.puck.y, 15, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#3b82f6'; 
-    ctx.beginPath();
-    ctx.arc(state.strikers.p1.x, state.strikers.p1.y, 25, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ef4444'; 
-    ctx.beginPath();
-    ctx.arc(state.strikers.p2.x, state.strikers.p2.y, 25, 0, Math.PI * 2);
-    ctx.fill();
+  const handlePointerMove = (e) => {
+    if (!isDraggingRef.current || e.pointerId !== dragPointerIdRef.current) return;
+
+    const state = gameStateRef.current;
+    if (!state || state.status !== 'playing') {
+      // Game state changed mid-drag (e.g. a goal was just scored) — bail
+      // out cleanly instead of leaving a stale drag in progress.
+      isDraggingRef.current = false;
+      dragPointerIdRef.current = null;
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    const role = myRoleRef.current;
+    if (!canvas || !role) return;
+
+    const raw = getCanvasPoint(e, canvas);
+    let dx = raw.x - dragOriginRef.current.x;
+    let dy = raw.y - dragOriginRef.current.y;
+    if (role === 'p2') {
+      // Requirement 2: in the 180°-rotated view, a drag that looks
+      // rightward/downward on screen is actually leftward/upward in the
+      // server's fixed coordinate space.
+      dx = -dx;
+      dy = -dy;
+    }
+
+    // Requirement 1: delta-based movement — the striker moves by how far
+    // the pointer has traveled since the grab, starting from wherever it
+    // was grabbed. It never snaps to the pointer's absolute position.
+    const next = clampStriker(
+      { x: strikerOriginRef.current.x + dx, y: strikerOriginRef.current.y + dy },
+      role
+    );
+
+    // Requirement 4: client-side prediction — render instantly, locally.
+    myStrikerRef.current = next;
+
+    // 30Hz network throttle, unchanged from before.
+    const now = Date.now();
+    if (now - lastMoveEmit.current < 33) return;
+    lastMoveEmit.current = now;
+
+    const socket = connectSocket();
+    socket.emit('airHockeyMove', { roomId: roomCode, position: next });
+  };
+
+  const endDrag = (e) => {
+    if (e.pointerId !== dragPointerIdRef.current) return;
+    isDraggingRef.current = false;
+    dragPointerIdRef.current = null;
+
+    // Force one final, un-throttled sync so the server's copy of our
+    // striker exactly matches where we visually left it.
+    if (myStrikerRef.current) {
+      const socket = connectSocket();
+      socket.emit('airHockeyMove', { roomId: roomCode, position: myStrikerRef.current });
+    }
+
+    const canvas = canvasRef.current;
+    if (canvas?.hasPointerCapture?.(e.pointerId)) {
+      canvas.releasePointerCapture(e.pointerId);
+    }
   };
 
   const handleStart = async () => {
@@ -371,6 +781,11 @@ export default function AirHockeyBoard() {
                   <div className="text-[#3b82f6]">P1 Score: {uiState.score.p1}</div>
                   <div className="text-[#ef4444]">P2 Score: {uiState.score.p2}</div>
                 </div>
+                {myRole && (
+                  <p className="text-center text-[10px] sm:text-xs font-black tracking-widest uppercase text-gray-300 mb-3 -mt-1">
+                    You're <span className={myRole === 'p1' ? 'text-[#3b82f6]' : 'text-[#ef4444]'}>{myRole === 'p1' ? 'Blue · P1' : 'Red · P2'}</span> — always at the bottom of your screen
+                  </p>
+                )}
                 <div className="relative border-[4px] border-black bg-white p-2 shadow-[8px_8px_0px_#000] rounded-xl -rotate-1">
                   {countdown && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 rounded-xl">
@@ -384,11 +799,13 @@ export default function AirHockeyBoard() {
                   )}
                   <canvas
                     ref={canvasRef}
-                    width={400}
-                    height={600}
+                    width={GAME_WIDTH}
+                    height={GAME_HEIGHT}
+                    onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
-                    onPointerDown={handlePointerMove}
-                    className="cursor-crosshair touch-none block max-w-full h-auto rounded"
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    className="cursor-grab active:cursor-grabbing touch-none block max-w-full h-auto rounded"
                   />
                 </div>
               </div>
