@@ -11,7 +11,9 @@ export default class AirHockeyGame {
         this.io = io;
         this.players = {};
         this.gameInterval = null;
+        this.networkInterval = null;
         this.countdownInterval = null;
+        this.destroyTimeout = null;
         this.resetGameState();
     }
 
@@ -29,7 +31,12 @@ export default class AirHockeyGame {
     }
 
     addPlayer(socketId, playerId) {
-        if (this.players[socketId]) return false; // Prevent StrictMode duplicate join
+        if (this.destroyTimeout) {
+            clearTimeout(this.destroyTimeout);
+            this.destroyTimeout = null;
+        }
+
+        if (this.players[socketId]) return false; 
         if (Object.keys(this.players).length >= 2) return false; 
         
         const role = Object.keys(this.players).length === 0 ? 'p1' : 'p2';
@@ -44,12 +51,17 @@ export default class AirHockeyGame {
     removePlayer(socketId) {
         delete this.players[socketId];
         this.state.status = 'waiting';
-        this.destroy(); 
         this.io.to(this.roomId).emit('playerDisconnected');
+        
+        // FIX: 10-second grace period before destroying instance
+        this.destroyTimeout = setTimeout(() => {
+            this.destroy();
+        }, 10000);
     }
 
     destroy() {
         if (this.gameInterval) clearInterval(this.gameInterval);
+        if (this.networkInterval) clearInterval(this.networkInterval);
         if (this.countdownInterval) clearInterval(this.countdownInterval);
     }
 
@@ -73,24 +85,28 @@ export default class AirHockeyGame {
 
     startGameLoop() {
         if (this.gameInterval) clearInterval(this.gameInterval);
+        if (this.networkInterval) clearInterval(this.networkInterval);
         
-        // 60 FPS physics loop
+        // FIX: 60 FPS physics loop (No Network Payload)
         this.gameInterval = setInterval(() => {
             if (this.state.status !== 'playing') return;
             this.updatePhysics();
-            this.io.to(this.roomId).emit('gameState', this.state);
         }, 1000 / 60);
+
+        // FIX: 30 FPS Network update loop
+        this.networkInterval = setInterval(() => {
+            if (this.state.status !== 'playing') return;
+            this.io.to(this.roomId).emit('gameState', this.state);
+        }, 1000 / 30);
     }
 
     updatePhysics() {
         const puck = this.state.puck;
-        
-        puck.vx *= 0.99; // Friction
+        puck.vx *= 0.99; 
         puck.vy *= 0.99;
         puck.x += puck.vx;
         puck.y += puck.vy;
 
-        // Left & Right Walls
         if (puck.x - PUCK_RADIUS <= 0) {
             puck.vx = Math.abs(puck.vx);
             puck.x = PUCK_RADIUS;
@@ -99,7 +115,6 @@ export default class AirHockeyGame {
             puck.x = GAME_WIDTH - PUCK_RADIUS;
         }
 
-        // Top & Bottom Walls (Goals)
         if (puck.y - PUCK_RADIUS <= 0) {
             if (puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2) {
                 this.handleGoal('p1');
@@ -126,24 +141,20 @@ export default class AirHockeyGame {
         
         const dx = puck.x - striker.x;
         const dy = puck.y - striker.y;
-        // Max function prevents NaN errors if distance is exactly 0
         const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 0.01);
         const minDist = PUCK_RADIUS + STRIKER_RADIUS;
 
         if (distance < minDist) {
-            // Penetration resolution to stop puck from getting stuck
             const overlap = minDist - distance;
             puck.x += (dx / distance) * overlap;
             puck.y += (dy / distance) * overlap;
 
-            // Bounce physics
             const angle = Math.atan2(dy, dx);
             const speed = Math.max(Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy), 5);
             
             puck.vx = Math.cos(angle) * (speed + 4); 
             puck.vy = Math.sin(angle) * (speed + 4);
             
-            // Speed limit
             const currentSpeed = Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy);
             if (currentSpeed > 16) {
                 puck.vx = (puck.vx / currentSpeed) * 16;
@@ -158,10 +169,11 @@ export default class AirHockeyGame {
             this.state.status = 'finished';
             this.state.winner = scorer;
             if (this.gameInterval) clearInterval(this.gameInterval);
+            if (this.networkInterval) clearInterval(this.networkInterval);
             this.io.to(this.roomId).emit('gameOver', this.state);
         } else {
             this.io.to(this.roomId).emit('goalAnimation', scorer);
-            this.startCountdown(); // Also resets puck
+            this.startCountdown(); 
         }
     }
 
@@ -180,7 +192,6 @@ export default class AirHockeyGame {
         let { x, y } = position;
         x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, x));
         
-        // Prevent crossing the center line
         if (player.role === 'p1') {
             y = Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, y));
         } else {

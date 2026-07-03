@@ -6,8 +6,7 @@ import { roomManager } from './rooms/roomManager.js';
 import { endScribbleTurn, revealHint } from './games/scribble.js';
 import { readFileSync } from "fs";
 import admin from "firebase-admin";
-import  AirHockeyGame  from './games/airHockey.js';
-
+import AirHockeyGame from './games/airHockey.js';
 
 const serviceAccount = JSON.parse(
   readFileSync(new URL('../serviceAccountKey.json', import.meta.url))
@@ -18,7 +17,6 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-
 const PORT = process.env.PORT || 3001;
 const CLIENT_ORIGINS = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
   .split(',')
@@ -40,14 +38,15 @@ const io = new Server(httpServer, {
   },
 });
 
-  // --- GLOBAL SINGLE PLAYER LEADERBOARDS ---
-  const globalLeaderboards = {
-    '2048': [],
-    'block-blaster': [],
-    'dino': []
-  };
+const globalLeaderboards = {
+  '2048': [],
+  'block-blaster': [],
+  'dino': []
+};
 
-// THIS FUNCTION SECURELY FIXES THE VIEWER-ID BUG!
+// Tracks active scribble games to avoid main-thread blocking loops
+const activeScribbleRooms = new Set();
+
 function emitRoomUpdate(room) {
   room.players.forEach((player) => {
     if (player.socketId) {
@@ -60,14 +59,11 @@ io.on('connection', (socket) => {
   let currentRoom = null;
   let playerId = null;
 
-
   socket.on('voice:join', ({ roomCode }) => {
-    // Notify everyone else in the room that a user wants to connect voice
     socket.to(roomCode).emit('voice:user_joined', { socketId: socket.id });
   });
 
   socket.on('voice:signal', (payload) => {
-    // Relay the WebRTC signaling data directly to the target user
     io.to(payload.targetId).emit('voice:signal', {
       senderId: socket.id,
       signalData: payload.signalData
@@ -85,9 +81,9 @@ io.on('connection', (socket) => {
     emitRoomUpdate(room);
   });
 
-  socket.on('room:join', ({ roomCode, playerName }, callback) => {
+  socket.on('room:join', ({ roomCode, playerName, deviceToken }, callback) => {
     playerId = socket.id;
-    const result = roomManager.joinRoom({ roomCode, playerId, playerName });
+    const result = roomManager.joinRoom({ roomCode, playerId, playerName, deviceToken });
 
     if (!result.ok) return callback?.({ ok: false, error: result.error });
 
@@ -117,11 +113,9 @@ io.on('connection', (socket) => {
   });
 
   // --- AIR HOCKEY REAL-TIME EVENTS ---
-
   socket.on('joinAirHockey', ({ roomId, playerInfo }) => {
     const room = roomManager.getRoom(roomId);
     if (room && room.gameType === 'air-hockey') {
-      // Instantiate the physics engine for this room if it doesn't exist yet
       if (!room.gameInstance) {
         room.gameInstance = new AirHockeyGame(roomId, io);
       }
@@ -143,12 +137,7 @@ io.on('connection', (socket) => {
     }
   });
 
-
-
-  // --- SINGLE PLAYER LEADERBOARD EVENTS ---
-  // --- FIREBASE SINGLE PLAYER LEADERBOARDS ---
-  
-  // 1. Fetch the Top 3 from Firestore
+  // --- LEADERBOARD EVENTS ---
   socket.on('leaderboard:get', async (gameId, callback) => {
     try {
       const doc = await db.collection('leaderboards').doc(gameId).get();
@@ -160,42 +149,27 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 2. Submit, Sort, and Save to Firestore
-  // 2. Submit, Sort, and Save to Firestore (UPDATED TO PREVENT DUPLICATES)
   socket.on('leaderboard:submit', async ({ gameId, name, score }, callback) => {
     try {
       const docRef = db.collection('leaderboards').doc(gameId);
-      
-      // Run inside a transaction to prevent race conditions
       await db.runTransaction(async (transaction) => {
         const doc = await transaction.get(docRef);
         let scores = doc.exists ? doc.data().scores : [];
-        
-        // --- NEW LOGIC: Check if the player is already on the board ---
         const existingPlayerIndex = scores.findIndex(entry => entry.name === name);
 
         if (existingPlayerIndex !== -1) {
-          // The player is already on the leaderboard.
-          // Only update their score if the NEW score is higher than their OLD score.
           if (score > scores[existingPlayerIndex].score) {
             scores[existingPlayerIndex].score = score;
           }
         } else {
-          // The player is not on the board yet, add them as a new entry.
           scores.push({ name, score, id: socket.id + Date.now() });
         }
         
-        // Sort highest to lowest and slice the Top 3
         scores.sort((a, b) => b.score - a.score);
         scores = scores.slice(0, 3);
-        
-        // Save back to Firestore
         transaction.set(docRef, { scores });
-        
-        // Broadcast the live update to all players looking at that game
         io.emit(`leaderboard:update:${gameId}`, scores);
       });
-      
       callback?.({ ok: true });
     } catch (error) {
       console.error("Firebase Write Error:", error);
@@ -204,33 +178,23 @@ io.on('connection', (socket) => {
   });
 
   // --- PROXIMITY RADAR LISTENERS ---
-
   socket.on('room:broadcast_location', (payload, callback) => {
     const { roomCode, lat, lng, url } = payload;
-    
     if (!roomCode || !lat || !lng || !url) {
       if (callback) callback({ ok: false, error: 'Missing location data' });
       return;
     }
-    
-    // Attach the GPS coords to the room in memory
     const success = roomManager.setRoomBroadcastLocation(roomCode, lat, lng, url);
-    if (callback) {
-      callback({ ok: success });
-    }
+    if (callback) callback({ ok: success });
   });
 
   socket.on('room:find_nearby', (payload, callback) => {
     const { lat, lng } = payload;
-    
     if (!lat || !lng) {
       if (callback) callback({ ok: false, error: 'Missing coordinates' });
       return;
     }
-
-    // Pass the receiver's coords to see if any room is within 25 meters
     const nearbyRoom = roomManager.findNearbyRoom(lat, lng, 25); 
-    
     if (nearbyRoom && nearbyRoom.broadcastLocation) {
       if (callback) callback({ ok: true, roomUrl: nearbyRoom.broadcastLocation.url });
     } else {
@@ -246,6 +210,7 @@ io.on('connection', (socket) => {
         room.gameState.turnState = 'drawing';
         room.gameState.currentWord = word;
         room.gameState.startTime = Date.now();
+        activeScribbleRooms.add(currentRoom); // Track for optimized timer
         emitRoomUpdate(room); 
         callback?.({ ok: true });
     }
@@ -256,19 +221,16 @@ io.on('connection', (socket) => {
     socket.to(currentRoom).emit('draw:line', payload);
   });
 
-  // Listen for the fill bucket tool being used
   socket.on('draw:fill', (data) => {
     if (currentRoom) {
-      // Broadcast the fill action to everyone else in the room
       socket.to(currentRoom).emit('draw:fill', data);
     }
-  }); // <--- ADDED MISSING BRACKETS HERE!
+  }); 
 
   socket.on('draw:clear', () => {
     if (!currentRoom) return;
     socket.to(currentRoom).emit('draw:clear');
   });
-  // ----------------------------------------
 
   socket.on('game:reset', (_payload, callback) => {
     if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
@@ -280,7 +242,6 @@ io.on('connection', (socket) => {
 
   socket.on('chat:message', ({ message }, callback) => {
     if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
-    
     const room = roomManager.getRoom(currentRoom);
     const player = room?.players.find((p) => p.id === playerId);
     if (!room || !player) return callback?.({ ok: false, error: 'Player not found' });
@@ -291,11 +252,10 @@ io.on('connection', (socket) => {
       message 
     });
 
-    // 1. Immediately send the chat message to everyone so it shows up in the box!
     io.to(currentRoom).emit('chat:message', result.entry);
 
-    // 2. Update everyone's screen if scores changed or the turn ended early
     if (result.turnEndedEarly) {
+      activeScribbleRooms.delete(currentRoom); // Stop tracking timer
       io.to(currentRoom).emit('chat:message', { 
         id: Date.now().toString(), 
         playerName: 'System', 
@@ -303,28 +263,19 @@ io.on('connection', (socket) => {
       });
       endScribbleTurn(room.gameState);
       io.to(currentRoom).emit('draw:clear');
-      emitRoomUpdate(room); // Sends the new turn & new scores!
+      emitRoomUpdate(room); 
     } else if (result.roomUpdated) {
-      emitRoomUpdate(room); // Syncs the new points for the person who guessed correctly!
+      emitRoomUpdate(room); 
     }
 
     callback?.({ ok: true });
   });
 
-  // socket.on('disconnect', () => {
-  //   if (!currentRoom || !playerId) return;
-  //   const result = roomManager.leaveRoom(currentRoom, playerId);
-  //   if (!result) return;
-  //   if (result.deleted) io.to(currentRoom).emit('room:closed', { reason: 'All players left' });
-  //   else emitRoomUpdate(result.room);
-  // });
-  // ... existing socket events ...
-
+  // FIX: Merged disconnected logic cleanly
   socket.on('disconnect', () => {
     if (!currentRoom || !playerId) return;
     const room = roomManager.getRoom(currentRoom);
 
-    // If a player disconnects from an active Air Hockey game, notify physics engine
     if (room && room.gameType === 'air-hockey' && room.gameInstance) {
       room.gameInstance.removePlayer(socket.id);
     }
@@ -333,48 +284,51 @@ io.on('connection', (socket) => {
     if (!result) return;
     
     if (result.deleted) {
-      // CLEAR INTERVALS TO PREVENT MEMORY LEAKS
       if (room && room.gameInstance) room.gameInstance.destroy(); 
+      activeScribbleRooms.delete(currentRoom);
       io.to(currentRoom).emit('room:closed', { reason: 'All players left' });
     } else {
       emitRoomUpdate(result.room);
     }
   });
-
-// ... rest of server.js
-  
 });
 
-// --- GLOBAL GAME LOOP TIMER ---
+// FIX: Optimized Game Loop - only processes active scribble drawing turns
 setInterval(() => {
-  roomManager.rooms.forEach((room) => {
-    if (room.gameType === 'scribble' && room.status === 'playing' && room.gameState?.turnState === 'drawing') {
-      const state = room.gameState;
-      const elapsed = (Date.now() - state.startTime) / 1000;
-      let needsSync = false;
+  if (activeScribbleRooms.size === 0) return;
 
-      // Hint 1 at 50% time
-      if (elapsed >= state.timeLimit * 0.5 && state.hintsRevealed === 0) {
-        revealHint(state); needsSync = true;
-      }
-      // Hint 2 at 75% time
-      if (elapsed >= state.timeLimit * 0.75 && state.hintsRevealed === 1) {
-        revealHint(state); needsSync = true;
-      }
-
-      // Time's Up Timeout
-      if (elapsed >= state.timeLimit) {
-        io.to(room.code).emit('chat:message', {
-          id: Date.now().toString(), playerName: 'System', message: `🕒 Time's up! The word was: ${state.currentWord}`
-        });
-        endScribbleTurn(state);
-        io.to(room.code).emit('draw:clear');
-        needsSync = true;
-      }
-
-      if (needsSync) emitRoomUpdate(room); 
+  for (const roomCode of activeScribbleRooms) {
+    const room = roomManager.getRoom(roomCode);
+    
+    // Safety check in case room was deleted
+    if (!room || room.gameType !== 'scribble' || room.status !== 'playing' || room.gameState?.turnState !== 'drawing') {
+      activeScribbleRooms.delete(roomCode);
+      continue;
     }
-  });
+
+    const state = room.gameState;
+    const elapsed = (Date.now() - state.startTime) / 1000;
+    let needsSync = false;
+
+    if (elapsed >= state.timeLimit * 0.5 && state.hintsRevealed === 0) {
+      revealHint(state); needsSync = true;
+    }
+    if (elapsed >= state.timeLimit * 0.75 && state.hintsRevealed === 1) {
+      revealHint(state); needsSync = true;
+    }
+
+    if (elapsed >= state.timeLimit) {
+      activeScribbleRooms.delete(roomCode);
+      io.to(room.code).emit('chat:message', {
+        id: Date.now().toString(), playerName: 'System', message: `🕒 Time's up! The word was: ${state.currentWord}`
+      });
+      endScribbleTurn(state);
+      io.to(room.code).emit('draw:clear');
+      needsSync = true;
+    }
+
+    if (needsSync) emitRoomUpdate(room); 
+  }
 }, 1000);
 
 httpServer.listen(PORT, () => {

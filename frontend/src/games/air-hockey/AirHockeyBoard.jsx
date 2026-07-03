@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
 
-// Reusable Chat Panel (With Scrollbar Fix & Crash Protection)
+// Reusable Chat Panel
 function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
@@ -21,8 +21,6 @@ function ChatPanel({ messages = [], onSend, disabled }) {
     onSend(text.trim());
     setText('');
   };
-
-
 
   return (
     <div className="flex flex-col w-full h-[400px] lg:h-[550px] shrink-0 bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
@@ -73,14 +71,13 @@ export default function AirHockeyBoard() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Standard Room Sync State
   const [room, setRoom] = useState(location.state?.room ?? null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState('');
 
-  // Air Hockey Gameplay State
   const canvasRef = useRef(null);
-  const gameStateRef = useRef(null); // Used for high-speed physics
+  const gameStateRef = useRef(null); 
+  const lastMoveEmit = useRef(0); // For network throttling
   const [uiState, setUiState] = useState({ score: { p1: 0, p2: 0 }, status: 'playing' });
   const [countdown, setCountdown] = useState(null);
   const [showGoal, setShowGoal] = useState(false);
@@ -89,22 +86,10 @@ export default function AirHockeyBoard() {
   const isPlaying = room?.status === 'playing';
   const isHost = room?.hostId === myPlayerId;
 
-  // Socket Connection & Standard Lifecycle
+  // FIX: Extracted inner useEffect to top level
   useEffect(() => {
-    const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username');
-
-    if (!username) {
-      navigate(`/games/air-hockey?join=${roomCode}`);
-      return;
-    }
-
-      useEffect(() => {
-    // Wait until the room status is upgraded to 'playing'
     if (isPlaying && connected && room?.code && myPlayerId) {
       const socket = connectSocket();
-      
-      // Tell the server we are ready to join the physics engine
       socket.emit('joinAirHockey', { 
         roomId: room.code, 
         playerInfo: { id: myPlayerId } 
@@ -112,11 +97,23 @@ export default function AirHockeyBoard() {
     }
   }, [isPlaying, connected, room?.code, myPlayerId]);
 
+  useEffect(() => {
+    const socket = connectSocket();
+    const username = localStorage.getItem('pohahub_username');
+    // Ensure you generate/store a unique device token in localStorage on first visit for security
+    const deviceToken = localStorage.getItem('pohahub_device_token'); 
+
+    if (!username) {
+      navigate(`/games/air-hockey?join=${roomCode}`);
+      return;
+    }
+
     const syncRoom = async () => {
       if (!username || !roomCode) return;
       const result = await emitWithAck('room:join', {
         roomCode: roomCode.toUpperCase(),
         playerName: username,
+        deviceToken: deviceToken, // Pass token for session verification
       });
       if (result.ok) {
         setRoom(result.room);
@@ -147,7 +144,6 @@ export default function AirHockeyBoard() {
       setTimeout(() => navigate('/games/air-hockey'), 2000);
     };
 
-    // Air Hockey High-Frequency Socket Events
     const onHighFreqGameState = (state) => {
       gameStateRef.current = state;
       setUiState((prev) => {
@@ -192,7 +188,6 @@ export default function AirHockeyBoard() {
     };
   }, [roomCode, navigate, location.state]);
 
-  // 60FPS Canvas Render Loop (Bypasses React DOM)
   useEffect(() => {
     let animationId;
     const renderLoop = () => {
@@ -207,6 +202,12 @@ export default function AirHockeyBoard() {
 
   const handlePointerMove = (e) => {
     if (!gameStateRef.current || gameStateRef.current.status !== 'playing' || !isPlaying) return;
+    
+    // FIX: 30Hz Network Throttle to prevent server flooding
+    const now = Date.now();
+    if (now - lastMoveEmit.current < 33) return; 
+    lastMoveEmit.current = now;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -223,12 +224,8 @@ export default function AirHockeyBoard() {
 
   const renderGame = (state, canvas) => {
     const ctx = canvas.getContext('2d');
-
-    // Board Background
     ctx.fillStyle = '#f8fafc';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Center Line & Circle
     ctx.strokeStyle = '#94a3b8';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -239,48 +236,35 @@ export default function AirHockeyBoard() {
     ctx.beginPath();
     ctx.arc(canvas.width / 2, canvas.height / 2, 50, 0, Math.PI * 2);
     ctx.stroke();
-
-    // Goals
-    ctx.fillStyle = '#ef4444'; // Red
+    ctx.fillStyle = '#ef4444'; 
     ctx.fillRect(canvas.width / 2 - 60, 0, 120, 15);
-    ctx.fillStyle = '#3b82f6'; // Blue
+    ctx.fillStyle = '#3b82f6'; 
     ctx.fillRect(canvas.width / 2 - 60, canvas.height - 15, 120, 15);
-
-    // Puck
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.arc(state.puck.x, state.puck.y, 15, 0, Math.PI * 2);
     ctx.fill();
-
-    // P1 Blue Striker (Bottom)
     ctx.fillStyle = '#3b82f6'; 
     ctx.beginPath();
     ctx.arc(state.strikers.p1.x, state.strikers.p1.y, 25, 0, Math.PI * 2);
     ctx.fill();
-
-    // P2 Red Striker (Top)
     ctx.fillStyle = '#ef4444'; 
     ctx.beginPath();
     ctx.arc(state.strikers.p2.x, state.strikers.p2.y, 25, 0, Math.PI * 2);
     ctx.fill();
   };
 
-  // Standard Standard Room Actions
   const handleStart = async () => {
     setError('');
     const result = await emitWithAck('room:start', {});
     if (!result.ok) setError(result.error);
   };
 
-// --- UPDATE THIS IN AirHockeyBoard.jsx ---
-
   const handlePlayAgain = async () => {
     setError('');
     const result = await emitWithAck('game:reset', {});
-    
     if (result.ok) {
       const socket = connectSocket();
-      // Inform the active physics engine to reset scores and trigger startCountdown()
       socket.emit('airHockeyRematch', roomCode);
     } else {
       setError(result.error || 'Failed to start a new game');
@@ -311,7 +295,6 @@ export default function AirHockeyBoard() {
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(1rem,3vw,2rem)] relative font-sans">
-      
       <style>{`
         @keyframes popIn {
           0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); }
@@ -320,21 +303,17 @@ export default function AirHockeyBoard() {
         .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
       `}</style>
 
-      {/* PREMIUM CELEBRATION POPUP */}
       {uiState.status === 'finished' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300" />
           <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-10 text-center animate-pop-in rounded-xl -rotate-2">
-            
             <div className="relative z-10 text-black">
               <div className="text-sm font-bold tracking-widest uppercase text-gray-500 mb-2">Match Concluded</div>
               <h2 className="text-[clamp(2rem,6vw,3.5rem)] font-black mb-2 tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black', color: uiState.winner === 'p1' ? '#3b82f6' : '#ef4444' }}>
                 {uiState.winner === 'p1' ? 'Blue (P1)' : 'Red (P2)'}
               </h2>
               <h3 className="text-2xl font-bold mb-8 uppercase">claims the victory!</h3>
-              
               <div className="w-full h-[3px] bg-black mb-8" />
-              
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={handlePlayAgain}
@@ -354,14 +333,9 @@ export default function AirHockeyBoard() {
         </div>
       )}
 
-      {/* MAIN SPLIT LAYOUT */}
       <div className="flex flex-col lg:flex-row gap-[clamp(1rem,3vw,2rem)] items-stretch">
-        
-        {/* LEFT COLUMN: GAME OR LOBBY */}
         <div className="flex-1 w-full min-w-0 flex flex-col">
           <div className="bg-[#333333] border-[3px] border-black rounded-lg p-6 sm:p-8 shadow-[8px_8px_0px_#000] -rotate-1 text-white">
-            
-            {/* Header Info */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b-[3px] border-black pb-6">
               <div>
                 <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">Room Code</p>
@@ -391,17 +365,13 @@ export default function AirHockeyBoard() {
               />
             )}
 
-            {/* AIR HOCKEY BOARD */}
             {isPlaying && (
               <div className="mx-auto w-full max-w-[420px] mt-4 flex flex-col items-center">
                 <div className="flex w-full justify-between px-4 py-3 bg-white border-[3px] border-black shadow-[4px_4px_0px_#000] rounded mb-4 font-black text-xl uppercase rotate-1">
                   <div className="text-[#3b82f6]">P1 Score: {uiState.score.p1}</div>
                   <div className="text-[#ef4444]">P2 Score: {uiState.score.p2}</div>
                 </div>
-
                 <div className="relative border-[4px] border-black bg-white p-2 shadow-[8px_8px_0px_#000] rounded-xl -rotate-1">
-                  
-                  {/* Overlays */}
                   {countdown && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 rounded-xl">
                       <span className="text-[6rem] font-black text-black animate-pop-in">{countdown}</span>
@@ -412,7 +382,6 @@ export default function AirHockeyBoard() {
                       <span className="text-5xl font-black text-[#ef4444] uppercase tracking-widest bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_#000] px-6 py-2 rotate-[-5deg] animate-pop-in">GOAL!</span>
                     </div>
                   )}
-
                   <canvas
                     ref={canvasRef}
                     width={400}
@@ -426,8 +395,6 @@ export default function AirHockeyBoard() {
             )}
           </div>
         </div>
-
-        {/* RIGHT COLUMN: CHAT PANEL */}
         <div className="w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0">
           <ChatPanel messages={room.chat ?? []} onSend={handleChat} disabled={!connected} />
         </div>

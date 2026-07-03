@@ -48,6 +48,22 @@ export default function DinoDash() {
 
   const requestRef = useRef();
 
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // Cancel the event
+      e.preventDefault();
+      // Chrome requires returnValue to be set to trigger the prompt
+      e.returnValue = ''; 
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup the event listener when the component unmounts
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
   // Physics Constants
   const GRAVITY = 0.7;
   const JUMP_POWER = 13;
