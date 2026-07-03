@@ -99,6 +99,22 @@ export default function BlockBlaster() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // Cancel the event
+      e.preventDefault();
+      // Chrome requires returnValue to be set to trigger the prompt
+      e.returnValue = ''; 
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Cleanup the event listener when the component unmounts
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
   // -- SUBMIT SCORE ON GAME OVER --
   useEffect(() => {
     if (gameOver && !hasSubmittedScore && score > 0) {

@@ -3,10 +3,8 @@ import { createTicTacToeState, playMove, serializeTicTacToeState } from '../game
 import { createScribbleState, serializeScribbleState } from '../games/scribble.js';
 import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } from '../games/snakeAndLadder.js';
 import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } from '../games/tambola.js';
-
 import { createStonePaperScissorState, playSpsMove, nextSpsRound, serializeSpsState } from '../games/stonePaperScissor.js';
 import { createLudoState, rollLudoDice, moveLudoToken, serializeLudoState } from '../games/ludo.js';
-
 
 const PLAYER_COLORS = ['red', 'yellow'];
 const PLAYER_SYMBOLS = ['X', 'O'];
@@ -27,81 +25,57 @@ class RoomManager {
     return this.rooms.get(roomCode.toUpperCase()) ?? null;
   }
 
-  // --- PROXIMITY RADAR METHODS ---
-
   setRoomBroadcastLocation(roomCode, lat, lng, url) {
     const room = this.getRoom(roomCode);
     if (room) {
-      // Save location and a timestamp to ignore old, dead broadcasts later
       room.broadcastLocation = { lat, lng, url, timestamp: Date.now() };
       return true;
     }
     return false;
   }
 
-findNearbyRoom(lat, lng, maxDistanceMeters = 25) {
+  findNearbyRoom(lat, lng, maxDistanceMeters = 25) {
     let closestRoom = null;
     let minDistance = Infinity;
 
-    console.log(`\n[RADAR] Receiver searching near Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
-
     for (const [code, room] of this.rooms.entries()) {
       if (room.broadcastLocation && room.status === 'waiting') {
-        
         if (Date.now() - room.broadcastLocation.timestamp > 15 * 60 * 1000) {
-          console.log(`[RADAR] Ignoring room ${code} (Broadcast expired)`);
           continue;
         }
 
-        // Calculate the distance
         const dist = this._calculateDistance(lat, lng, room.broadcastLocation.lat, room.broadcastLocation.lng);
-        
-        // LOG THE EXACT DISTANCE!
-        console.log(`[RADAR] Room ${code} is broadcasting ${dist.toFixed(2)} meters away.`);
-
         if (dist <= maxDistanceMeters && dist < minDistance) {
           minDistance = dist;
           closestRoom = room;
         }
       }
     }
-
-    if (closestRoom) {
-      console.log(`[RADAR] MATCH FOUND! Sending user to Room ${closestRoom.code}\n`);
-    } else {
-      console.log(`[RADAR] Failed. No rooms found within ${maxDistanceMeters}m radius.\n`);
-    }
-
     return closestRoom;
   }
 
-  // The Haversine Formula (Calculates distance in meters between two coordinates)
   _calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Earth's radius in meters
+    const R = 6371e3; 
     const rad = Math.PI / 180;
     const phi1 = lat1 * rad;
     const phi2 = lat2 * rad;
     const deltaPhi = (lat2 - lat1) * rad;
     const deltaLambda = (lon2 - lon1) * rad;
-
     const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
               Math.cos(phi1) * Math.cos(phi2) *
               Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
     return R * c; 
   }
-  // --------------------------------
 
-createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
-    // Dynamically set limits based on the game type
+  createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
     let limit = maxPlayers;
     if (gameType === 'scribble') limit = 8;
-    if (gameType === 'tambola') limit = 50; // Tambola gets a massive lobby!
+    if (gameType === 'tambola') limit = 50; 
     if (gameType === 'ludo') limit = 4;
     if (gameType === 'stone-paper-scissor') limit = 2;
     if (gameType === 'air-hockey') limit = 2;
-    const host = { id: hostId, name: hostName, socketId: null };
+    const host = { id: hostId, name: hostName, socketId: null, deviceToken: null };
     const room = {
       code: this.generateRoomCode(),
       gameType, hostId, maxPlayers: limit,
@@ -109,21 +83,30 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
       status: 'waiting', gameState: null, createdAt: Date.now(),
     };
     this.rooms.set(room.code, room);
-    
     return room;
   }
 
-  joinRoom({ roomCode, playerId, playerName }) {
+  // FIX: Added deviceToken verification to prevent session hijacking
+  joinRoom({ roomCode, playerId, playerName, deviceToken }) {
     const room = this.getRoom(roomCode);
     if (!room) return { ok: false, error: 'Room not found' };
 
     const existingById = room.players.find((p) => p.id === playerId);
-    if (existingById) return { ok: true, room };
+    if (existingById) {
+      existingById.deviceToken = deviceToken;
+      return { ok: true, room };
+    }
 
-  const existingByName = room.players.find((p) => p.name.toLowerCase() === playerName.toLowerCase());
+    const existingByName = room.players.find((p) => p.name.toLowerCase() === playerName.toLowerCase());
     if (existingByName) {
+      // Prevent hostile takeover if tokens do not match
+      if (existingByName.deviceToken && existingByName.deviceToken !== deviceToken) {
+        return { ok: false, error: 'Name already taken by an active device.' };
+      }
+
       const oldId = existingByName.id;
       existingByName.id = playerId;
+      existingByName.deviceToken = deviceToken;
       
       if (room.gameState?.players) {
         const gamePlayer = room.gameState.players.find((p) => p.id === oldId);
@@ -144,7 +127,7 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
     if (room.status === 'playing' && room.gameType !== 'scribble') return { ok: false, error: 'Game in progress' };
     if (room.players.length >= room.maxPlayers) return { ok: false, error: 'Room full' };
 
-    room.players.push({ id: playerId, name: playerName, socketId: null });
+    room.players.push({ id: playerId, name: playerName, socketId: null, deviceToken });
     if (room.gameType === 'scribble' && room.gameState) room.gameState.players.push({ id: playerId, name: playerName, score: 0 });
     const joinMessage = {
       id: `${Date.now()}-join-${playerId}`,
@@ -154,7 +137,7 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
       timestamp: Date.now()
     };
     room.chat.push(joinMessage);
-    if (room.chat.length > 100) room.chat.shift(); // Keeps chat from getting too long
+    if (room.chat.length > 100) room.chat.shift(); 
     
     return { ok: true, room };
   }
@@ -173,7 +156,6 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
   }
 
   getRoomByPlayerId(playerId) {
-    // We check all active rooms to find which one this player is currently in
     for (const roomCode in this.rooms) {
       const room = this.rooms[roomCode];
       if (room.players && room.players.some(p => p.id === playerId)) {
@@ -191,7 +173,7 @@ createRoom({ gameType, hostId, hostName, maxPlayers = 2 }) {
     return room;
   }
 
-addChatMessage(roomCode, { playerId, playerName, message }) {
+  addChatMessage(roomCode, { playerId, playerName, message }) {
     const room = this.getRoom(roomCode);
     if (!room) return null;
 
@@ -199,38 +181,29 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     let isCorrectGuess = false;
     let turnEndedEarly = false;
 
-    // --- DYNAMIC SCRIBBLE SCORING & SPOILER PREVENTION ---
     if (room.gameType === 'scribble' && room.status === 'playing' && room.gameState?.turnState === 'drawing') {
       const state = room.gameState;
       const isDrawer = playerId === state.drawerId;
       const hasGuessed = state.guessedPlayers.includes(playerId);
       
-      // Check if the chat message matches the secret word
       const isMatch = finalMessage.toLowerCase() === state.currentWord.toLowerCase();
 
       if (isMatch) {
         if (isDrawer) {
-          // Prevent the Drawer from giving away the answer
           finalMessage = "🤐 I tried to give away the word!";
         } else if (hasGuessed) {
-          // Prevent winners from spoiling it for others
           finalMessage = "🤐 I tried to spoil the word!";
         } else {
-          // A valid guess from someone who hasn't guessed yet!
           isCorrectGuess = true;
           state.guessedPlayers.push(playerId);
           
-          // Calculate Dynamic Points based on time
           const elapsed = (Date.now() - state.startTime) / 1000;
           const remaining = Math.max(0, state.timeLimit - elapsed);
           const score = Math.floor(100 + (100 * (remaining / state.timeLimit))); 
           
-          // 1. Give points to the Guesser
           const player = state.players.find((p) => p.id === playerId);
           if (player) player.score += score;
           
-          // 2. TRADITIONAL RULES: Give scaled points to the Drawer
-          // The drawer gets a fair, balanced fraction of the guesser's score!
           const drawer = state.players.find((p) => p.id === state.drawerId);
           if (drawer) {
             const totalGuessers = Math.max(1, state.players.length - 1);
@@ -239,7 +212,6 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
           }
 
           finalMessage = `🎉 Guessed the word! (+${score} pts)`;
-
           if (state.guessedPlayers.length >= state.players.length - 1) turnEndedEarly = true;
         }
       }
@@ -267,32 +239,25 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     if (room.gameType === 'connect-four') {
       room.gameState = createConnectFourState(room.players.map((p, i) => ({ ...p, color: PLAYER_COLORS[i] })));
     } else if (room.gameType === 'tic-tac-toe') {
-      // ✅ FIX: Grab the old starting index BEFORE overwriting the game state!
       const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
-      
       room.gameState = createTicTacToeState(
         room.players.map((p, i) => ({ ...p, symbol: PLAYER_SYMBOLS[i] })),
-        previousStartingIndex // Pass it into your updated function
+        previousStartingIndex 
       );
     } else if (room.gameType === 'scribble') {
       room.gameState = createScribbleState(room.players.map((p) => ({ id: p.id, name: p.name })));
-    }else if (room.gameType === 'snake-and-ladder') {
+    } else if (room.gameType === 'snake-and-ladder') {
       room.gameState = createSnakeAndLadderState(room.players.map((p) => ({ id: p.id, name: p.name })));
-    }else if (room.gameType === 'tambola') {
+    } else if (room.gameType === 'tambola') {
       room.gameState = createTambolaState(
         room.players.map((p) => ({ id: p.id, name: p.name })),
         room.hostId
       );
-    }else if (room.gameType === 'stone-paper-scissor') {
-      room.gameState = createStonePaperScissorState(room.players.map((p) => ({ id: p.id, name: p.name }))); // Add this line
-    }
-    else if (room.gameType === 'ludo') {
-      // Add this block
+    } else if (room.gameType === 'stone-paper-scissor') {
+      room.gameState = createStonePaperScissorState(room.players.map((p) => ({ id: p.id, name: p.name }))); 
+    } else if (room.gameType === 'ludo') {
       room.gameState = createLudoState(room.players.map((p) => ({ id: p.id, name: p.name })));
-    }
-    else if (room.gameType === 'air-hockey') {
-      // We don't create a static state here. The AirHockeyGame class 
-      // will handle the real-time state inside server.js.
+    } else if (room.gameType === 'air-hockey') {
       room.gameState = { status: 'starting' }; 
     }
 
@@ -307,9 +272,7 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
     if (room.gameType === 'connect-four') return dropDisc(room.gameState, payload.column, playerId).ok ? { ok: true, room } : { ok: false };
     if (room.gameType === 'tic-tac-toe') return playMove(room.gameState, payload.index, playerId).ok ? { ok: true, room } : { ok: false };
     if (room.gameType === 'snake-and-ladder') {
-      if (payload.action === 'roll') {
-        return rollDice(room.gameState, playerId).ok ? { ok: true, room } : { ok: false };
-      }
+      if (payload.action === 'roll') return rollDice(room.gameState, playerId).ok ? { ok: true, room } : { ok: false };
     }
     if (room.gameType === 'tambola') {
       if (payload.action === 'draw') {
@@ -322,26 +285,17 @@ addChatMessage(roomCode, { playerId, playerName, message }) {
       }
     }
     if (room.gameType === 'stone-paper-scissor') {
-      if (payload.action === 'play') {
-        return playSpsMove(room.gameState, playerId, payload.choice).ok ? { ok: true, room } : { ok: false };
-      }
-      if (payload.action === 'nextRound') {
-        return nextSpsRound(room.gameState).ok ? { ok: true, room } : { ok: false };
-      }
+      if (payload.action === 'play') return playSpsMove(room.gameState, playerId, payload.choice).ok ? { ok: true, room } : { ok: false };
+      if (payload.action === 'nextRound') return nextSpsRound(room.gameState).ok ? { ok: true, room } : { ok: false };
     }
     if (room.gameType === 'ludo') {
-      if (payload.action === 'roll') {
-        return rollLudoDice(room.gameState, playerId).ok ? { ok: true, room } : { ok: false };
-      }
-      if (payload.action === 'move') {
-        return moveLudoToken(room.gameState, playerId, payload.tokenId).ok ? { ok: true, room } : { ok: false };
-      }
+      if (payload.action === 'roll') return rollLudoDice(room.gameState, playerId).ok ? { ok: true, room } : { ok: false };
+      if (payload.action === 'move') return moveLudoToken(room.gameState, playerId, payload.tokenId).ok ? { ok: true, room } : { ok: false };
     }
     return { ok: false, error: 'Unsupported game type' };
   }
 
   resetGame(roomCode) {
-    // Resets are the exact same logic as starting
     return this.startGame(roomCode, this.getRoom(roomCode)?.hostId);
   }
 
