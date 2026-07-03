@@ -545,6 +545,20 @@ export default function AirHockeyBoard() {
           trailToRender = puckTrailRef.current;
         }
 
+        if (role && puckToRender && strikersToRender[role]) {
+          const myStriker = strikersToRender[role];
+          const dx = puckToRender.x - myStriker.x;
+          const dy = puckToRender.y - myStriker.y;
+          const dist = Math.hypot(dx, dy);
+          const minDist = PUCK_RADIUS + STRIKER_RADIUS; //[cite: 10]
+
+          if (dist < minDist) {
+            const overlap = minDist - dist;
+            puckToRender.x += (dx / dist) * overlap;
+            puckToRender.y += (dy / dist) * overlap;
+          }
+        }
+
         // Goal "drop" animation overrides the live puck for a brief
         // moment right after a goal (Requirement 3).
         let dropToRender = null;
