@@ -75,7 +75,7 @@ export default function Game2048() {
     const s = connectSocket();
 
     const fetchLeaderboard = () => {
-      emitWithAck('leaderboard:get', 'dino').then((res) => {
+      emitWithAck('leaderboard:get', '2048').then((res) => {
         if (res?.ok) setGlobalLeaderboard(res.leaderboard);
       });
     };
@@ -85,7 +85,7 @@ export default function Game2048() {
     };
 
     // 1. Listen for real-time updates from other players
-    s.on('leaderboard:update:dino', handleLeaderboardUpdate);
+    s.on('leaderboard:update:2048', handleLeaderboardUpdate);
 
     // 2. Fetch initial data safely
     if (s.connected) {
@@ -97,7 +97,7 @@ export default function Game2048() {
     }
 
     return () => {
-      s.off('leaderboard:update:dino', handleLeaderboardUpdate);
+      s.off('leaderboard:update:2048', handleLeaderboardUpdate);
       s.off('connect', fetchLeaderboard);
     };
   }, []);
