@@ -32,7 +32,7 @@ export default function Game2048() {
   const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
   
-  const playerName = localStorage.getItem('Doozles-player-name') || 'Player';
+  const playerName = localStorage.getItem('doozles-player-name') || 'Player';
   const [localHighScore, setLocalHighScore] = useState(() => {
     const saved = localStorage.getItem('2048-highScore');
     return saved !== null ? parseInt(saved, 10) : 0;
