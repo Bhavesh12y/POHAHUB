@@ -87,7 +87,7 @@ export default function BlockBlaster() {
     const s = connectSocket();
 
     const fetchLeaderboard = () => {
-      emitWithAck('leaderboard:get', 'dino').then((res) => {
+      emitWithAck('leaderboard:get', 'block-blaster').then((res) => {
         if (res?.ok) setGlobalLeaderboard(res.leaderboard);
       });
     };
@@ -97,7 +97,7 @@ export default function BlockBlaster() {
     };
 
     // 1. Listen for real-time updates from other players
-    s.on('leaderboard:update:dino', handleLeaderboardUpdate);
+    s.on('leaderboard:update:block-blaster', handleLeaderboardUpdate);
 
     // 2. Fetch initial data safely
     if (s.connected) {
@@ -109,7 +109,7 @@ export default function BlockBlaster() {
     }
 
     return () => {
-      s.off('leaderboard:update:dino', handleLeaderboardUpdate);
+      s.off('leaderboard:update:block-blaster', handleLeaderboardUpdate);
       s.off('connect', fetchLeaderboard);
     };
   }, []);
