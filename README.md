@@ -1,4 +1,4 @@
-# POHAHUB
+# Doozles
 
 Centralized multiplayer gaming hub with an **authoritative server model**. The backend validates all game state; the frontend is a real-time rendering layer.
 
@@ -21,7 +21,7 @@ Centralized multiplayer gaming hub with an **authoritative server model**. The b
 ## Project Structure
 
 ```
-POHAHUB/
+Doozles/
 ├── frontend/          # React client
 │   └── src/
 │       ├── components/     # Layout, MainLanding

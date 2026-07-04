@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
-  <title id="title">POHAHUB Multiplayer Gaming Hub</title>
-  <desc id="desc">A colorful notebook-style preview image for POHAHUB.</desc>
+  <title id="title">Doozles Multiplayer Gaming Hub</title>
+  <desc id="desc">A colorful notebook-style preview image for Doozles.</desc>
   <rect width="1200" height="630" fill="#fdfdfd"/>
   <path d="M0 105h1200M0 165h1200M0 225h1200M0 285h1200M0 345h1200M0 405h1200M0 465h1200M0 525h1200M0 585h1200" stroke="#dedede" stroke-width="3"/>
   <path d="M115 0v630" stroke="#ff9999" stroke-width="7"/>
@@ -8,7 +8,7 @@
   <rect x="175" y="120" width="220" height="120" rx="4" fill="#fde047" stroke="#000000" stroke-width="8"/>
   <rect x="420" y="120" width="220" height="120" rx="4" fill="#7dd3fc" stroke="#000000" stroke-width="8"/>
   <rect x="665" y="120" width="220" height="120" rx="4" fill="#f9a8d4" stroke="#000000" stroke-width="8"/>
-  <text x="600" y="340" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="104" font-weight="900" fill="#000000">POHAHUB</text>
+  <text x="600" y="340" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="104" font-weight="900" fill="#000000">Doozles</text>
   <text x="600" y="410" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="900" fill="#111111">CREATE ROOMS. PLAY WITH FRIENDS.</text>
   <rect x="390" y="485" width="420" height="80" rx="4" fill="#86efac" stroke="#000000" stroke-width="8"/>
   <text x="600" y="538" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" fill="#000000">MULTIPLAYER ARCADE</text>
