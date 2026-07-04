@@ -50,17 +50,17 @@ const pages = {
       {
         title: 'Analytics',
         body:
-          'We may use privacy-conscious analytics and Google Analytics 4 to understand aggregate usage, page views, game starts, invite actions, and errors. These signals help improve reliability and performance.',
+          'We use privacy-conscious analytics (including Google Analytics 4) to understand aggregate usage, page views, game starts, and errors. These signals help improve reliability and performance.',
       },
       {
-        title: 'Advertising',
+        title: 'Advertising and Cookies',
         body:
-          'If ads are enabled in the future, third-party vendors including Google may use cookies or similar technologies to serve and measure ads. Users may control personalized ads through Google ad settings and browser privacy controls.',
+          'Third-party vendors, including Google, use cookies to serve ads based on a user\'s prior visits to this website or other websites. Google\'s use of advertising cookies enables it and its partners to serve ads to our users based on their visit to our sites and/or other sites on the Internet.',
       },
       {
-        title: 'Contact',
+        title: 'Opting Out',
         body:
-          'For privacy questions, use the contact page. This placeholder should be replaced with your final business email before AdSense review.',
+          'Users may opt out of personalized advertising by visiting Google\'s Ads Settings. You can also opt out of some third-party vendors\' uses of cookies for personalized advertising by visiting www.aboutads.info.',
       },
     ],
   },
@@ -78,17 +78,17 @@ const pages = {
       {
         title: 'Rooms and Gameplay',
         body:
-          'Game rooms are temporary and may close when players disconnect. Scores and room states are not guaranteed to persist unless a future account system is added.',
+          'Game rooms are temporary and may close when players disconnect. Scores and room states are not guaranteed to persist.',
+      },
+      {
+        title: 'Intellectual Property',
+        body:
+          'The unique visual notebook designs, logos, and custom code are the property of Doozles. Do not scrape or republish our web assets without permission.',
       },
       {
         title: 'Availability',
         body:
-          'The service may change, pause, or become unavailable while features are improved or maintained.',
-      },
-      {
-        title: 'Responsible Play',
-        body:
-          'Doozles is designed for entertainment. Do not use the site for gambling, wagers, or illegal activity.',
+          'The service may change, pause, or become unavailable while features are improved or maintained. We are not liable for any interruptions in gameplay.',
       },
     ],
   },
@@ -101,12 +101,12 @@ const pages = {
       {
         title: 'Support',
         body:
-          'For bugs, feedback, or account-free gameplay questions, reach out through the creator contact link below. Add a dedicated support email here before submitting for AdSense.',
+          'For bugs, feedback, or account-free gameplay questions, please email us directly at support@doozles.xyz. We aim to respond within 48 hours.',
       },
       {
         title: 'Creator Contact',
         body:
-          'Instagram: https://www.instagram.com/bhavesh12z',
+          'Doozles is actively developed by Bhavesh Gupta. For direct queries, partnership requests, or technical discussions, you can reach out via Instagram: https://www.instagram.com/bhavesh12z',
       },
     ],
   },
@@ -119,17 +119,17 @@ const pages = {
       {
         title: 'What Doozles Is',
         body:
-          'Doozles is a lightweight multiplayer arcade where players can create private rooms and play quick games with friends from a browser.',
+          'Doozles is a lightweight multiplayer arcade where players can create private rooms and play quick games with friends from a browser, entirely free of app installations.',
       },
       {
         title: 'Current Games',
         body:
-          'The platform currently includes games such as Tic Tac Toe, Connect 4, Ludo, Scribble, Tambola, Snake and Ladder, Rock Paper Scissor, and 2048.',
+          'The platform currently includes games such as Tic Tac Toe, Connect 4, Ludo, Scribble, Tambola, Snake and Ladder, Rock Paper Scissor, Block Blaster, and 2048.',
       },
       {
         title: 'Product Direction',
         body:
-          'The goal is to keep room creation instant while improving SEO content, trust pages, performance, analytics, and future monetization readiness.',
+          'The goal is to keep room creation instant while continually expanding our catalog of notebook-style arcade games.',
       },
     ],
   },
