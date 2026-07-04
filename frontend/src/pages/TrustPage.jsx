@@ -3,16 +3,44 @@ import { Link } from 'react-router-dom';
 import { absoluteUrl } from '../config/seo.js';
 
 const pages = {
+  trust: {
+    title: 'Trust and Safety | Doozles',
+    heading: 'Trust and Safety',
+    description:
+      'Learn how Doozles supports browser-based play, private rooms, basic privacy practices, and safe casual gaming.',
+    sections: [
+      {
+        title: 'Browser-Based Play',
+        body:
+          'Doozles games run in the browser, so players can create and join rooms without installing an app.',
+      },
+      {
+        title: 'Private Rooms',
+        body:
+          'Multiplayer sessions use room links or room codes so friends can join the same match quickly.',
+      },
+      {
+        title: 'Basic Data Use',
+        body:
+          'The app may use display names, room codes, browser storage, analytics, and gameplay events to operate rooms and improve reliability.',
+      },
+      {
+        title: 'Casual Play',
+        body:
+          'Doozles is designed for entertainment and should not be used for gambling, wagers, harassment, or disruptive behavior.',
+      },
+    ],
+  },
   'privacy-policy': {
-    title: 'Privacy Policy | POHAHUB',
+    title: 'Privacy Policy | Doozles',
     heading: 'Privacy Policy',
     description:
-      'Read how POHAHUB handles basic gameplay data, browser storage, analytics, and advertising disclosures.',
+      'Read how Doozles handles basic gameplay data, browser storage, analytics, and advertising disclosures.',
     sections: [
       {
         title: 'Information We Use',
         body:
-          'POHAHUB lets players create and join private game rooms. The app may use a display name, room code, browser storage, device information, and gameplay events to run the multiplayer experience.',
+          'Doozles lets players create and join private game rooms. The app may use a display name, room code, browser storage, device information, and gameplay events to run the multiplayer experience.',
       },
       {
         title: 'Local Storage',
@@ -37,15 +65,15 @@ const pages = {
     ],
   },
   terms: {
-    title: 'Terms and Conditions | POHAHUB',
+    title: 'Terms and Conditions | Doozles',
     heading: 'Terms and Conditions',
     description:
-      'Review the basic terms for using POHAHUB multiplayer rooms and browser games.',
+      'Review the basic terms for using Doozles multiplayer rooms and browser games.',
     sections: [
       {
         title: 'Use of the Service',
         body:
-          'POHAHUB is provided for casual browser-based gameplay. Do not use the platform for abuse, harassment, spam, cheating, or activity that disrupts other players.',
+          'Doozles is provided for casual browser-based gameplay. Do not use the platform for abuse, harassment, spam, cheating, or activity that disrupts other players.',
       },
       {
         title: 'Rooms and Gameplay',
@@ -60,15 +88,15 @@ const pages = {
       {
         title: 'Responsible Play',
         body:
-          'POHAHUB is designed for entertainment. Do not use the site for gambling, wagers, or illegal activity.',
+          'Doozles is designed for entertainment. Do not use the site for gambling, wagers, or illegal activity.',
       },
     ],
   },
   contact: {
-    title: 'Contact POHAHUB',
+    title: 'Contact Doozles',
     heading: 'Contact',
     description:
-      'Contact POHAHUB for feedback, bug reports, privacy questions, and partnership requests.',
+      'Contact Doozles for feedback, bug reports, privacy questions, and partnership requests.',
     sections: [
       {
         title: 'Support',
@@ -83,15 +111,15 @@ const pages = {
     ],
   },
   about: {
-    title: 'About POHAHUB',
-    heading: 'About POHAHUB',
+    title: 'About Doozles',
+    heading: 'About Doozles',
     description:
-      'POHAHUB is a browser-based multiplayer gaming hub for quick private matches with friends.',
+      'Doozles is a browser-based multiplayer gaming hub for quick private matches with friends.',
     sections: [
       {
-        title: 'What POHAHUB Is',
+        title: 'What Doozles Is',
         body:
-          'POHAHUB is a lightweight multiplayer arcade where players can create private rooms and play quick games with friends from a browser.',
+          'Doozles is a lightweight multiplayer arcade where players can create private rooms and play quick games with friends from a browser.',
       },
       {
         title: 'Current Games',
@@ -118,7 +146,7 @@ export default function TrustPage({ page }) {
         <meta name="description" content={content.description} />
         <link rel="canonical" href={absoluteUrl(canonicalPath)} />
         <meta property="og:type" content="article" />
-        <meta property="og:site_name" content="POHAHUB" />
+        <meta property="og:site_name" content="Doozles" />
         <meta property="og:title" content={content.title} />
         <meta property="og:description" content={content.description} />
         <meta property="og:url" content={absoluteUrl(canonicalPath)} />
@@ -130,7 +158,7 @@ export default function TrustPage({ page }) {
       <article className="max-w-4xl mx-auto px-5 py-12 sm:py-16">
         <header className="mb-8">
           <p className="inline-block bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_#000] px-4 py-2 mb-5 -rotate-1 text-sm font-black uppercase tracking-widest">
-            POHAHUB
+            Doozles
           </p>
           <h1 className="text-[clamp(2.25rem,6vw,4rem)] font-black uppercase leading-none tracking-normal">
             {content.heading}

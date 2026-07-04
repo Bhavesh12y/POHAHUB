@@ -20,7 +20,7 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join my match on PohaHub',
+          title: 'Join my match on Doozles',
           text: 'Click the link to join my game room:',
           url: roomUrl,
         });

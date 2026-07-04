@@ -1,7 +1,7 @@
 {
-  "name": "pohahub-backend",
+  "name": "doozles-backend",
   "version": "1.0.0",
-  "description": "POHAHUB authoritative game server",
+  "description": "Doozles authoritative game server",
   "main": "src/server.js",
   "type": "module",
   "scripts": {

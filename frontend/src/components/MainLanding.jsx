@@ -82,7 +82,7 @@ const GAMES = [
     id: 'ludo',
     title: 'Ludo',
     description: 'Race your tokens home in this classic board game.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/ludo.png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/Doozles/refs/heads/main/frontend/src/images/ludo.png',
     path: '/games/ludo',
     available: true,
     headerColor: 'bg-[#facc15]',
@@ -93,7 +93,7 @@ const GAMES = [
     id: 'air-hockey',
     title: 'Air Hockey',
     description: 'Slide, strike, and score in fast-paced 1v1 Air Hockey!',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/airhockey.png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/Doozles/refs/heads/main/frontend/src/images/airhockey.png',
     path: '/games/air-hockey',
     available: true,
     headerColor: 'bg-[#facc15]',
@@ -109,7 +109,7 @@ const SINGLE_PLAYER_GAMES = [
     id: 'block-blaster',
     title: 'Block Blaster',
     description: 'Clear the board by placing and matching blocks.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/block.png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/Doozles/refs/heads/main/frontend/src/images/block.png',
     path: '/games/block-blaster',
     available: true,
     headerColor: 'bg-[#c4b5fd]',
@@ -120,7 +120,7 @@ const SINGLE_PLAYER_GAMES = [
     id: '2048',
     title: '2048',
     description: 'Slide tiles and merge them to reach the 2048 tile.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/2048.png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/Doozles/refs/heads/main/frontend/src/images/2048.png',
     path: '/games/2048',
     available: true,
     headerColor: 'bg-[#bef264]',
@@ -131,7 +131,7 @@ const SINGLE_PLAYER_GAMES = [
     id: 'dino',
     title: 'Dino Run',
     description: 'Jump over cacti and dodge obstacles in this endless runner.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/dinorun.png',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/Doozles/refs/heads/main/frontend/src/images/dinorun.png',
     path: '/games/dino',
     available: true,
     headerColor: 'bg-[#93c5fd]',
@@ -167,7 +167,7 @@ export default function MainLanding() {
   const [playerNameInput, setPlayerNameInput] = useState('');
   
   // Track player name in state so it updates the UI immediately
-  const [playerName, setPlayerName] = useState(() => localStorage.getItem('pohahub-player-name') || '');
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem('Doozles-player-name') || '');
 
   const handleScan = (result) => {
     if (result && result[0]) {
@@ -194,7 +194,7 @@ export default function MainLanding() {
     e.preventDefault();
     if (playerNameInput.trim()) {
       const newName = playerNameInput.trim();
-      localStorage.setItem('pohahub-player-name', newName);
+      localStorage.setItem('Doozles-player-name', newName);
       setPlayerName(newName); // Update local state immediately
       setShowNameModal(false);
       setGameMode('singleplayer');
@@ -255,9 +255,10 @@ export default function MainLanding() {
         {/* ... (Keep your SEO config the same) ... */}
         <title>{defaultSeo.title}</title>
         <meta name="description" content={defaultSeo.description} />
+        <meta name="keywords" content={defaultSeo.keywords} />
         <link rel="canonical" href={absoluteUrl('/')} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="POHAHUB" />
+        <meta property="og:site_name" content="Doozles" />
         <meta property="og:title" content={defaultSeo.title} />
         <meta property="og:description" content={defaultSeo.description} />
         <meta property="og:url" content={absoluteUrl('/')} />

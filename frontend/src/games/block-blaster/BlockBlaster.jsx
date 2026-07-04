@@ -46,7 +46,7 @@ export default function BlockBlaster() {
   const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
   
-  const playerName = localStorage.getItem('pohahub-player-name') || 'Player';
+  const playerName = localStorage.getItem('Doozles-player-name') || 'Player';
  const [localHighScore, setLocalHighScore] = useState(() => {
     const saved = localStorage.getItem('blockblaster-highScore');
     return saved !== null ? parseInt(saved, 10) : 0;

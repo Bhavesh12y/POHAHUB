@@ -1,6 +1,13 @@
-import { Link, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { absoluteUrl, defaultSeo, gamesSeo } from '../config/seo.js';
+import {
+  SEO_CONFIG,
+  absoluteUrl,
+  defaultSeo,
+  gamesSeo,
+  normalizeGameId,
+} from '../config/seo.js';
 
 function JsonLd({ data }) {
   return (
@@ -10,8 +17,36 @@ function JsonLd({ data }) {
   );
 }
 
+function setNamedMeta(name, content) {
+  if (!content) return;
+
+  let element = document.querySelector(`meta[name="${name}"]`);
+
+  if (!element) {
+    element = document.createElement('meta');
+    element.setAttribute('name', name);
+    document.head.appendChild(element);
+  }
+
+  element.setAttribute('content', content);
+}
+
 export default function GameSeoPage({ slug }) {
-  const game = gamesSeo[slug];
+  const { gameId } = useParams();
+  const rawGameId = slug || gameId || '';
+  const normalizedGameId = normalizeGameId(rawGameId);
+  const game = gamesSeo[rawGameId] || gamesSeo[normalizedGameId];
+  const meta = SEO_CONFIG.games[normalizedGameId] || game;
+
+  useEffect(() => {
+    const title = meta?.title || SEO_CONFIG.defaultTitle;
+    const description = meta?.description || SEO_CONFIG.defaultDescription;
+    const keywords = meta?.keywords || SEO_CONFIG.defaultKeywords;
+
+    document.title = title;
+    setNamedMeta('description', description);
+    setNamedMeta('keywords', keywords);
+  }, [meta]);
 
   if (!game) {
     return <Navigate to="/" replace />;
@@ -19,7 +54,7 @@ export default function GameSeoPage({ slug }) {
 
   const canonicalUrl = absoluteUrl(game.path);
   const relatedGames = game.related.map((relatedSlug) => gamesSeo[relatedSlug]).filter(Boolean);
-  const isChess = slug === 'chess';
+  const isChess = normalizedGameId === 'chess';
 
   const videoGameSchema = {
     '@context': 'https://schema.org',
@@ -32,7 +67,7 @@ export default function GameSeoPage({ slug }) {
     playMode: game.playMode || 'MultiPlayer',
     publisher: {
       '@type': 'Organization',
-      name: 'POHAHUB',
+      name: SEO_CONFIG.siteName,
       url: absoluteUrl('/'),
     },
   };
@@ -44,7 +79,7 @@ export default function GameSeoPage({ slug }) {
       {
         '@type': 'ListItem',
         position: 1,
-        name: 'POHAHUB',
+        name: SEO_CONFIG.siteName,
         item: absoluteUrl('/'),
       },
       {
@@ -74,9 +109,10 @@ export default function GameSeoPage({ slug }) {
       <Helmet>
         <title>{game.title}</title>
         <meta name="description" content={game.description} />
+        <meta name="keywords" content={game.keywords} />
         <link rel="canonical" href={canonicalUrl} />
         <meta property="og:type" content="article" />
-        <meta property="og:site_name" content="POHAHUB" />
+        <meta property="og:site_name" content={SEO_CONFIG.siteName} />
         <meta property="og:title" content={game.title} />
         <meta property="og:description" content={game.description} />
         <meta property="og:url" content={canonicalUrl} />

@@ -27,7 +27,7 @@ app.use(cors({ origin: CLIENT_ORIGINS }));
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'pohahub-backend' });
+  res.json({ status: 'ok', service: 'Doozles-backend' });
 });
 
 const httpServer = createServer(app);
@@ -332,5 +332,5 @@ setInterval(() => {
 }, 1000);
 
 httpServer.listen(PORT, () => {
-  console.log(`POHAHUB server running on http://localhost:${PORT}`);
+  console.log(`Doozles server running on http://localhost:${PORT}`);
 });

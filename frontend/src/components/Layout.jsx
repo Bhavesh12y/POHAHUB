@@ -2,9 +2,6 @@ import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 
-
-
-
 export function useDesktopScalingFix() {
   useEffect(() => {
     const applyReverseZoom = () => {
@@ -47,6 +44,7 @@ export function useDesktopScalingFix() {
     return () => window.removeEventListener('resize', applyReverseZoom);
   }, []);
 }
+
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -54,8 +52,6 @@ export default function Layout() {
 
   const isHome = location.pathname === '/';
   const isInGameRoom = location.pathname.includes('/room/');
-
-  
 
  useEffect(() => {
   if (!isInGameRoom) return;
@@ -101,12 +97,12 @@ export default function Layout() {
             className="group flex items-center gap-3 cursor-pointer"
           >
             <div className="bg-[#facc15] text-black border-[3px] border-black px-3 py-1 shadow-[4px_4px_0px_#000] -rotate-3 transition-transform duration-200 group-hover:-rotate-1">
-              <span className="text-[clamp(1.1rem,2.5vw,1.75rem)] font-black tracking-widest uppercase">PH</span>
+              <span className="text-[clamp(1.1rem,2.5vw,1.75rem)] font-black tracking-widest uppercase">DZ</span>
             </div>
 
             <div className="flex flex-col justify-center min-w-0">
               <h1 className="text-[clamp(1.25rem,3vw,2.25rem)] font-black uppercase tracking-widest leading-none text-black">
-                Pohahub
+                Doozles
               </h1>
               <p className="text-[clamp(0.55rem,1.1vw,0.7rem)] font-black uppercase text-gray-600 tracking-wider mt-1">
                 Multiplayer notebook arcade
@@ -136,7 +132,7 @@ export default function Layout() {
       <footer className="border-t-[4px] border-black bg-white mt-12">
         <div className="max-w-7xl mx-auto px-5 py-8 flex flex-col gap-6 text-sm font-black uppercase tracking-widest text-black">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <p>(c) {new Date().getFullYear()} Pohahub</p>
+            <p>(c) {new Date().getFullYear()} Doozles</p>
             <nav aria-label="Legal pages" className="flex flex-wrap gap-4 sm:gap-6">
               <Link to="/about" className="hover:underline decoration-[3px] underline-offset-4">
                 About
@@ -155,11 +151,17 @@ export default function Layout() {
 
           {!isInGameRoom && (
             <nav aria-label="Game guides" className="flex flex-wrap gap-4 sm:gap-6 text-xs">
-              <Link to="/connect-4" className="hover:underline decoration-[3px] underline-offset-4">
-                Connect 4 Guide
+              <Link to="/ludo" className="hover:underline decoration-[3px] underline-offset-4">
+                Ludo Guide
               </Link>
               <Link to="/tic-tac-toe" className="hover:underline decoration-[3px] underline-offset-4">
                 Tic Tac Toe Guide
+              </Link>
+              <Link to="/air-hockey" className="hover:underline decoration-[3px] underline-offset-4">
+                Air Hockey Guide
+              </Link>
+              <Link to="/connect-4" className="hover:underline decoration-[3px] underline-offset-4">
+                Connect 4 Guide
               </Link>
               <Link to="/scribble" className="hover:underline decoration-[3px] underline-offset-4">
                 Scribble Guide
@@ -167,20 +169,20 @@ export default function Layout() {
               <Link to="/snake-and-ladder" className="hover:underline decoration-[3px] underline-offset-4">
                 Snake & Ladder Guide
               </Link>
-              <Link to="/tambola" className="hover:underline decoration-[3px] underline-offset-4">
-                Tambola Guide
-              </Link>
               <Link to="/rock-paper-scissor" className="hover:underline decoration-[3px] underline-offset-4">
                 Rock Paper Scissor Guide
               </Link>
-              <Link to="/ludo" className="hover:underline decoration-[3px] underline-offset-4">
-                Ludo Guide
+              <Link to="/tambola" className="hover:underline decoration-[3px] underline-offset-4">
+                Tambola Guide
               </Link>
               <Link to="/2048" className="hover:underline decoration-[3px] underline-offset-4">
                 2048 Guide
               </Link>
-              <Link to="/chess" className="hover:underline decoration-[3px] underline-offset-4">
-                Chess Guide
+              <Link to="/block-blaster" className="hover:underline decoration-[3px] underline-offset-4">
+                Block Blaster Guide
+              </Link>
+              <Link to="/dino" className="hover:underline decoration-[3px] underline-offset-4">
+                Dino Run Guide
               </Link>
             </nav>
           )}

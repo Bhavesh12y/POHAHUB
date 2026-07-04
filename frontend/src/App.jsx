@@ -64,25 +64,16 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<MainLanding />} />
 
-          <Route path="connect-4" element={<GameSeoPage slug="connect-4" />} />
-          <Route path="tic-tac-toe" element={<GameSeoPage slug="tic-tac-toe" />} />
-          <Route path="ludo" element={<GameSeoPage slug="ludo" />} />
-          <Route path="chess" element={<GameSeoPage slug="chess" />} />
-          <Route path="scribble" element={<GameSeoPage slug="scribble" />} />
-          <Route path="snake-and-ladder" element={<GameSeoPage slug="snake-and-ladder" />} />
-          <Route path="tambola" element={<GameSeoPage slug="tambola" />} />
-          <Route path="rock-paper-scissor" element={<GameSeoPage slug="rock-paper-scissor" />} />
-          <Route path="stone-paper-scissor" element={<GameSeoPage slug="rock-paper-scissor" />} />
-          <Route path="2048" element={<GameSeoPage slug="2048" />} />
-
-
-          <Route path="games/air-hockey" element={<AirHockeyLanding />} />
-          <Route path="/games/air-hockey/room/:roomCode" element={<AirHockeyRoom />} />
-
+          <Route path="trust" element={<TrustPage page="trust" />} />
           <Route path="privacy-policy" element={<TrustPage page="privacy-policy" />} />
           <Route path="terms" element={<TrustPage page="terms" />} />
           <Route path="contact" element={<TrustPage page="contact" />} />
           <Route path="about" element={<TrustPage page="about" />} />
+
+          <Route path=":gameId" element={<GameSeoPage />} />
+
+          <Route path="games/air-hockey" element={<AirHockeyLanding />} />
+          <Route path="/games/air-hockey/room/:roomCode" element={<AirHockeyRoom />} />
 
           <Route path="games/connect-four" element={<ConnectFourLanding />} />
           <Route path="games/connect-four/room/:roomCode" element={<ConnectFourBoard />} />
