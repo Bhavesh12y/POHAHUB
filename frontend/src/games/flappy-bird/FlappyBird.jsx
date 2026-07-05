@@ -153,6 +153,10 @@ export default function FlappyBird() {
   };
 
   const spawnPipe = () => {
+<<<<<<< HEAD
+=======
+    // Fetch the dynamically scaled gap size based on current score
+>>>>>>> f527f9dea647a3902a12f6e434a94b825fbe4c1b
     const { gap } = getDifficultyParams(physicsRef.current.score);
     
     const minPipeHeight = 50;
