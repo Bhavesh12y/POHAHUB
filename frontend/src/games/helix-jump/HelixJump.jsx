@@ -6,7 +6,7 @@ import { connectSocket, emitWithAck } from '../../lib/socket.js';
 const CANVAS_WIDTH = 320;
 const CANVAS_HEIGHT = 480;
 const GRAVITY = 0.29;
-const JUMP_STRENGTH = -5.0;
+const JUMP_STRENGTH = -7.0;
 const BALL_RADIUS = 10;
 const PLATFORM_SPACING = 180; 
 
