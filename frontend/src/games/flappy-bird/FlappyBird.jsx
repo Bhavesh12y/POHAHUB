@@ -6,7 +6,7 @@ import { connectSocket, emitWithAck } from '../../lib/socket.js';
 const CANVAS_WIDTH = 400; 
 const CANVAS_HEIGHT = 600; 
 
-const GRAVITY = 0.15; 
+const GRAVITY = 0.2; 
 const JUMP_STRENGTH = -4.5; 
 
 const PIPE_SPEED = 2.5;
@@ -153,10 +153,6 @@ export default function FlappyBird() {
   };
 
   const spawnPipe = () => {
-<<<<<<< HEAD
-=======
-    // Fetch the dynamically scaled gap size based on current score
->>>>>>> f527f9dea647a3902a12f6e434a94b825fbe4c1b
     const { gap } = getDifficultyParams(physicsRef.current.score);
     
     const minPipeHeight = 50;

@@ -6,7 +6,7 @@ import { connectSocket, emitWithAck } from '../../lib/socket.js';
 const CANVAS_WIDTH = 320;
 const CANVAS_HEIGHT = 480;
 const GRAVITY = 0.29;
-const JUMP_STRENGTH = -5.0;
+const JUMP_STRENGTH = -7.0;
 const BALL_RADIUS = 10;
 const PLATFORM_SPACING = 180; 
 
@@ -357,38 +357,42 @@ export default function HelixJump() {
       physicsRef.current.hasStarted = true;
       setGameStarted(true);
     }
-    pointerRef.current.isTouching = true;
-    pointerRef.current.lastX = e.clientX;
+    // FIX 1: Use dragRef instead of pointerRef
+    dragRef.current.isDragging = true;
+    dragRef.current.lastX = e.clientX;
   };
 
   const handlePointerMove = (e) => {
-    if (!pointerRef.current.isTouching || physicsRef.current.isGameOver) return;
+    // FIX 2: Use dragRef instead of pointerRef
+    if (!dragRef.current.isDragging || physicsRef.current.isGameOver) return;
     
-    // Pointer delta is physical distance, not time-scaled
+    // FIX 3: Calculate the delta distance moved since last frame
+    const delta = e.clientX - dragRef.current.lastX;
+    
     physicsRef.current.towerAngle += delta * 0.015;
     dragRef.current.velocity = delta * 0.015;
     dragRef.current.lastX = e.clientX;
   };
 
-  const handlePointerUp = () => dragRef.current.isDragging = false;
+  const handlePointerUp = () => {
+    dragRef.current.isDragging = false;
+  };
 
-  // Keyboard Handlers for Laptop
+  // FIX 4: Merged the two useEffects and corrected event listener unbinding
   useEffect(() => {
     resetGame();
     frameRef.current = requestAnimationFrame(gameLoop);
+    
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
+    
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+      cancelAnimationFrame(frameRef.current);
     };
-  }, []);
-
-  useEffect(() => {
-    resetGame();
-    frameRef.current = requestAnimationFrame(gameLoop);
-    return () => cancelAnimationFrame(frameRef.current);
   }, [gameLoop]);
 
   return (
