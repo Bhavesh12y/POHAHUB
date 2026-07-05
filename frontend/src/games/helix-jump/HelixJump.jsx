@@ -8,7 +8,7 @@ const CANVAS_HEIGHT = 480;
 const GRAVITY = 0.29;
 const JUMP_STRENGTH = -5.0;
 const BALL_RADIUS = 10;
-const PLATFORM_SPACING = 150;
+const PLATFORM_SPACING = 180; 
 
 // --- 3D ENGINE CONSTANTS ---
 const R_IN = 50; 
@@ -351,19 +351,18 @@ export default function HelixJump() {
   }, []);
 
   const handlePointerDown = (e) => {
+    e.target.setPointerCapture(e.pointerId); 
     if (physicsRef.current.isGameOver) return;
     if (!physicsRef.current.hasStarted) {
       physicsRef.current.hasStarted = true;
       setGameStarted(true);
     }
-    dragRef.current.isDragging = true;
-    dragRef.current.lastX = e.clientX;
-    dragRef.current.velocity = 0;
+    pointerRef.current.isTouching = true;
+    pointerRef.current.lastX = e.clientX;
   };
 
   const handlePointerMove = (e) => {
-    if (!dragRef.current.isDragging || physicsRef.current.isGameOver) return;
-    const delta = e.clientX - dragRef.current.lastX;
+    if (!pointerRef.current.isTouching || physicsRef.current.isGameOver) return;
     
     // Pointer delta is physical distance, not time-scaled
     physicsRef.current.towerAngle += delta * 0.015;
@@ -373,6 +372,7 @@ export default function HelixJump() {
 
   const handlePointerUp = () => dragRef.current.isDragging = false;
 
+  // Keyboard Handlers for Laptop
   useEffect(() => {
     resetGame();
     frameRef.current = requestAnimationFrame(gameLoop);
@@ -380,11 +380,15 @@ export default function HelixJump() {
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
     return () => {
-      cancelAnimationFrame(frameRef.current);
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-      window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
+  }, []);
+
+  useEffect(() => {
+    resetGame();
+    frameRef.current = requestAnimationFrame(gameLoop);
+    return () => cancelAnimationFrame(frameRef.current);
   }, [gameLoop]);
 
   return (
