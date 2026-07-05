@@ -150,6 +150,18 @@ const SINGLE_PLAYER_GAMES = [
     buttonColor: 'bg-[#fca5a5]',
     tilt: 'rotate-1',
   },
+   {
+
+  id: 'helix-jump',
+    title: 'Helix Jump',
+    description: 'Jump through the helix in this challenging arcade game.',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/helix.jpg',
+    path: '/games/helix-jump',
+    available: true,
+    headerColor: 'bg-[#93c5fd]',
+    buttonColor: 'bg-[#fca5a5]',
+    tilt: 'rotate-1',
+  },
 
 ];
 
