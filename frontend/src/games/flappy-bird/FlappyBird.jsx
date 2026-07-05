@@ -8,8 +8,8 @@ const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 600; 
 
 // Tweaked physics for a floatier, slower fall and smoother jump
-const GRAVITY = 0.15; 
-const JUMP_STRENGTH = -5.5; 
+const GRAVITY = 0.25; 
+const JUMP_STRENGTH = -4.5; 
 
 const PIPE_SPEED = 2.5;
 const PIPE_WIDTH = 60;
