@@ -138,6 +138,19 @@ const SINGLE_PLAYER_GAMES = [
     buttonColor: 'bg-[#fca5a5]',
     tilt: 'rotate-1',
   },
+  {
+
+  id: 'flappy-bird',
+    title: 'Flappy Bird',
+    description: 'Navigate through pipes in this challenging arcade game.',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/flappy.jpg',
+    path: '/games/flappy-bird',
+    available: true,
+    headerColor: 'bg-[#93c5fd]',
+    buttonColor: 'bg-[#fca5a5]',
+    tilt: 'rotate-1',
+  },
+
 ];
 
 function CloseIcon() {

@@ -29,6 +29,7 @@ const Dino = lazy(() => import('./games/dino/DinoDash.jsx'));
 const AirHockeyLanding = lazy(() => import('./games/air-hockey/Landing.jsx'));
 
 const AirHockeyRoom = lazy(() => import("./games/air-hockey/AirHockeyBoard.jsx"));
+const FlappyBirdL = lazy(() => import('./games/flappy-bird/FlappyBird.jsx'));
 
 function RouteFallback() {
   return (
@@ -99,6 +100,7 @@ export default function App() {
           <Route path="games/2048" element={<Game2048 />} />
           <Route path="games/block-blaster" element={<BlockBlaster />} />
           <Route path="games/dino" element={<Dino />} />
+          <Route path="games/flappy-bird" element={<FlappyBirdL />} />
 
           <Route
             path="*"
