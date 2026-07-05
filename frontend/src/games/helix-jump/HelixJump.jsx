@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 
-// --- GAME CONSTANTS (TWEAKED FOR HEAVY, SNAPPY FEEL) ---
+// --- GAME CONSTANTS ---
 const CANVAS_WIDTH = 320;
 const CANVAS_HEIGHT = 480;
-const GRAVITY = 0.5; // Heavier fall
-const JUMP_STRENGTH = -8.5; // Harder, punchier bounce
+const GRAVITY = 0.5; 
+const JUMP_STRENGTH = -8.5; 
 const BALL_RADIUS = 10;
-const PLATFORM_SPACING = 180; // More room for the faster drop
+const PLATFORM_SPACING = 180; 
 
 // --- 3D ENGINE CONSTANTS ---
 const R_IN = 50; 
@@ -22,7 +22,8 @@ export default function HelixJump() {
 
   // -- High Performance Physics State --
   const frameRef = useRef(null);
-  const dragRef = useRef({ isDragging: false, lastX: 0, velocity: 0 });
+  const pointerRef = useRef({ isTouching: false, lastX: 0 });
+  const keysRef = useRef({ left: false, right: false });
   
   const physicsRef = useRef({
     birdY: 100,
@@ -91,7 +92,7 @@ export default function HelixJump() {
     setTimeout(() => setPopups(prev => prev.filter(p => p.id !== id)), 1000);
   };
 
-  // -- BALANCED 3D Level Generation --
+  // -- Level Generation --
   const generatePlatform = (y, difficulty) => {
     let segments = [];
     
@@ -166,7 +167,8 @@ export default function HelixJump() {
       hasStarted: false,
       difficulty: 0
     };
-    dragRef.current = { isDragging: false, lastX: 0, velocity: 0 };
+    pointerRef.current = { isTouching: false, lastX: 0 };
+    keysRef.current = { left: false, right: false };
     setScore(0);
     setGameOver(false);
     setGameStarted(false);
@@ -211,10 +213,13 @@ export default function HelixJump() {
     
     const state = physicsRef.current;
     
-    // Apply Tower Inertia
-    if (!dragRef.current.isDragging) {
-      dragRef.current.velocity *= 0.94; // slightly less friction for longer spins
-      state.towerAngle += dragRef.current.velocity;
+    // Apply Keyboard Steering for Laptop Users
+    const KEY_ROTATION_SPEED = 0.06;
+    if (keysRef.current.left) {
+      state.towerAngle -= KEY_ROTATION_SPEED;
+    }
+    if (keysRef.current.right) {
+      state.towerAngle += KEY_ROTATION_SPEED;
     }
 
     if (state.hasStarted) {
@@ -223,7 +228,7 @@ export default function HelixJump() {
       state.birdV += GRAVITY;
       state.birdY += state.birdV;
 
-      // Camera Follows Down smoothly (Faster tracking to match new gravity)
+      // Camera Follows Down smoothly
       const targetCam = state.birdY - 150;
       if (targetCam > state.cameraY) {
         state.cameraY += (targetCam - state.cameraY) * 0.2;
@@ -385,9 +390,9 @@ export default function HelixJump() {
       // 4. Draw Ball
       const ballScreenY = state.birdY - state.cameraY;
       ctx.fillStyle = '#000';
-      ctx.beginPath(); ctx.arc(160 + 4, ballScreenY + 4, BALL_RADIUS, 0, Math.PI*2); ctx.fill(); // Shadow
+      ctx.beginPath(); ctx.arc(160 + 4, ballScreenY + 4, BALL_RADIUS, 0, Math.PI*2); ctx.fill(); 
       
-      ctx.fillStyle = (state.comboCount >= 3) ? '#ef476f' : '#ffd166'; // Glow red if smashing
+      ctx.fillStyle = (state.comboCount >= 3) ? '#ef476f' : '#ffd166'; 
       ctx.beginPath(); ctx.arc(160, ballScreenY, BALL_RADIUS, 0, Math.PI*2); ctx.fill();
       ctx.stroke();
     }
@@ -395,37 +400,60 @@ export default function HelixJump() {
     frameRef.current = requestAnimationFrame(gameLoop);
   }, []);
 
-  // -- Input Handlers (FIXED: Captures pointer properly now) --
+  // -- Event Handlers --
   const handlePointerDown = (e) => {
-    e.target.setPointerCapture(e.pointerId); // Lock the pointer to the canvas
+    e.target.setPointerCapture(e.pointerId); 
     if (physicsRef.current.isGameOver) return;
     if (!physicsRef.current.hasStarted) {
       physicsRef.current.hasStarted = true;
       setGameStarted(true);
     }
-    dragRef.current.isDragging = true;
-    dragRef.current.lastX = e.clientX;
-    dragRef.current.velocity = 0;
+    pointerRef.current.isTouching = true;
+    pointerRef.current.lastX = e.clientX;
   };
 
   const handlePointerMove = (e) => {
-    if (!dragRef.current.isDragging || physicsRef.current.isGameOver) return;
+    if (!pointerRef.current.isTouching || physicsRef.current.isGameOver) return;
     
-    const delta = e.clientX - dragRef.current.lastX;
-    const sensitivity = 0.025; // Increased sensitivity for faster spins
+    const delta = e.clientX - pointerRef.current.lastX;
     
-    physicsRef.current.towerAngle += delta * sensitivity;
-    
-    // Smooth the velocity so micro-pauses don't kill the flick inertia
-    dragRef.current.velocity = (dragRef.current.velocity * 0.4) + (delta * sensitivity * 0.6);
-    
-    dragRef.current.lastX = e.clientX;
+    // Strict 1:1 finger tracking, no messy sliding inertia
+    physicsRef.current.towerAngle += delta * 0.02;
+    pointerRef.current.lastX = e.clientX;
   };
 
   const handlePointerUp = (e) => {
     e.target.releasePointerCapture(e.pointerId);
-    dragRef.current.isDragging = false;
+    pointerRef.current.isTouching = false;
   };
+
+  // Keyboard Handlers for Laptop
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (physicsRef.current.isGameOver) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (!physicsRef.current.hasStarted) {
+          physicsRef.current.hasStarted = true;
+          setGameStarted(true);
+        }
+        if (e.key === 'ArrowLeft') keysRef.current.left = true;
+        if (e.key === 'ArrowRight') keysRef.current.right = true;
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === 'ArrowLeft') keysRef.current.left = false;
+      if (e.key === 'ArrowRight') keysRef.current.right = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
 
   useEffect(() => {
     resetGame();
@@ -509,7 +537,9 @@ export default function HelixJump() {
           {!gameStarted && !gameOver && (
             <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/30 backdrop-blur-[1px] pointer-events-none">
               <div className="bg-[#fcf6bd] border-[3px] border-black shadow-[4px_4px_0_0_#000] p-4 text-center animate-bounce mt-32">
-                <p className="font-black text-xl uppercase">Drag to Spin!</p>
+                <p className="font-black text-sm uppercase mb-2">Swipe Finger</p>
+                <p className="font-black text-sm uppercase mb-2">OR</p>
+                <p className="font-black text-sm uppercase">Use Arrow Keys!</p>
               </div>
             </div>
           )}
