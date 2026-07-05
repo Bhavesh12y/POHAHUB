@@ -3,26 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 
 // --- GAME CONSTANTS ---
-// Increased canvas size for a larger gaming window
 const CANVAS_WIDTH = 400; 
 const CANVAS_HEIGHT = 600; 
 
-// Tweaked physics for a floatier, slower fall and smoother jump
 const GRAVITY = 0.15; 
 const JUMP_STRENGTH = -5.5; 
 
 const PIPE_SPEED = 2.5;
 const PIPE_WIDTH = 60;
-const PIPE_GAP = 160; // Slightly larger gap for the bigger screen
+const PIPE_GAP = 160; 
 const BIRD_SIZE = 34;
-const BIRD_X = 60; // Pushed bird slightly forward
-const PIPE_SPAWN_RATE = 110; // Adjusted for the wider screen
+const BIRD_X = 60; 
+const PIPE_SPAWN_RATE = 110; 
 
 export default function FlappyBird() {
   const navigate = useNavigate();
 
   // -- High Performance Game State (Refs) --
   const frameRef = useRef(null);
+  const lastTimeRef = useRef(0); // For Delta Time
   const framesCount = useRef(0);
   const physicsRef = useRef({
     birdY: CANVAS_HEIGHT / 2,
@@ -43,11 +42,9 @@ export default function FlappyBird() {
   const [gameOver, setGameOver] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   
-  // -- Countdown State --
   const [countdown, setCountdown] = useState(null);
   const countdownIntervalRef = useRef(null);
   
-  // -- Leaderboard & High Score State --
   const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
   
@@ -57,7 +54,6 @@ export default function FlappyBird() {
     return saved !== null ? parseInt(saved, 10) : 0;
   });
 
-  // Track personal best locally
   useEffect(() => {
     if (score > localHighScore) {
       setLocalHighScore(score);
@@ -65,23 +61,17 @@ export default function FlappyBird() {
     }
   }, [score, localHighScore]);
 
-  // -- FETCH AND SYNC LEADERBOARD --
   useEffect(() => {
     const s = connectSocket();
-
     const fetchLeaderboard = () => {
       emitWithAck('leaderboard:get', 'flappy-bird').then((res) => {
         if (res?.ok) setGlobalLeaderboard(res.leaderboard);
       });
     };
-
-    const handleLeaderboardUpdate = (newLeaderboard) => {
-      setGlobalLeaderboard(newLeaderboard);
-    };
+    const handleLeaderboardUpdate = (newLeaderboard) => setGlobalLeaderboard(newLeaderboard);
 
     if (s.connected) fetchLeaderboard();
     else s.on('connect', fetchLeaderboard);
-
     s.on('leaderboard:update:flappy-bird', handleLeaderboardUpdate);
 
     return () => {
@@ -90,33 +80,23 @@ export default function FlappyBird() {
     };
   }, []);
 
-  // Cleanup countdown on unmount
   useEffect(() => {
     return () => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-      }
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
   }, []);
 
-  // -- SUBMIT SCORE ON GAME OVER --
   useEffect(() => {
     if (gameOver && !hasSubmittedScore && score > 0) {
       setHasSubmittedScore(true);
-      emitWithAck('leaderboard:submit', { 
-        gameId: 'flappy-bird', 
-        name: playerName, 
-        score: score 
-      });
+      emitWithAck('leaderboard:submit', { gameId: 'flappy-bird', name: playerName, score: score });
     }
   }, [gameOver, hasSubmittedScore, score, playerName]);
 
-  // -- Game Logic --
   const jump = useCallback(() => {
     if (physicsRef.current.isGameOver) return;
     
     if (!physicsRef.current.hasStarted) {
-      // Trigger Countdown if not already counting down
       if (countdownIntervalRef.current === null && countdown === null) {
         setCountdown(3);
         countdownIntervalRef.current = setInterval(() => {
@@ -124,21 +104,18 @@ export default function FlappyBird() {
             if (prev <= 1) {
               clearInterval(countdownIntervalRef.current);
               countdownIntervalRef.current = null;
-              
-              // Start game mechanics
               physicsRef.current.hasStarted = true;
               setGameStarted(true);
               setHasSubmittedScore(false);
-              physicsRef.current.birdV = JUMP_STRENGTH; // Initial hop when game begins
+              physicsRef.current.birdV = JUMP_STRENGTH; 
               return null;
             }
             return prev - 1;
           });
         }, 1000);
       }
-      return; // Do nothing else while counting down
+      return; 
     }
-    
     physicsRef.current.birdV = JUMP_STRENGTH;
   }, [countdown]);
 
@@ -148,6 +125,7 @@ export default function FlappyBird() {
       countdownIntervalRef.current = null;
     }
     setCountdown(null);
+    lastTimeRef.current = 0; // Reset time tracker
     
     physicsRef.current = {
       birdY: CANVAS_HEIGHT / 2,
@@ -170,14 +148,21 @@ export default function FlappyBird() {
     const maxPipeHeight = CANVAS_HEIGHT - PIPE_GAP - minPipeHeight;
     const topHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1)) + minPipeHeight;
     
-    physicsRef.current.pipes.push({
-      x: CANVAS_WIDTH,
-      topHeight: topHeight,
-      passed: false
-    });
+    physicsRef.current.pipes.push({ x: CANVAS_WIDTH, topHeight: topHeight, passed: false });
   };
 
-  const gameLoop = useCallback(() => {
+  const gameLoop = useCallback((timestamp) => {
+    if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+    const dt = timestamp - lastTimeRef.current;
+    lastTimeRef.current = timestamp;
+
+    if (dt > 100) {
+      frameRef.current = requestAnimationFrame(gameLoop);
+      return;
+    }
+
+    const timeScale = dt / (1000 / 60);
+
     if (physicsRef.current.isGameOver || !physicsRef.current.hasStarted) {
       frameRef.current = requestAnimationFrame(gameLoop);
       return;
@@ -185,31 +170,29 @@ export default function FlappyBird() {
 
     const state = physicsRef.current;
 
-    // Apply Gravity
-    state.birdV += GRAVITY;
-    state.birdY += state.birdV;
+    // Apply normalized Gravity
+    state.birdV += GRAVITY * timeScale;
+    state.birdY += state.birdV * timeScale;
 
-    // Floor / Ceiling Collision
     if (state.birdY + BIRD_SIZE >= CANVAS_HEIGHT || state.birdY <= 0) {
       state.isGameOver = true;
       setGameOver(true);
     }
 
-    // Pipe Logic
-    framesCount.current++;
-    if (framesCount.current % PIPE_SPAWN_RATE === 0) {
+    // Normalized Spawn Timer
+    framesCount.current += timeScale;
+    if (framesCount.current >= PIPE_SPAWN_RATE) {
       spawnPipe();
+      framesCount.current = 0; // Reset after spawning
     }
 
     state.pipes.forEach(pipe => {
-      pipe.x -= PIPE_SPEED;
+      pipe.x -= PIPE_SPEED * timeScale;
 
-      // Hitboxes
       const birdRect = { left: BIRD_X, right: BIRD_X + BIRD_SIZE, top: state.birdY, bottom: state.birdY + BIRD_SIZE };
       const topPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: 0, bottom: pipe.topHeight };
       const bottomPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: pipe.topHeight + PIPE_GAP, bottom: CANVAS_HEIGHT };
 
-      // Check Pipe Collision
       if (
         (birdRect.right > topPipeRect.left && birdRect.left < topPipeRect.right && birdRect.top < topPipeRect.bottom) ||
         (birdRect.right > bottomPipeRect.left && birdRect.left < bottomPipeRect.right && birdRect.bottom > bottomPipeRect.top)
@@ -218,7 +201,6 @@ export default function FlappyBird() {
         setGameOver(true);
       }
 
-      // Score Tracking
       if (pipe.x + PIPE_WIDTH < BIRD_X && !pipe.passed) {
         pipe.passed = true;
         state.score += 1;
@@ -226,20 +208,17 @@ export default function FlappyBird() {
       }
     });
 
-    // Cleanup off-screen pipes
     state.pipes = state.pipes.filter(p => p.x + PIPE_WIDTH > 0);
 
-    // Sync to React for Rendering
     setGameState({
       birdY: state.birdY,
       birdV: state.birdV,
-      pipes: [...state.pipes] // Clone array to trigger re-render
+      pipes: [...state.pipes] 
     });
 
     frameRef.current = requestAnimationFrame(gameLoop);
   }, []);
 
-  // -- Input & Loop Mount --
   useEffect(() => {
     frameRef.current = requestAnimationFrame(gameLoop);
     
@@ -260,13 +239,10 @@ export default function FlappyBird() {
   return (
     <div className="flex flex-col items-center min-h-screen pt-0 pb-10 sm:justify-center">
       <div className="w-full max-w-[600px] p-2 sm:p-4 relative z-10">
-        
-        {/* Header (Mirrors BlockBlaster) */}
         <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 sm:pb-4 gap-2">
           <h1 className="text-3xl sm:text-5xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">
             Flappy<br/>Bird
           </h1>
-          
           <div className="flex gap-2 sm:gap-4 shrink-0">
             <div className="bg-[#ff99c8] border-[3px] border-black shadow-[2px_2px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] px-2 sm:px-4 py-1 sm:py-2 text-black text-center min-w-[70px] sm:min-w-[90px]">
               <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Score</div>
@@ -279,7 +255,6 @@ export default function FlappyBird() {
           </div>
         </div>
         
-        {/* Controls */}
         <div className="flex justify-between items-center mb-4 sm:mb-6 gap-4">
           <button 
             onClick={() => navigate('/')} 
@@ -289,16 +264,13 @@ export default function FlappyBird() {
           </button>
         </div>
 
-        {/* Game Canvas Container */}
         <div 
           className="mx-auto bg-white border-[4px] border-black shadow-[8px_8px_0_0_#000] relative overflow-hidden mb-8 touch-none select-none cursor-pointer"
           style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
           onPointerDown={jump}
         >
-          {/* Subtle Grid Background */}
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgMjBoMjBWMEgwem0xOS0xdjEtMWgtMXYxLTEtMS0xIiBmaWxsPSJub25lIiBzdHJva2U9IiNlNWU3ZWIiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')] opacity-50 z-0 pointer-events-none" />
 
-          {/* Initial Start Screen Overlay */}
           {!gameStarted && !gameOver && countdown === null && (
             <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/50 backdrop-blur-[2px]">
               <div className="bg-[#fcf6bd] border-[3px] border-black shadow-[4px_4px_0_0_#000] p-4 text-center animate-bounce">
@@ -307,7 +279,6 @@ export default function FlappyBird() {
             </div>
           )}
 
-          {/* Countdown Overlay */}
           {!gameStarted && countdown !== null && (
             <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/50 backdrop-blur-[2px]">
               <div className="text-7xl font-black text-[#ef476f] animate-ping" style={{ textShadow: '4px 4px 0 #000' }}>
@@ -316,7 +287,6 @@ export default function FlappyBird() {
             </div>
           )}
 
-          {/* Game Over Overlay */}
           {gameOver && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center">
               <div className="bg-[#ef476f] border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 text-center transform -rotate-2">
@@ -331,62 +301,38 @@ export default function FlappyBird() {
             </div>
           )}
 
-          {/* Bird */}
           <div 
             className="absolute z-20 bg-[#ffd166] border-[3px] border-black shadow-[2px_2px_0_0_#000] rounded-sm transition-transform duration-75"
             style={{ 
-              width: BIRD_SIZE, 
-              height: BIRD_SIZE, 
-              left: BIRD_X, 
-              top: gameState.birdY,
-              transform: `rotate(${Math.min(Math.max(gameState.birdV * 4, -25), 90)}deg)` // Tilts based on velocity
+              width: BIRD_SIZE, height: BIRD_SIZE, left: BIRD_X, top: gameState.birdY,
+              transform: `rotate(${Math.min(Math.max(gameState.birdV * 4, -25), 90)}deg)` 
             }}
           >
-            {/* Cute Little Bird Eye */}
             <div className="absolute top-1 right-2 w-2 h-2 bg-white border-[1px] border-black rounded-full flex items-center justify-center">
                 <div className="w-1 h-1 bg-black rounded-full" />
             </div>
             <div className="absolute top-3 right-[-6px] w-3 h-2 bg-[#ff99c8] border-[1px] border-black rounded-r-full" />
           </div>
 
-          {/* Pipes */}
           {gameState.pipes.map((pipe, idx) => (
             <React.Fragment key={idx}>
-              {/* Top Pipe */}
               <div 
                 className="absolute z-10 bg-[#06d6a0] border-[3px] border-black shadow-[4px_4px_0_0_#000]"
-                style={{
-                  left: pipe.x,
-                  top: 0,
-                  width: PIPE_WIDTH,
-                  height: pipe.topHeight
-                }}
+                style={{ left: pipe.x, top: 0, width: PIPE_WIDTH, height: pipe.topHeight }}
               >
-                {/* Pipe Lip */}
                 <div className="absolute bottom-[-3px] left-[-4px] right-[-4px] h-6 bg-[#06d6a0] border-[3px] border-black" />
               </div>
-
-              {/* Bottom Pipe */}
               <div 
                 className="absolute z-10 bg-[#06d6a0] border-[3px] border-black shadow-[4px_4px_0_0_#000]"
-                style={{
-                  left: pipe.x,
-                  top: pipe.topHeight + PIPE_GAP,
-                  width: PIPE_WIDTH,
-                  height: CANVAS_HEIGHT - (pipe.topHeight + PIPE_GAP)
-                }}
+                style={{ left: pipe.x, top: pipe.topHeight + PIPE_GAP, width: PIPE_WIDTH, height: CANVAS_HEIGHT - (pipe.topHeight + PIPE_GAP) }}
               >
-                 {/* Pipe Lip */}
                  <div className="absolute top-[-3px] left-[-4px] right-[-4px] h-6 bg-[#06d6a0] border-[3px] border-black" />
               </div>
             </React.Fragment>
           ))}
-          
-          {/* Ground Floor visual */}
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-[#fcf6bd] border-t-[3px] border-black z-20" />
         </div>
 
-        {/* --- GLOBAL TOP 3 LEADERBOARD --- */}
         <div className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 w-full transform -rotate-1">
           <h3 className="text-xl sm:text-2xl font-black uppercase text-black mb-4 flex items-center justify-between">
             <span>Global Top 3</span>
@@ -401,30 +347,19 @@ export default function FlappyBird() {
               {globalLeaderboard.map((entry, idx) => {
                 const rankColors = ['bg-[#ffd166]', 'bg-[#d0f4de]', 'bg-[#ffb5a7]'];
                 const bgColor = rankColors[idx] || 'bg-white';
-                
                 return (
-                  <li 
-                    key={entry.id || idx} 
-                    className={`${bgColor} border-[3px] border-black p-3 sm:p-4 shadow-[4px_4px_0_0_#000] flex justify-between items-center transition-transform hover:-translate-y-1`}
-                  >
+                  <li key={entry.id || idx} className={`${bgColor} border-[3px] border-black p-3 sm:p-4 shadow-[4px_4px_0_0_#000] flex justify-between items-center transition-transform hover:-translate-y-1`}>
                     <div className="flex items-center gap-3 sm:gap-4">
-                      <span className="text-lg sm:text-xl font-black bg-white border-[2px] border-black rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shadow-[2px_2px_0_0_#000]">
-                        #{idx + 1}
-                      </span>
-                      <span className="font-black uppercase text-base sm:text-lg tracking-wider">
-                        {entry.name}
-                      </span>
+                      <span className="text-lg sm:text-xl font-black bg-white border-[2px] border-black rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shadow-[2px_2px_0_0_#000]">#{idx + 1}</span>
+                      <span className="font-black uppercase text-base sm:text-lg tracking-wider">{entry.name}</span>
                     </div>
-                    <span className="font-black text-xl sm:text-2xl">
-                      {entry.score}
-                    </span>
+                    <span className="font-black text-xl sm:text-2xl">{entry.score}</span>
                   </li>
                 );
               })}
             </ul>
           )}
         </div>
-
       </div>
     </div>
   );
