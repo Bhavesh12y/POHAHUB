@@ -184,6 +184,12 @@ export default function Layout() {
               <Link to="/dino" className="hover:underline decoration-[3px] underline-offset-4">
                 Dino Run Guide
               </Link>
+              <Link to="/flappy-bird" className="hover:underline decoration-[3px] underline-offset-4">
+                Flappy Bird Guide
+              </Link>
+              <Link to="/helix-jump" className="hover:underline decoration-[3px] underline-offset-4">
+                Helix Jump Guide
+              </Link>
             </nav>
           )}
         </div>
