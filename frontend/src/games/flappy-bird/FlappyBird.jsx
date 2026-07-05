@@ -3,20 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 
 // --- GAME CONSTANTS ---
-// Increased canvas size for a larger gaming window
 const CANVAS_WIDTH = 400; 
 const CANVAS_HEIGHT = 600; 
-
-// Tweaked physics for a floatier, slower fall and smoother jump
 const GRAVITY = 0.25; 
 const JUMP_STRENGTH = -4.5; 
-
-const PIPE_SPEED = 2.5;
 const PIPE_WIDTH = 60;
-const PIPE_GAP = 160; // Slightly larger gap for the bigger screen
 const BIRD_SIZE = 34;
-const BIRD_X = 60; // Pushed bird slightly forward
-const PIPE_SPAWN_RATE = 110; // Adjusted for the wider screen
+const BIRD_X = 60; 
+
+// --- PROGRESSIVE DIFFICULTY LOGIC ---
+const getDifficultyParams = (score) => {
+  // Speed scales up by 0.15 per point, capping at 5.5
+  const speed = Math.min(5.5, 2.5 + (score * 0.15));
+  // Gap shrinks by 2px per point, capping at 105px (very tight!)
+  const gap = Math.max(105, 160 - (score * 2));
+  // Spawn rate gets faster (lower frame delay), capping at 60 frames
+  const spawnRate = Math.max(60, 110 - (score * 1.5));
+  
+  return { speed, gap, spawnRate };
+};
 
 export default function FlappyBird() {
   const navigate = useNavigate();
@@ -116,7 +121,6 @@ export default function FlappyBird() {
     if (physicsRef.current.isGameOver) return;
     
     if (!physicsRef.current.hasStarted) {
-      // Trigger Countdown if not already counting down
       if (countdownIntervalRef.current === null && countdown === null) {
         setCountdown(3);
         countdownIntervalRef.current = setInterval(() => {
@@ -125,18 +129,17 @@ export default function FlappyBird() {
               clearInterval(countdownIntervalRef.current);
               countdownIntervalRef.current = null;
               
-              // Start game mechanics
               physicsRef.current.hasStarted = true;
               setGameStarted(true);
               setHasSubmittedScore(false);
-              physicsRef.current.birdV = JUMP_STRENGTH; // Initial hop when game begins
+              physicsRef.current.birdV = JUMP_STRENGTH;
               return null;
             }
             return prev - 1;
           });
         }, 1000);
       }
-      return; // Do nothing else while counting down
+      return; 
     }
     
     physicsRef.current.birdV = JUMP_STRENGTH;
@@ -166,13 +169,17 @@ export default function FlappyBird() {
   };
 
   const spawnPipe = () => {
+    // Fetch the dynamically scaled gap size based on current score
+    const { gap } = getDifficultyParams(physicsRef.current.score);
+    
     const minPipeHeight = 50;
-    const maxPipeHeight = CANVAS_HEIGHT - PIPE_GAP - minPipeHeight;
+    const maxPipeHeight = CANVAS_HEIGHT - gap - minPipeHeight;
     const topHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1)) + minPipeHeight;
     
     physicsRef.current.pipes.push({
       x: CANVAS_WIDTH,
       topHeight: topHeight,
+      gap: gap, // Store this pipe's specific gap size so hitboxes remain perfectly accurate as they scroll
       passed: false
     });
   };
@@ -184,6 +191,9 @@ export default function FlappyBird() {
     }
 
     const state = physicsRef.current;
+    
+    // Dynamically scale game properties based on current score
+    const { speed, spawnRate } = getDifficultyParams(state.score);
 
     // Apply Gravity
     state.birdV += GRAVITY;
@@ -195,19 +205,20 @@ export default function FlappyBird() {
       setGameOver(true);
     }
 
-    // Pipe Logic
+    // Pipe Spawning Logic (Now scales aggressively)
     framesCount.current++;
-    if (framesCount.current % PIPE_SPAWN_RATE === 0) {
+    if (framesCount.current >= spawnRate) {
       spawnPipe();
+      framesCount.current = 0;
     }
 
     state.pipes.forEach(pipe => {
-      pipe.x -= PIPE_SPEED;
+      pipe.x -= speed;
 
       // Hitboxes
       const birdRect = { left: BIRD_X, right: BIRD_X + BIRD_SIZE, top: state.birdY, bottom: state.birdY + BIRD_SIZE };
       const topPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: 0, bottom: pipe.topHeight };
-      const bottomPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: pipe.topHeight + PIPE_GAP, bottom: CANVAS_HEIGHT };
+      const bottomPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: pipe.topHeight + pipe.gap, bottom: CANVAS_HEIGHT };
 
       // Check Pipe Collision
       if (
@@ -233,7 +244,7 @@ export default function FlappyBird() {
     setGameState({
       birdY: state.birdY,
       birdV: state.birdV,
-      pipes: [...state.pipes] // Clone array to trigger re-render
+      pipes: [...state.pipes] 
     });
 
     frameRef.current = requestAnimationFrame(gameLoop);
@@ -339,7 +350,7 @@ export default function FlappyBird() {
               height: BIRD_SIZE, 
               left: BIRD_X, 
               top: gameState.birdY,
-              transform: `rotate(${Math.min(Math.max(gameState.birdV * 4, -25), 90)}deg)` // Tilts based on velocity
+              transform: `rotate(${Math.min(Math.max(gameState.birdV * 4, -25), 90)}deg)` 
             }}
           >
             {/* Cute Little Bird Eye */}
@@ -371,9 +382,9 @@ export default function FlappyBird() {
                 className="absolute z-10 bg-[#06d6a0] border-[3px] border-black shadow-[4px_4px_0_0_#000]"
                 style={{
                   left: pipe.x,
-                  top: pipe.topHeight + PIPE_GAP,
+                  top: pipe.topHeight + pipe.gap,
                   width: PIPE_WIDTH,
-                  height: CANVAS_HEIGHT - (pipe.topHeight + PIPE_GAP)
+                  height: CANVAS_HEIGHT - (pipe.topHeight + pipe.gap)
                 }}
               >
                  {/* Pipe Lip */}
