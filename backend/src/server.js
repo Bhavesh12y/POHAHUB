@@ -41,7 +41,9 @@ const io = new Server(httpServer, {
 const globalLeaderboards = {
   '2048': [],
   'block-blaster': [],
-  'dino': []
+  'dino': [],
+  'flappy-bird': [],
+  'helix-jump': [],
 };
 
 // Tracks active scribble games to avoid main-thread blocking loops
