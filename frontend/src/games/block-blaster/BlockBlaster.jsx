@@ -25,6 +25,7 @@ export default function BlockBlaster() {
   
   // -- Refs for Stale-State Prevention --
   const gridRef = useRef(null);
+  const dragNodeRef = useRef(null); // Direct DOM ref for zero-latency dragging
   const boardRef = useRef(Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null)));
   const shapesRef = useRef([]);
   const scoreRef = useRef(0);
@@ -47,7 +48,7 @@ export default function BlockBlaster() {
   const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
   
   const playerName = localStorage.getItem('Doozles-player-name') || 'Player';
- const [localHighScore, setLocalHighScore] = useState(() => {
+  const [localHighScore, setLocalHighScore] = useState(() => {
     const saved = localStorage.getItem('blockblaster-highScore');
     return saved !== null ? parseInt(saved, 10) : 0;
   });
@@ -82,7 +83,6 @@ export default function BlockBlaster() {
   });
 
   // -- FETCH AND SYNC LEADERBOARD --
-  // -- FETCH AND SYNC LEADERBOARD --
   useEffect(() => {
     const s = connectSocket();
 
@@ -96,34 +96,28 @@ export default function BlockBlaster() {
       setGlobalLeaderboard(newLeaderboard);
     };
 
-    // 1. Listen for real-time updates from other players
-    s.on('leaderboard:update:block-blaster', handleLeaderboardUpdate);
-
-    // 2. Fetch initial data safely
     if (s.connected) {
-      // If the socket is already ready, fetch immediately
       fetchLeaderboard();
     } else {
-      // If it's still connecting, wait for the 'connect' event
       s.on('connect', fetchLeaderboard);
     }
+
+    s.on('leaderboard:update:block-blaster', handleLeaderboardUpdate);
 
     return () => {
       s.off('leaderboard:update:block-blaster', handleLeaderboardUpdate);
       s.off('connect', fetchLeaderboard);
     };
   }, []);
+
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      // Cancel the event
       e.preventDefault();
-      // Chrome requires returnValue to be set to trigger the prompt
       e.returnValue = ''; 
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
 
-    // Cleanup the event listener when the component unmounts
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
@@ -181,7 +175,7 @@ export default function BlockBlaster() {
     const emptyBoard = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
     comboRef.current = 1;
     setCombo(1);
-    setHasSubmittedScore(false); // Reset for new game
+    setHasSubmittedScore(false); 
     
     const initialShapes = generateShapes();
     syncState(emptyBoard, initialShapes, 0, false);
@@ -346,44 +340,70 @@ export default function BlockBlaster() {
       
       const x = e.clientX;
       const y = e.clientY;
-      const gridRect = gridRef.current.getBoundingClientRect();
-      const cellW = gridRect.width / GRID_SIZE;
-      const cellH = gridRect.height / GRID_SIZE;
+      const state = dragStateRef.current;
       
-      const shape = shapesRef.current[dragStateRef.current.shapeIdx];
-      const shapeW = shape.matrix[0].length * cellW;
-      const shapeH = shape.matrix.length * cellH;
+      // [FAST PATH] Direct DOM update for zero-latency dragging
+      if (dragNodeRef.current) {
+        dragNodeRef.current.style.left = `${x}px`;
+        dragNodeRef.current.style.top = `${y}px`;
+      }
 
+      const gridRect = gridRef.current.getBoundingClientRect();
       const isMobile = window.innerWidth < 640;
-      const offsetY = isMobile ? 80 : 40;
+      const gap = isMobile ? 4 : 6;
+      const cellW = (gridRect.width + gap) / GRID_SIZE;
+      const cellH = (gridRect.height + gap) / GRID_SIZE;
+      
+      let targetX, targetY;
 
-      const targetX = x - (shapeW / 2);
-      const targetY = y - shapeH - offsetY;
+      // 1. Fetch the exact physical bounding box rendered by the browser to avoid CSS vs Math desyncs
+      if (dragNodeRef.current) {
+        const dragRect = dragNodeRef.current.getBoundingClientRect();
+        targetX = dragRect.left;
+        targetY = dragRect.top;
+      } else {
+        // Fallback for the very first frame before ref is available
+        const shape = shapesRef.current[state.shapeIdx];
+        const visualW = shape.matrix[0].length * cellW - gap;
+        const visualH = shape.matrix.length * cellH - gap;
+        const offsetY = isMobile ? 80 : 40;
+        targetX = x - (visualW / 2);
+        targetY = y - visualH - offsetY;
+      }
 
-      let c = Math.round((targetX - gridRect.left) / cellW);
-      let r = Math.round((targetY - gridRect.top) / cellH);
+      // 2. We align based on the CENTER of the shape's top-left block for highly forgiving snapping
+      const blockCenterX = targetX + (cellW - gap) / 2;
+      const blockCenterY = targetY + (cellH - gap) / 2;
+
+      let c = Math.floor((blockCenterX - gridRect.left) / cellW);
+      let r = Math.floor((blockCenterY - gridRect.top) / cellH);
 
       const margin = 2;
       const isNearGrid = (
-        targetX >= gridRect.left - (cellW * margin) && 
-        targetX <= gridRect.right + (cellW * margin) && 
-        targetY >= gridRect.top - (cellH * margin) && 
-        targetY <= gridRect.bottom + (cellH * margin)
+        blockCenterX >= gridRect.left - (cellW * margin) && 
+        blockCenterX <= gridRect.right + (cellW * margin) && 
+        blockCenterY >= gridRect.top - (cellH * margin) && 
+        blockCenterY <= gridRect.bottom + (cellH * margin)
       );
 
       let isValid = false;
       if (isNearGrid) {
-        isValid = canPlaceShape(boardRef.current, shape, r, c);
+        isValid = canPlaceShape(boardRef.current, shapesRef.current[state.shapeIdx], r, c);
       } else {
         r = null; c = null;
       }
 
-      dragStateRef.current = {
-        ...dragStateRef.current,
-        x, y, hoverR: r, hoverC: c, isValidHover: isValid
-      };
-      
-      setDragRender({ ...dragStateRef.current });
+      // [OPTIMIZATION] Only trigger a heavy React state re-render if the grid shadow position actually jumps
+      if (state.hoverR !== r || state.hoverC !== c || state.isValidHover !== isValid) {
+        dragStateRef.current = {
+          ...state,
+          x, y, hoverR: r, hoverC: c, isValidHover: isValid
+        };
+        setDragRender({ ...dragStateRef.current });
+      } else {
+        dragStateRef.current.x = x;
+        dragStateRef.current.y = y;
+      }
     };
 
     const handlePointerUp = () => {
@@ -460,24 +480,26 @@ export default function BlockBlaster() {
           30% { transform: scale(1.15); filter: brightness(1.4); z-index: 10; box-shadow: 0 0 20px rgba(255,255,255,0.9); border-color: white; }
           100% { transform: scale(0.5) rotate(15deg); opacity: 0; filter: brightness(2); }
         }
+        
+        /* OVERHAULED INTENSE GLOW EFFECT */
         @keyframes smoothGlow {
-          0% { box-shadow: inset 0 0 5px rgba(255,255,255,0.2), 0 0 5px rgba(255,255,255,0.1); filter: brightness(1.05); }
-          100% { box-shadow: inset 0 0 20px rgba(255,255,255,0.7), 0 0 15px rgba(255,255,255,0.5); filter: brightness(1.25); }
+          0% { box-shadow: inset 0 0 10px rgba(255,255,255,0.4), 0 0 10px rgba(255,255,255,0.3); filter: brightness(1.1); border-color: rgba(255,255,255,0.8); }
+          100% { box-shadow: inset 0 0 25px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8); filter: brightness(1.6) contrast(1.1); border-color: white; transform: scale(1.05); }
         }
         
         .animate-float { animation: floatUp 1s ease-out forwards; }
         .animate-shake { animation: boardShake 0.2s ease-in-out; }
         .animate-clear-pop { animation: blockPopClear 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         .predictive-highlight { 
-          animation: smoothGlow 1.5s ease-in-out infinite alternate; 
-          border-color: rgba(255, 255, 255, 0.85) !important; 
-          z-index: 5; 
+          animation: smoothGlow 0.35s ease-in-out infinite alternate !important; 
+          z-index: 10; 
         }
       `}</style>
 
       {dragRender.isDragging && availableShapes[dragRender.shapeIdx] && (
         <div 
-          className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)] transition-transform duration-75 ease-out"
+          ref={dragNodeRef} // Fixed DOM rendering for instant cursor tracking
+          className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)]"
           style={{ 
               left: dragRender.x, 
               top: dragRender.y,
