@@ -103,6 +103,8 @@ export default function App() {
           <Route path="games/dino" element={<Dino />} />
           <Route path="games/flappy-bird" element={<FlappyBirdL />} />
           <Route path="games/helix-jump" element={<HelixJump />} />
+          <Route path="/flappy-bird" element={<GameSeoPage slug="flappy-bird" />} />
+          <Route path="/helix-jump" element={<GameSeoPage slug="helix-jump" />} />  
 
           <Route
             path="*"
