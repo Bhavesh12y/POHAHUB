@@ -144,8 +144,11 @@ export default function FlappyBird() {
   };
 
   const spawnPipe = () => {
+    // Fetch the dynamically scaled gap size based on current score
+    const { gap } = getDifficultyParams(physicsRef.current.score);
+    
     const minPipeHeight = 50;
-    const maxPipeHeight = CANVAS_HEIGHT - PIPE_GAP - minPipeHeight;
+    const maxPipeHeight = CANVAS_HEIGHT - gap - minPipeHeight;
     const topHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1)) + minPipeHeight;
     
     physicsRef.current.pipes.push({ x: CANVAS_WIDTH, topHeight: topHeight, passed: false });
@@ -169,6 +172,9 @@ export default function FlappyBird() {
     }
 
     const state = physicsRef.current;
+    
+    // Dynamically scale game properties based on current score
+    const { speed, spawnRate } = getDifficultyParams(state.score);
 
     // Apply normalized Gravity
     state.birdV += GRAVITY * timeScale;
@@ -191,7 +197,7 @@ export default function FlappyBird() {
 
       const birdRect = { left: BIRD_X, right: BIRD_X + BIRD_SIZE, top: state.birdY, bottom: state.birdY + BIRD_SIZE };
       const topPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: 0, bottom: pipe.topHeight };
-      const bottomPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: pipe.topHeight + PIPE_GAP, bottom: CANVAS_HEIGHT };
+      const bottomPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: pipe.topHeight + pipe.gap, bottom: CANVAS_HEIGHT };
 
       if (
         (birdRect.right > topPipeRect.left && birdRect.left < topPipeRect.right && birdRect.top < topPipeRect.bottom) ||
