@@ -16,6 +16,15 @@ const BIRD_SIZE = 34;
 const BIRD_X = 60; 
 const PIPE_SPAWN_RATE = 110; 
 
+// --- DYNAMIC DIFFICULTY HELPER ---
+const getDifficultyParams = (score) => {
+  return {
+    gap: Math.max(100, PIPE_GAP - (score * 2)),         // Gap shrinks as score increases
+    speed: PIPE_SPEED + (score * 0.05),                 // Speed slightly increases
+    spawnRate: Math.max(70, PIPE_SPAWN_RATE - score)    // Pipes spawn slightly faster
+  };
+};
+
 export default function FlappyBird() {
   const navigate = useNavigate();
 
@@ -144,14 +153,14 @@ export default function FlappyBird() {
   };
 
   const spawnPipe = () => {
-    // Fetch the dynamically scaled gap size based on current score
     const { gap } = getDifficultyParams(physicsRef.current.score);
     
     const minPipeHeight = 50;
     const maxPipeHeight = CANVAS_HEIGHT - gap - minPipeHeight;
     const topHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1)) + minPipeHeight;
     
-    physicsRef.current.pipes.push({ x: CANVAS_WIDTH, topHeight: topHeight, passed: false });
+    // Push the gap so the gameLoop can access it!
+    physicsRef.current.pipes.push({ x: CANVAS_WIDTH, topHeight: topHeight, gap: gap, passed: false });
   };
 
   const gameLoop = useCallback((timestamp) => {
@@ -185,15 +194,16 @@ export default function FlappyBird() {
       setGameOver(true);
     }
 
-    // Normalized Spawn Timer
+    // Normalized Spawn Timer using dynamic spawnRate
     framesCount.current += timeScale;
-    if (framesCount.current >= PIPE_SPAWN_RATE) {
+    if (framesCount.current >= spawnRate) {
       spawnPipe();
       framesCount.current = 0; // Reset after spawning
     }
 
     state.pipes.forEach(pipe => {
-      pipe.x -= PIPE_SPEED * timeScale;
+      // Use dynamic speed
+      pipe.x -= speed * timeScale;
 
       const birdRect = { left: BIRD_X, right: BIRD_X + BIRD_SIZE, top: state.birdY, bottom: state.birdY + BIRD_SIZE };
       const topPipeRect = { left: pipe.x, right: pipe.x + PIPE_WIDTH, top: 0, bottom: pipe.topHeight };
@@ -330,7 +340,8 @@ export default function FlappyBird() {
               </div>
               <div 
                 className="absolute z-10 bg-[#06d6a0] border-[3px] border-black shadow-[4px_4px_0_0_#000]"
-                style={{ left: pipe.x, top: pipe.topHeight + PIPE_GAP, width: PIPE_WIDTH, height: CANVAS_HEIGHT - (pipe.topHeight + PIPE_GAP) }}
+                // Updated to use the specific pipe's gap
+                style={{ left: pipe.x, top: pipe.topHeight + pipe.gap, width: PIPE_WIDTH, height: CANVAS_HEIGHT - (pipe.topHeight + pipe.gap) }}
               >
                  <div className="absolute top-[-3px] left-[-4px] right-[-4px] h-6 bg-[#06d6a0] border-[3px] border-black" />
               </div>
