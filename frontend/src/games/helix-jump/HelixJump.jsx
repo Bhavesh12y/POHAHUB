@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 
-// --- GAME CONSTANTS ---
+// --- GAME CONSTANTS (TWEAKED FOR HEAVY, SNAPPY FEEL) ---
 const CANVAS_WIDTH = 320;
 const CANVAS_HEIGHT = 480;
-const GRAVITY = 0.29;
-const JUMP_STRENGTH = -5.0;
+const GRAVITY = 0.5; // Heavier fall
+const JUMP_STRENGTH = -8.5; // Harder, punchier bounce
 const BALL_RADIUS = 10;
-const PLATFORM_SPACING = 150;
+const PLATFORM_SPACING = 180; // More room for the faster drop
 
 // --- 3D ENGINE CONSTANTS ---
 const R_IN = 50; 
@@ -95,20 +95,14 @@ export default function HelixJump() {
   const generatePlatform = (y, difficulty) => {
     let segments = [];
     
-    // Level 0: Safe landing zone to start
     if (difficulty === 0) {
       segments.push({ start: 0, end: Math.PI * 2, type: 'safe' });
       return { y, segments, broken: false, passed: false };
     }
 
-    // Max 2 gaps to prevent impossibly thin safe zones
     let numGaps = 1;
     if (difficulty > 4) numGaps = Math.random() > 0.5 ? 2 : 1;
-    
-    // Gap size shrinks but never below 0.6 radians
     let gapSize = Math.max(0.6, 1.2 - (difficulty * 0.04)); 
-    
-    // Danger probability capped at 60%
     let dangerProb = Math.min(0.6, 0.1 + (difficulty * 0.08));
 
     const sectionArc = (Math.PI * 2) / numGaps;
@@ -117,7 +111,6 @@ export default function HelixJump() {
       let sectionStart = i * sectionArc;
       let sectionEnd = (i + 1) * sectionArc;
       
-      // Keep gap away from absolute section edges
       let gapStart = sectionStart + 0.1 + Math.random() * (sectionArc - gapSize - 0.2);
       let gapEnd = gapStart + gapSize;
       
@@ -126,18 +119,14 @@ export default function HelixJump() {
       
       const processSolid = (solid) => {
           let width = solid.end - solid.start;
-          if (width < 0.1) return; // Ignore micro-slivers
+          if (width < 0.1) return; 
           
           if (Math.random() < dangerProb) {
-              // Danger size cannot exceed 40% of the solid block
               let maxDSize = width * 0.4;
               let dSize = Math.max(0.2, Math.min(maxDSize, 0.2 + (difficulty * 0.05))); 
-              
-              // Pad danger away from edges so player always has a safe landing lip
               let padding = 0.15; 
               
               if (width < dSize + padding * 2) {
-                  // If the block is too small for danger + padding, just make it safe
                   segments.push({ start: solid.start, end: solid.end, type: 'safe' });
                   return;
               }
@@ -224,7 +213,7 @@ export default function HelixJump() {
     
     // Apply Tower Inertia
     if (!dragRef.current.isDragging) {
-      dragRef.current.velocity *= 0.92;
+      dragRef.current.velocity *= 0.94; // slightly less friction for longer spins
       state.towerAngle += dragRef.current.velocity;
     }
 
@@ -234,10 +223,10 @@ export default function HelixJump() {
       state.birdV += GRAVITY;
       state.birdY += state.birdV;
 
-      // Camera Follows Down smoothly
+      // Camera Follows Down smoothly (Faster tracking to match new gravity)
       const targetCam = state.birdY - 150;
       if (targetCam > state.cameraY) {
-        state.cameraY += (targetCam - state.cameraY) * 0.15;
+        state.cameraY += (targetCam - state.cameraY) * 0.2;
       }
 
       // Generate New Platforms
@@ -406,8 +395,9 @@ export default function HelixJump() {
     frameRef.current = requestAnimationFrame(gameLoop);
   }, []);
 
-  // -- Input Handlers --
+  // -- Input Handlers (FIXED: Captures pointer properly now) --
   const handlePointerDown = (e) => {
+    e.target.setPointerCapture(e.pointerId); // Lock the pointer to the canvas
     if (physicsRef.current.isGameOver) return;
     if (!physicsRef.current.hasStarted) {
       physicsRef.current.hasStarted = true;
@@ -420,32 +410,27 @@ export default function HelixJump() {
 
   const handlePointerMove = (e) => {
     if (!dragRef.current.isDragging || physicsRef.current.isGameOver) return;
-    const delta = e.clientX - dragRef.current.lastX;
     
-    physicsRef.current.towerAngle += delta * 0.015;
-    dragRef.current.velocity = delta * 0.015;
+    const delta = e.clientX - dragRef.current.lastX;
+    const sensitivity = 0.025; // Increased sensitivity for faster spins
+    
+    physicsRef.current.towerAngle += delta * sensitivity;
+    
+    // Smooth the velocity so micro-pauses don't kill the flick inertia
+    dragRef.current.velocity = (dragRef.current.velocity * 0.4) + (delta * sensitivity * 0.6);
     
     dragRef.current.lastX = e.clientX;
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e) => {
+    e.target.releasePointerCapture(e.pointerId);
     dragRef.current.isDragging = false;
   };
 
   useEffect(() => {
     resetGame();
     frameRef.current = requestAnimationFrame(gameLoop);
-    
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-    window.addEventListener('pointercancel', handlePointerUp);
-    
-    return () => {
-      cancelAnimationFrame(frameRef.current);
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-      window.removeEventListener('pointercancel', handlePointerUp);
-    };
+    return () => cancelAnimationFrame(frameRef.current);
   }, [gameLoop]);
 
   return (
@@ -504,6 +489,10 @@ export default function HelixJump() {
           className={`mx-auto bg-white border-[4px] border-black shadow-[8px_8px_0_0_#000] relative overflow-hidden mb-8 touch-none select-none cursor-grab active:cursor-grabbing ${isShaking ? 'animate-shake' : ''}`}
           style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
           onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onPointerLeave={handlePointerUp}
         >
           {/* Subtle Grid Background */}
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgMjBoMjBWMEgwem0xOS0xdjEtMWgtMXYxLTEtMS0xIiBmaWxsPSJub25lIiBzdHJva2U9IiNlNWU3ZWIiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')] opacity-50 z-0 pointer-events-none" />
