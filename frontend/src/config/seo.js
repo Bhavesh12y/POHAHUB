@@ -130,6 +130,28 @@ export const SEO_CONFIG = {
       keywords:
         'dino run online, dinosaur game online, chrome dino style game, endless runner browser game, browser games without downloading, free single player games online',
     },
+    'flappy-bird': {
+      name: 'Flappy Bird',
+      route: '/flappy-bird',
+      playPath: '/games/flappy-bird',
+      playMode: 'SinglePlayer',
+      title: 'Play Flappy Bird Online Free | Doozles',
+      description:
+        'Play Flappy Bird online for free on Doozles. Fly through pipes, beat your high score, and enjoy this classic endless arcade game directly in your browser.',
+      keywords:
+        'flappy bird online, play flappy bird free, flappy bird browser game, endless runner, arcade game online, single player browser game',
+    },
+    'helix-jump': {
+      name: 'Helix Jump',
+      route: '/helix-jump',
+      playPath: '/games/helix-jump',
+      playMode: 'SinglePlayer',
+      title: 'Play Helix Jump Online Free | Doozles',
+      description:
+        'Play Helix Jump online for free on Doozles. Guide the bouncing ball through rotating helix towers and achieve the highest score in your browser.',
+      keywords:
+        'helix jump online, play helix jump free, helix jump browser game, bouncing ball game, arcade game online, single player browser game',
+    },
   },
 };
 
@@ -564,6 +586,80 @@ const guideDetails = {
       },
     ],
   },
+  'flappy-bird': {
+    related: ['dino', 'helix-jump', '2048'],
+    intro:
+      'Flappy Bird is a simple yet challenging arcade game where you tap to keep the bird flying while avoiding pipes.',
+    rules: [
+      'Tap to flap upward.',
+      'Avoid hitting pipes or the ground.',
+      'Each pipe passed earns one point.',
+      'The game ends after a collision.',
+    ],
+    howToPlay: [
+      'Open Flappy Bird on Doozles.',
+      'Tap or click to keep the bird airborne.',
+      'Pass through pipe gaps.',
+      'Beat your highest score.',
+    ],
+    strategies: [
+      'Tap lightly instead of repeatedly.',
+      'Stay near the center of each gap.',
+      'Maintain a steady rhythm.',
+      'Avoid overcorrecting after each flap.',
+    ],
+    faq: [
+      {
+        question: 'Can I play Flappy Bird online?',
+        answer: 'Yes. Flappy Bird is available for free in your browser on Doozles.',
+      },
+      {
+        question: 'Is Flappy Bird free?',
+        answer: 'Yes. No download or installation is required.',
+      },
+      {
+        question: 'Can I play on mobile?',
+        answer: 'Yes. Flappy Bird works on desktop and mobile browsers.',
+      },
+    ],
+  },
+  'helix-jump': {
+    related: ['flappy-bird', '2048', 'block-blaster'],
+    intro:
+      'Helix Jump is a fast-paced arcade game where you rotate platforms to guide a bouncing ball safely downward.',
+    rules: [
+      'Rotate the tower to create a path.',
+      'Avoid dangerous colored sections.',
+      'Reach the bottom to complete the level.',
+      'Missing safe platforms ends the run.',
+    ],
+    howToPlay: [
+      'Open Helix Jump on Doozles.',
+      'Drag left or right to rotate the tower.',
+      'Guide the ball through open spaces.',
+      'Avoid red platforms.',
+    ],
+    strategies: [
+      'Plan several platforms ahead.',
+      'Use long drops when safe.',
+      'Avoid rushing difficult sections.',
+      'Stay focused near the bottom.',
+    ],
+    faq: [
+      {
+        question: 'Can I play Helix Jump online?',
+        answer: 'Yes. Helix Jump runs directly in your browser.',
+      },
+      {
+        question: 'Is Helix Jump free?',
+        answer: 'Yes. You can play without downloading anything.',
+      },
+      {
+        question: 'Does Helix Jump work on mobile?',
+        answer: 'Yes. It supports mobile browsers.',
+      },
+    ],
+  },
 };
 
 function buildGameSeo(id) {
@@ -596,55 +692,5 @@ Object.assign(gamesSeo, {
     id: 'rock-paper-scissor',
     name: 'Rock Paper Scissor',
     path: '/rock-paper-scissor',
-  },
-  chess: {
-    id: 'chess',
-    name: 'Chess',
-    title: 'Play Chess Online With Friends | Doozles',
-    description:
-      'Learn chess basics, rules, and strategy while Doozles prepares a private online chess room experience.',
-    keywords:
-      'play chess online, chess with friends, browser chess game, strategy games online, browser games without downloading',
-    path: '/chess',
-    route: '/chess',
-    playPath: '/games/chess',
-    playMode: 'MultiPlayer',
-    related: ['tictactoe', 'connect-four', 'ludo'],
-    intro:
-      'Chess is a two-player strategy game where each side tries to checkmate the opposing king through careful piece movement and planning.',
-    rules: [
-      'Each piece moves in its own pattern across the board.',
-      'The king must never remain in check.',
-      'The goal is to checkmate the opponent king.',
-      'Games can also end by draw, stalemate, resignation, or timeout depending on the format.',
-    ],
-    howToPlay: [
-      'Choose a side and learn the movement pattern of each piece.',
-      'Develop pieces toward the center and protect your king.',
-      'Look for checks, captures, and threats each turn.',
-      'Checkmate the opponent king to win.',
-    ],
-    strategies: [
-      'Control the center early with pawns and minor pieces.',
-      'Castle to improve king safety.',
-      'Avoid moving the same piece repeatedly in the opening.',
-      'Before every move, check whether any piece is hanging.',
-    ],
-    faq: [
-      {
-        question: 'Is Chess playable on Doozles right now?',
-        answer:
-          'The SEO guide page is ready, but the live Chess room flow should be added before promoting the Play Now action widely.',
-      },
-      {
-        question: 'How many players does Chess need?',
-        answer: 'Chess is a two-player game.',
-      },
-      {
-        question: 'What is checkmate?',
-        answer:
-          'Checkmate happens when a king is under attack and the defending player has no legal move to escape.',
-      },
-    ],
   },
 });
