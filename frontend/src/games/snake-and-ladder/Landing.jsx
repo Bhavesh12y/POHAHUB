@@ -32,6 +32,7 @@ export default function SnakeAndLadderLanding() {
       setError(res.error || 'Failed to create room');
     }
   };
+  // Join room handler
 
   const handleJoin = async (e) => {
     e.preventDefault();
@@ -56,6 +57,7 @@ export default function SnakeAndLadderLanding() {
       setError(res.error || 'Failed to join room');
     }
   };
+  
 
   return (
     <div className="max-w-xl mx-auto px-5 py-12 sm:py-16">
