@@ -42,7 +42,7 @@ export default class AirHockeyGame {
         this.strikerVelocities = { p1: { vx: 0, vy: 0 }, p2: { vx: 0, vy: 0 } };
     }
 
-    addPlayer(socketId, playerId) {
+addPlayer(socketId, playerId) {
         if (this.destroyTimeout) {
             clearTimeout(this.destroyTimeout);
             this.destroyTimeout = null;
@@ -54,6 +54,10 @@ export default class AirHockeyGame {
         this.players[socketId] = { id: playerId, role };
 
         this.io.to(socketId).emit('airHockeyRole', { role });
+
+        // FIX: Immediately send the initial game state to the player who just joined
+        // This gives the client the data it needs to render the initial board.
+        this.io.to(socketId).emit('gameState', this.state);
 
         if (Object.keys(this.players).length === 2) {
             this.startCountdown();
