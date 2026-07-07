@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
-import WaitingLobby from '../../components/WaitingLobby'; // FIXED PATH
-import VoiceChat from '../../components/VoiceChat'; // IMPORTED VOICE CHAT
+import WaitingLobby from '../../components/WaitingLobby';
+import VoiceChat from '../../components/VoiceChat';
 
-// Reusable Chat Panel (Matched perfectly to your TicTacToe style)
+// Reusable Chat Panel (unchanged)
 function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
@@ -73,12 +73,10 @@ export default function TableTennisBoard() {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   
-  // Standard Room State
   const [room, setRoom] = useState(location.state?.room ?? null);
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
 
-  // Table Tennis Physics State
   const [gameState, setGameState] = useState(null);
   const [myRole, setMyRole] = useState(null);
   const [countdown, setCountdown] = useState(null);
@@ -89,7 +87,7 @@ export default function TableTennisBoard() {
   const myPlayerId = socket.id;
   const isHost = room?.hostId === myPlayerId;
 
-  // 1. STANDARD ROOM & CHAT SYNC
+  // 1. ROOM & CHAT SYNC (unchanged)
   useEffect(() => {
     if (!username) {
       navigate(`/games/table-tennis?join=${roomCode}`);
@@ -137,7 +135,7 @@ export default function TableTennisBoard() {
     };
   }, [roomCode, navigate, username, socket]);
 
-  // 2. TABLE TENNIS PHYSICS SYNC
+  // 2. GAME SYNC (unchanged)
   useEffect(() => {
     if (room?.status !== 'playing') return;
 
@@ -167,21 +165,39 @@ export default function TableTennisBoard() {
   const handleRematch = async () => {
     const result = await emitWithAck('game:reset', {});
     if (result.ok) {
-        socket.emit('tt:rematch', roomCode.toUpperCase());
+      socket.emit('tt:rematch', roomCode.toUpperCase());
     }
   };
 
-  // ==========================================
-  // HOLD & DRAG MECHANICS + MIRRORING
-  // ==========================================
-  
+  // ──────────────────────────────────────────
+  // 3. DRAG CONTROLS – ONLY HORIZONTAL MOVEMENT
+  // ──────────────────────────────────────────
+  const processPointerMove = (e) => {
+    if (!gameState || gameState.status !== 'playing' || !containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const scaleX = 600 / rect.width;   // game width = 600px
+
+    // Get X coordinate (works for mouse and touch)
+    const clientX = e.clientX ?? (e.touches?.[0]?.clientX);
+    if (clientX === undefined) return;
+
+    const relativeX = (clientX - rect.left) * scaleX;
+
+    // Send only X to server – paddle moves left/right
+    socket.emit('tt:move', { 
+      roomId: roomCode.toUpperCase(), 
+      pos: { x: relativeX }
+    });
+  };
+
   const handlePointerDown = (e) => {
     if (gameState?.status !== 'playing') return;
     setIsDragging(true);
     try {
-        e.target.setPointerCapture(e.pointerId); 
-    } catch(err) {} // Failsafe for older browsers
-    processPointerMove(e); 
+      e.target.setPointerCapture(e.pointerId);
+    } catch (err) {}
+    processPointerMove(e);
   };
 
   const handlePointerMove = (e) => {
@@ -192,97 +208,72 @@ export default function TableTennisBoard() {
   const handlePointerUp = (e) => {
     setIsDragging(false);
     try {
-        e.target.releasePointerCapture(e.pointerId);
-    } catch(err) {}
+      e.target.releasePointerCapture(e.pointerId);
+    } catch (err) {}
   };
 
-  const processPointerMove = (e) => {
-    if (!gameState || gameState.status !== 'playing' || !containerRef.current) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    const scaleX = 1000 / rect.width;  
-    const scaleY = 600 / rect.height;  
-    
-    // Fallbacks for touch vs mouse clientX/Y
-    const clientX = e.clientX ?? (e.touches?.[0]?.clientX);
-    const clientY = e.clientY ?? (e.touches?.[0]?.clientY);
-    
-    if (clientX === undefined || clientY === undefined) return;
-
-    let relativeX = (clientX - rect.left) * scaleX;
-    const relativeY = (clientY - rect.top) * scaleY;
-    
-    // CRITICAL: If you are Player 2, your screen is flipped! 
-    // We must invert your X coordinate before sending to the server.
-    if (myRole === 'p2') {
-        relativeX = 1000 - relativeX;
-    }
-
-    socket.emit('tt:move', { 
-        roomId: roomCode.toUpperCase(), 
-        pos: { x: relativeX, y: relativeY } 
-    });
-  };
-
-  // 3. CANVAS RENDER LOOP
+  // ──────────────────────────────────────────
+  // 4. CANVAS RENDERING – VERTICAL (PORTRAIT)
+  // ──────────────────────────────────────────
   useEffect(() => {
     if (!gameState || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    const w = canvas.width = 600;
+    const h = canvas.height = 1000;
 
-    // Helper: Flips the X axis if you are Player 2 so you are always on the left!
-    const drawX = (x) => myRole === 'p2' ? 1000 - x : x;
+    // Flip Y for Player 2 so they always appear at bottom
+    const drawY = (y) => myRole === 'p2' ? h - y : y;
 
-    // Clear Canvas
+    // Clear & background
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, w, h);
 
-    // Grid pattern background
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < canvas.width; i += 50) {
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+    // Faint grid
+    ctx.strokeStyle = '#f0f0f0';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < w; i += 40) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
     }
-    for (let i = 0; i < canvas.height; i += 50) {
-      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+    for (let j = 0; j < h; j += 40) {
+      ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(w, j); ctx.stroke();
     }
 
-    // Floor line
-    ctx.fillStyle = '#f9a8d4';
-    ctx.fillRect(0, gameState.dimensions.netY, canvas.width, 10);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, gameState.dimensions.netY + 10, canvas.width, 4);
+    // Net – horizontal line in the middle
+    const netY = drawY(gameState.dimensions.netY);
+    ctx.strokeStyle = '#a3a3a3';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, netY);
+    ctx.lineTo(w, netY);
+    ctx.stroke();
 
-    // Net
-    const renderedNetX = drawX(gameState.dimensions.width / 2);
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(renderedNetX - 5, gameState.dimensions.netY - gameState.dimensions.netHeight, 10, gameState.dimensions.netHeight);
-    ctx.strokeRect(renderedNetX - 5, gameState.dimensions.netY - gameState.dimensions.netHeight, 10, gameState.dimensions.netHeight);
+    // Paddles – wide, thin rectangles
+    const p1 = gameState.paddles.p1;
+    const p2 = gameState.paddles.p2;
 
-    // P1 Paddle (Blue)
-    const renderedP1X = drawX(gameState.paddles.p1.x);
+    // P1 paddle (blue) – at the top (Y fixed, X moves)
     ctx.fillStyle = '#3b82f6';
-    ctx.fillRect(renderedP1X - 10, gameState.paddles.p1.y - 60, 20, 120);
-    ctx.strokeRect(renderedP1X - 10, gameState.paddles.p1.y - 60, 20, 120);
-    
-    // P2 Paddle (Red)
-    const renderedP2X = drawX(gameState.paddles.p2.x);
+    ctx.fillRect(p1.x - 60, drawY(p1.y) - 10, 120, 20);
+    ctx.strokeStyle = '#000';
+    ctx.strokeRect(p1.x - 60, drawY(p1.y) - 10, 120, 20);
+
+    // P2 paddle (red) – at the bottom
     ctx.fillStyle = '#ef4444';
-    ctx.fillRect(renderedP2X - 10, gameState.paddles.p2.y - 60, 20, 120);
-    ctx.strokeRect(renderedP2X - 10, gameState.paddles.p2.y - 60, 20, 120);
+    ctx.fillRect(p2.x - 60, drawY(p2.y) - 10, 120, 20);
+    ctx.strokeRect(p2.x - 60, drawY(p2.y) - 10, 120, 20);
 
     // Ball
-    const renderedBallX = drawX(gameState.ball.x);
+    const ballY = drawY(gameState.ball.y);
     ctx.beginPath();
-    ctx.arc(renderedBallX, gameState.ball.y, 14, 0, Math.PI * 2);
+    ctx.arc(gameState.ball.x, ballY, BALL_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
     ctx.fill();
 
   }, [gameState, myRole]);
 
-
-  // DYNAMIC SCOREBOARD LOGIC (Keeps "YOU" on the left)
-  const leftPlayer = myRole === 'p2' ? 'p2' : 'p1';
+  // Scoreboard – YOU always on the bottom? Better: keep the same logic as before
+  const leftPlayer = myRole === 'p2' ? 'p2' : 'p1';   // we still show "YOU" on left side of scoreboard
   const rightPlayer = myRole === 'p2' ? 'p1' : 'p2';
   const leftColor = myRole === 'p2' ? 'text-[#ef4444]' : 'text-[#3b82f6]';
   const rightColor = myRole === 'p2' ? 'text-[#3b82f6]' : 'text-[#ef4444]';
@@ -301,15 +292,7 @@ export default function TableTennisBoard() {
   return (
     <div className="w-full max-w-[1600px] mx-auto px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(1rem,3vw,2rem)] relative font-sans">
       
-      <style>{`
-        @keyframes popIn {
-          0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); }
-          100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); }
-        }
-        .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-      `}</style>
-
-      {/* MATCH CONCLUDED POPUP */}
+      {/* MATCH FINISHED POPUP */}
       {gameState?.status === 'finished' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300" />
@@ -343,10 +326,10 @@ export default function TableTennisBoard() {
         </div>
       )}
 
-      {/* MAIN SPLIT LAYOUT */}
+      {/* MAIN LAYOUT */}
       <div className="flex flex-col lg:flex-row gap-[clamp(1rem,3vw,2rem)] items-stretch">
         
-        {/* LEFT COLUMN: GAME OR LOBBY */}
+        {/* GAME COLUMN */}
         <div className="flex-1 w-full min-w-0 flex flex-col">
           <div className="bg-[#333333] border-[3px] border-black rounded-lg p-6 sm:p-8 shadow-[8px_8px_0px_#000] -rotate-1 text-white">
             
@@ -387,11 +370,11 @@ export default function TableTennisBoard() {
               </div>
             )}
 
-            {/* THE TABLE TENNIS BOARD */}
+            {/* THE GAME CANVAS – portrait orientation */}
             {gameState && (
               <div className="w-full mt-4">
                 
-                {/* Mirrored Scoreboard Overlay */}
+                {/* Scoreboard – horizontal layout */}
                 <div className="flex justify-between items-center bg-white border-[4px] border-black p-4 mb-6 shadow-[8px_8px_0px_#000] rotate-1 text-black">
                   <div className="text-center w-1/3">
                     <p className={`text-sm font-bold uppercase ${leftColor}`}>⭐ YOU</p>
@@ -407,11 +390,11 @@ export default function TableTennisBoard() {
                   </div>
                 </div>
 
+                {/* Canvas container – aspect ratio 6/10 (portrait) */}
                 <div 
                   ref={containerRef}
-                  className={`relative w-full aspect-[10/6] max-w-[1000px] mx-auto bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] -rotate-1 overflow-hidden touch-none select-none transition-all duration-200 ${isDragging ? 'cursor-grabbing ring-4 ring-[#facc15]' : 'cursor-grab'}`}
+                  className={`relative w-full aspect-[6/10] max-w-[600px] mx-auto bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] -rotate-1 overflow-hidden touch-none select-none transition-all duration-200 ${isDragging ? 'cursor-grabbing ring-4 ring-[#facc15]' : 'cursor-grab'}`}
                   
-                  // NEW DRAG EVENTS
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
@@ -420,8 +403,8 @@ export default function TableTennisBoard() {
                 >
                   <canvas 
                     ref={canvasRef} 
-                    width={1000} 
-                    height={600} 
+                    width={600} 
+                    height={1000} 
                     className="w-full h-full object-contain pointer-events-none"
                   />
 
@@ -435,16 +418,16 @@ export default function TableTennisBoard() {
                 </div>
                 
                 <div className="flex justify-center mt-8">
-                    <p className={`text-center text-sm font-bold uppercase tracking-widest px-4 py-2 border-[3px] border-black shadow-[4px_4px_0px_#000] rotate-1 transition-all ${isDragging ? 'bg-[#facc15] text-black scale-105' : 'bg-[#222] text-white'}`}>
-                    {isDragging ? '🏓 SWINGING!' : '👆 YOU ARE ON THE LEFT: HOLD & DRAG'}
-                    </p>
+                  <p className={`text-center text-sm font-bold uppercase tracking-widest px-4 py-2 border-[3px] border-black shadow-[4px_4px_0px_#000] rotate-1 transition-all ${isDragging ? 'bg-[#facc15] text-black scale-105' : 'bg-[#222] text-white'}`}>
+                    {isDragging ? '🏓 SWINGING!' : '👈 DRAG LEFT & RIGHT TO MOVE'}
+                  </p>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* RIGHT COLUMN: CHAT PANEL */}
+        {/* CHAT PANEL */}
         <div className="w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0">
           <ChatPanel messages={room.chat ?? []} onSend={handleChat} disabled={!connected} />
         </div>
