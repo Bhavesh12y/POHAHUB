@@ -82,8 +82,6 @@ export default function TableTennisBoard() {
   const [gameState, setGameState] = useState(null);
   const [myRole, setMyRole] = useState(null);
   const [countdown, setCountdown] = useState(null);
-  
-  // NEW: Drag State for better controls
   const [isDragging, setIsDragging] = useState(false);
   
   const socket = connectSocket();
@@ -174,14 +172,16 @@ export default function TableTennisBoard() {
   };
 
   // ==========================================
-  // NEW: HOLD & DRAG MECHANICS (2D Movement)
+  // HOLD & DRAG MECHANICS + MIRRORING
   // ==========================================
   
   const handlePointerDown = (e) => {
     if (gameState?.status !== 'playing') return;
     setIsDragging(true);
-    e.target.setPointerCapture(e.pointerId); // Locks pointer to container
-    processPointerMove(e); // Snap paddle instantly
+    try {
+        e.target.setPointerCapture(e.pointerId); 
+    } catch(err) {} // Failsafe for older browsers
+    processPointerMove(e); 
   };
 
   const handlePointerMove = (e) => {
@@ -191,23 +191,36 @@ export default function TableTennisBoard() {
 
   const handlePointerUp = (e) => {
     setIsDragging(false);
-    e.target.releasePointerCapture(e.pointerId);
+    try {
+        e.target.releasePointerCapture(e.pointerId);
+    } catch(err) {}
   };
 
   const processPointerMove = (e) => {
     if (!gameState || gameState.status !== 'playing' || !containerRef.current) return;
     
     const rect = containerRef.current.getBoundingClientRect();
-    // Use scaling so it perfectly maps no matter the screen size
-    const scaleX = 1000 / rect.width;  // Updated to 1000 width
-    const scaleY = 600 / rect.height;  // Updated to 600 height
+    const scaleX = 1000 / rect.width;  
+    const scaleY = 600 / rect.height;  
     
-    const relativeX = (e.clientX - rect.left) * scaleX;
-    const relativeY = (e.clientY - rect.top) * scaleY;
+    // Fallbacks for touch vs mouse clientX/Y
+    const clientX = e.clientX ?? (e.touches?.[0]?.clientX);
+    const clientY = e.clientY ?? (e.touches?.[0]?.clientY);
     
+    if (clientX === undefined || clientY === undefined) return;
+
+    let relativeX = (clientX - rect.left) * scaleX;
+    const relativeY = (clientY - rect.top) * scaleY;
+    
+    // CRITICAL: If you are Player 2, your screen is flipped! 
+    // We must invert your X coordinate before sending to the server.
+    if (myRole === 'p2') {
+        relativeX = 1000 - relativeX;
+    }
+
     socket.emit('tt:move', { 
         roomId: roomCode.toUpperCase(), 
-        pos: { x: relativeX, y: relativeY } // Sending 2D position!
+        pos: { x: relativeX, y: relativeY } 
     });
   };
 
@@ -216,6 +229,9 @@ export default function TableTennisBoard() {
     if (!gameState || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+
+    // Helper: Flips the X axis if you are Player 2 so you are always on the left!
+    const drawX = (x) => myRole === 'p2' ? 1000 - x : x;
 
     // Clear Canvas
     ctx.fillStyle = '#ffffff';
@@ -238,26 +254,38 @@ export default function TableTennisBoard() {
     ctx.fillRect(0, gameState.dimensions.netY + 10, canvas.width, 4);
 
     // Net
+    const renderedNetX = drawX(gameState.dimensions.width / 2);
     ctx.fillStyle = '#facc15';
-    ctx.fillRect((canvas.width / 2) - 5, gameState.dimensions.netY - gameState.dimensions.netHeight, 10, gameState.dimensions.netHeight);
-    ctx.strokeRect((canvas.width / 2) - 5, gameState.dimensions.netY - gameState.dimensions.netHeight, 10, gameState.dimensions.netHeight);
+    ctx.fillRect(renderedNetX - 5, gameState.dimensions.netY - gameState.dimensions.netHeight, 10, gameState.dimensions.netHeight);
+    ctx.strokeRect(renderedNetX - 5, gameState.dimensions.netY - gameState.dimensions.netHeight, 10, gameState.dimensions.netHeight);
 
-    // Paddles
+    // P1 Paddle (Blue)
+    const renderedP1X = drawX(gameState.paddles.p1.x);
     ctx.fillStyle = '#3b82f6';
-    ctx.fillRect(gameState.paddles.p1.x - 10, gameState.paddles.p1.y - 60, 20, 120);
-    ctx.strokeRect(gameState.paddles.p1.x - 10, gameState.paddles.p1.y - 60, 20, 120);
+    ctx.fillRect(renderedP1X - 10, gameState.paddles.p1.y - 60, 20, 120);
+    ctx.strokeRect(renderedP1X - 10, gameState.paddles.p1.y - 60, 20, 120);
     
+    // P2 Paddle (Red)
+    const renderedP2X = drawX(gameState.paddles.p2.x);
     ctx.fillStyle = '#ef4444';
-    ctx.fillRect(gameState.paddles.p2.x - 10, gameState.paddles.p2.y - 60, 20, 120);
-    ctx.strokeRect(gameState.paddles.p2.x - 10, gameState.paddles.p2.y - 60, 20, 120);
+    ctx.fillRect(renderedP2X - 10, gameState.paddles.p2.y - 60, 20, 120);
+    ctx.strokeRect(renderedP2X - 10, gameState.paddles.p2.y - 60, 20, 120);
 
     // Ball
+    const renderedBallX = drawX(gameState.ball.x);
     ctx.beginPath();
-    ctx.arc(gameState.ball.x, gameState.ball.y, 14, 0, Math.PI * 2);
+    ctx.arc(renderedBallX, gameState.ball.y, 14, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
     ctx.fill();
 
-  }, [gameState]);
+  }, [gameState, myRole]);
+
+
+  // DYNAMIC SCOREBOARD LOGIC (Keeps "YOU" on the left)
+  const leftPlayer = myRole === 'p2' ? 'p2' : 'p1';
+  const rightPlayer = myRole === 'p2' ? 'p1' : 'p2';
+  const leftColor = myRole === 'p2' ? 'text-[#ef4444]' : 'text-[#3b82f6]';
+  const rightColor = myRole === 'p2' ? 'text-[#3b82f6]' : 'text-[#ef4444]';
 
   if (!room) {
     return (
@@ -363,23 +391,19 @@ export default function TableTennisBoard() {
             {gameState && (
               <div className="w-full mt-4">
                 
-                {/* Scoreboard Overlay */}
+                {/* Mirrored Scoreboard Overlay */}
                 <div className="flex justify-between items-center bg-white border-[4px] border-black p-4 mb-6 shadow-[8px_8px_0px_#000] rotate-1 text-black">
                   <div className="text-center w-1/3">
-                    <p className={`text-sm font-bold uppercase ${myRole === 'p1' ? 'text-[#facc15]' : 'text-[#3b82f6]'}`}>
-                      {myRole === 'p1' ? '⭐ YOU (P1)' : 'Player 1'}
-                    </p>
-                    <p className="text-4xl font-black">{gameState.score.p1}</p>
+                    <p className={`text-sm font-bold uppercase ${leftColor}`}>⭐ YOU</p>
+                    <p className="text-4xl font-black">{gameState.score[leftPlayer]}</p>
                   </div>
                   <div className="text-center w-1/3">
                     <p className="text-xs font-bold tracking-widest uppercase text-gray-500 mb-1">Score</p>
                     <p className="text-2xl font-black bg-[#22d3ee] px-4 py-1 border-[3px] border-black shadow-[4px_4px_0px_#000] inline-block">VS</p>
                   </div>
                   <div className="text-center w-1/3">
-                    <p className={`text-sm font-bold uppercase ${myRole === 'p2' ? 'text-[#facc15]' : 'text-[#ef4444]'}`}>
-                      {myRole === 'p2' ? '⭐ YOU (P2)' : 'Player 2'}
-                    </p>
-                    <p className="text-4xl font-black">{gameState.score.p2}</p>
+                    <p className={`text-sm font-bold uppercase ${rightColor}`}>OPPONENT</p>
+                    <p className="text-4xl font-black">{gameState.score[rightPlayer]}</p>
                   </div>
                 </div>
 
@@ -412,7 +436,7 @@ export default function TableTennisBoard() {
                 
                 <div className="flex justify-center mt-8">
                     <p className={`text-center text-sm font-bold uppercase tracking-widest px-4 py-2 border-[3px] border-black shadow-[4px_4px_0px_#000] rotate-1 transition-all ${isDragging ? 'bg-[#facc15] text-black scale-105' : 'bg-[#222] text-white'}`}>
-                    {isDragging ? '🏓 SWINGING!' : '👆 HOLD AND DRAG TO PLAY'}
+                    {isDragging ? '🏓 SWINGING!' : '👆 YOU ARE ON THE LEFT: HOLD & DRAG'}
                     </p>
                 </div>
               </div>
