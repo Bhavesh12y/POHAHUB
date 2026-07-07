@@ -50,11 +50,19 @@ export default function VoiceChat({ roomCode }) {
           audio.autoplay = true;
           audio.muted = !speakerOnRef.current;
           remoteAudios.current[peerId] = audio;
+
+          // Force play and catch autoplay policy blocks
+          audio.play().catch(err => {
+            console.warn("Autoplay blocked. User interaction required:", err);
+          });
         }
       };
 
       // 3. AUTOMATIC RENEGOTIATION: This fires automatically when a track is added
       peer.onnegotiationneeded = async () => {
+        // Prevent glare: don't create an offer if we are processing an incoming offer
+        if (peer.signalingState !== "stable") return; 
+
         try {
           const offer = await peer.createOffer();
           await peer.setLocalDescription(offer);
@@ -107,6 +115,8 @@ export default function VoiceChat({ roomCode }) {
   useEffect(() => {
     return () => {
       Object.values(peers.current).forEach(peer => peer.close());
+      peers.current = {}; // Wipe the object clean to prevent stale references
+      
       if (localStream.current) {
         localStream.current.getTracks().forEach(track => track.stop());
       }
