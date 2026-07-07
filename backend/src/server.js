@@ -7,6 +7,7 @@ import { endScribbleTurn, revealHint } from './games/scribble.js';
 import { readFileSync } from "fs";
 import admin from "firebase-admin";
 import AirHockeyGame from './games/airHockey.js';
+import TableTennisGame from './games/tableTennisGame.js';
 
 const serviceAccount = JSON.parse(
   readFileSync(new URL('../serviceAccountKey.json', import.meta.url))
@@ -133,6 +134,31 @@ io.on('connection', (socket) => {
   });
 
   socket.on('airHockeyRematch', (roomId) => {
+    const room = roomManager.getRoom(roomId);
+    if (room && room.gameInstance) {
+      room.gameInstance.handleRematch();
+    }
+  });
+
+  // --- TABLE TENNIS REAL-TIME EVENTS ---
+  socket.on('tt:join', ({ roomId, playerInfo }) => {
+    const room = roomManager.getRoom(roomId);
+    if (room && room.gameType === 'table-tennis') {
+      if (!room.gameInstance) {
+        room.gameInstance = new TableTennisGame(roomId, io);
+      }
+      room.gameInstance.addPlayer(socket.id, playerInfo.id);
+    }
+  });
+
+  socket.on('tt:move', ({ roomId, yPos }) => {
+    const room = roomManager.getRoom(roomId);
+    if (room && room.gameInstance) {
+      room.gameInstance.handlePlayerMove(socket.id, yPos);
+    }
+  });
+
+  socket.on('tt:rematch', (roomId) => {
     const room = roomManager.getRoom(roomId);
     if (room && room.gameInstance) {
       room.gameInstance.handleRematch();
