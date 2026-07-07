@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "firebase-admin": "^13.10.0"
   }
 }
