@@ -1,17 +1,20 @@
-const TABLE_WIDTH = 800;
-const TABLE_HEIGHT = 500;
+// Expanded Table Size
+const TABLE_WIDTH = 1000;
+const TABLE_HEIGHT = 600;
 const NET_X = TABLE_WIDTH / 2;
-const NET_HEIGHT = 40;
+const NET_HEIGHT = 50;
 const NET_Y = TABLE_HEIGHT - NET_HEIGHT;
 
-const PADDLE_WIDTH = 15;
-const PADDLE_HEIGHT = 100;
-const BALL_RADIUS = 10;
-const GRAVITY = 0.3;
+const PADDLE_WIDTH = 20;
+const PADDLE_HEIGHT = 120; // Taller paddle
+const BALL_RADIUS = 14;    // Slightly larger ball for visibility
+
+// Slower, smoother physics
+const GRAVITY = 0.2;               // Was 0.3 or 0.4 - much floatier now
 const TABLE_FRICTION = 0.98;
-const BOUNCE_DAMPING = 0.85;
-const PADDLE_MOMENTUM_FACTOR = 0.5;
-const MAX_BALL_SPEED = 20;
+const BOUNCE_DAMPING = 0.8;
+const PADDLE_MOMENTUM_FACTOR = 0.4; // How much paddle speed transfers to ball
+const MAX_BALL_SPEED = 15;         // Was 20 - slows the maximum pace down
 const PADDLE_VELOCITY_DECAY = 0.7;
 const MAX_SCORE = 5;
 
@@ -23,7 +26,8 @@ export default class TableTennisGame {
         this.gameInterval = null;
         this.countdownInterval = null;
         this.destroyTimeout = null;
-        this.paddleVelocities = { p1: { vy: 0 }, p2: { vy: 0 } };
+        // Track both X and Y velocities for momentum
+        this.paddleVelocities = { p1: { vx: 0, vy: 0 }, p2: { vx: 0, vy: 0 } };
         this.resetGameState();
     }
 
@@ -34,12 +38,12 @@ export default class TableTennisGame {
             winner: null,
             ball: { x: TABLE_WIDTH / 2, y: TABLE_HEIGHT / 4, vx: 0, vy: 0 },
             paddles: {
-                p1: { x: 50, y: TABLE_HEIGHT / 2 },
-                p2: { x: TABLE_WIDTH - 50, y: TABLE_HEIGHT / 2 },
+                p1: { x: 100, y: TABLE_HEIGHT / 2 },
+                p2: { x: TABLE_WIDTH - 100, y: TABLE_HEIGHT / 2 },
             },
             dimensions: { width: TABLE_WIDTH, height: TABLE_HEIGHT, netY: NET_Y, netHeight: NET_HEIGHT }
         };
-        this.paddleVelocities = { p1: { vy: 0 }, p2: { vy: 0 } };
+        this.paddleVelocities = { p1: { vx: 0, vy: 0 }, p2: { vx: 0, vy: 0 } };
     }
 
     addPlayer(socketId, playerId) {
@@ -52,7 +56,6 @@ export default class TableTennisGame {
         const role = Object.keys(this.players).length === 0 ? 'p1' : 'p2';
         this.players[socketId] = { id: playerId, role };
         
-        // Tell the client which paddle they control
         this.io.to(socketId).emit('tt:role', { role });
 
         if (Object.keys(this.players).length === 2) {
@@ -101,13 +104,12 @@ export default class TableTennisGame {
             if (this.state.status !== 'playing') return;
             this.updatePhysics();
             this.broadcastState();
-        }, 1000 / 60); // 60 FPS tick rate
+        }, 1000 / 60); 
     }
 
     updatePhysics() {
         const ball = this.state.ball;
 
-        // Apply Gravity
         ball.vy += GRAVITY;
         ball.x += ball.vx;
         ball.y += ball.vy;
@@ -126,16 +128,16 @@ export default class TableTennisGame {
         }
 
         // Net Collision
-        if (ball.x > NET_X - 5 && ball.x < NET_X + 5 && ball.y + BALL_RADIUS > NET_Y) {
+        if (ball.x > NET_X - 6 && ball.x < NET_X + 6 && ball.y + BALL_RADIUS > NET_Y) {
             ball.vx *= -0.5;
             ball.vy = -Math.abs(ball.vy) * 0.5;
-            ball.x = ball.vx > 0 ? NET_X + 6 : NET_X - 6;
+            ball.x = ball.vx > 0 ? NET_X + 7 : NET_X - 7;
         }
 
         // Scoring Rules
         if (ball.x - BALL_RADIUS <= 0 && ball.y > NET_Y) this.handleGoal('p2');
         else if (ball.x + BALL_RADIUS >= TABLE_WIDTH && ball.y > NET_Y) this.handleGoal('p1');
-        else if (ball.x < -100) this.handleGoal('p2'); // Flew off screen entirely
+        else if (ball.x < -100) this.handleGoal('p2'); 
         else if (ball.x > TABLE_WIDTH + 100) this.handleGoal('p1');
 
         this.checkPaddleCollision('p1');
@@ -146,9 +148,6 @@ export default class TableTennisGame {
         const paddle = this.state.paddles[role];
         const ball = this.state.ball;
         const vel = this.paddleVelocities[role];
-
-        // Prevent hitting ball from behind
-        if ((role === 'p1' && ball.vx > 0) || (role === 'p2' && ball.vx < 0)) return;
 
         const pLeft = paddle.x - PADDLE_WIDTH / 2;
         const pRight = paddle.x + PADDLE_WIDTH / 2;
@@ -162,12 +161,23 @@ export default class TableTennisGame {
         const dist = Math.hypot(dx, dy);
 
         if (dist < BALL_RADIUS) {
+            // Push ball out of paddle to prevent getting stuck
+            const overlap = BALL_RADIUS - dist;
+            const nx = dx / (dist || 1);
+            const ny = dy / (dist || 1);
+            ball.x += nx * overlap;
+            ball.y += ny * overlap;
+
+            // Reflect horizontally based on side
             ball.vx = role === 'p1' ? Math.abs(ball.vx) : -Math.abs(ball.vx);
+            
+            // Add Paddle Momentum (Smashing mechanics)
+            ball.vx += (vel.vx || 0) * PADDLE_MOMENTUM_FACTOR;
             ball.vy += (vel.vy || 0) * PADDLE_MOMENTUM_FACTOR;
 
-            // Enforce minimum speed so the game doesn't stall, and max speed for sanity
+            // Cap Speed
             const speed = Math.hypot(ball.vx, ball.vy);
-            const targetSpeed = Math.max(10, Math.min(speed + 2, MAX_BALL_SPEED));
+            const targetSpeed = Math.max(8, Math.min(speed, MAX_BALL_SPEED));
             ball.vx = (ball.vx / speed) * targetSpeed;
             ball.vy = (ball.vy / speed) * targetSpeed;
         }
@@ -187,20 +197,36 @@ export default class TableTennisGame {
 
     resetBall() {
         const direction = Math.random() > 0.5 ? 1 : -1;
-        this.state.ball = { x: TABLE_WIDTH / 2, y: TABLE_HEIGHT / 3, vx: direction * 6, vy: -4 };
+        // Slower starting serve
+        this.state.ball = { x: TABLE_WIDTH / 2, y: TABLE_HEIGHT / 4, vx: direction * 5, vy: -3 };
     }
 
-    handlePlayerMove(socketId, yPos) {
+    handlePlayerMove(socketId, pos) {
         const player = this.players[socketId];
         if (!player || this.state.status !== 'playing') return;
 
         const paddle = this.state.paddles[player.role];
-        const newY = Math.max(PADDLE_HEIGHT / 2, Math.min(TABLE_HEIGHT - PADDLE_HEIGHT / 2, yPos));
         
+        // 1. Clamp Y Axis
+        const newY = Math.max(PADDLE_HEIGHT / 2, Math.min(TABLE_HEIGHT - PADDLE_HEIGHT / 2, pos.y));
+        
+        // 2. Clamp X Axis (Keep them on their own side of the net)
+        let newX;
+        if (player.role === 'p1') {
+            newX = Math.max(PADDLE_WIDTH / 2, Math.min(NET_X - PADDLE_WIDTH / 2 - 20, pos.x));
+        } else {
+            newX = Math.max(NET_X + PADDLE_WIDTH / 2 + 20, Math.min(TABLE_WIDTH - PADDLE_WIDTH / 2, pos.x));
+        }
+        
+        const oldX = paddle.x;
         const oldY = paddle.y;
+        
+        paddle.x = newX;
         paddle.y = newY;
 
+        // 3. Track velocities for smashing the ball
         const vel = this.paddleVelocities[player.role];
+        vel.vx = vel.vx * PADDLE_VELOCITY_DECAY + (newX - oldX) * (1 - PADDLE_VELOCITY_DECAY);
         vel.vy = vel.vy * PADDLE_VELOCITY_DECAY + (newY - oldY) * (1 - PADDLE_VELOCITY_DECAY);
     }
 
