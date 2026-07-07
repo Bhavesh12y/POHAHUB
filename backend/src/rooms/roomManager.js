@@ -75,6 +75,7 @@ class RoomManager {
     if (gameType === 'ludo') limit = 4;
     if (gameType === 'stone-paper-scissor') limit = 2;
     if (gameType === 'air-hockey') limit = 2;
+    if (gameType === 'table-tennis') limit = 2;
     const host = { id: hostId, name: hostName, socketId: null, deviceToken: null };
     const room = {
       code: this.generateRoomCode(),
@@ -260,6 +261,9 @@ class RoomManager {
     } else if (room.gameType === 'air-hockey') {
       room.gameState = { status: 'starting' }; 
     }
+    else if (room.gameType === 'table-tennis') {
+      room.gameState = { status: 'starting' };
+    }
 
     room.status = 'playing';
     return { ok: true, room };
@@ -313,6 +317,7 @@ class RoomManager {
     else if (room.gameState && room.gameType === 'stone-paper-scissor') payload.gameState = serializeSpsState(room.gameState);
     else if (room.gameState && room.gameType === 'ludo') payload.gameState = serializeLudoState(room.gameState);
     else if (room.gameState && room.gameType === 'air-hockey') payload.gameState = room.gameState;
+    else if (room.gameState && room.gameType === 'table-tennis') payload.gameState = room.gameState;
     return payload;
   }
 }

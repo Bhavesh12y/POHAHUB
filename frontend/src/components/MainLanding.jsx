@@ -91,15 +91,27 @@ const GAMES = [
   },
    {
     id: 'air-hockey',
-    title: 'Air Hockey',
+    title: 'Air Hockey (IN TESTING PHASE)',
     description: 'Slide, strike, and score in fast-paced 1v1 Air Hockey!',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/airhockey.png',
     path: '/games/air-hockey',
-    available: true,
+    available: true, 
     headerColor: 'bg-[#facc15]',
     buttonColor: 'bg-[#e5e7eb]',
     tilt: 'rotate-1',
   },
+     {
+    id: 'table-tennis',
+    title: 'Table Tennis (IN TESTING PHASE)',
+    description: 'Play fast-paced 1v1 Table Tennis!',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/tabletennis.png',
+    path: '/games/table-tennis',
+    available: true, 
+    headerColor: 'bg-[#facc15]',
+    buttonColor: 'bg-[#e5e7eb]',
+    tilt: 'rotate-1',
+  },
+
 
 ];
 
