@@ -5,15 +5,18 @@ import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
 
 // ============================================================
-// CONSTANTS (keep EXACTLY in sync with server)
+// AUTHORITATIVE CONSTANTS – keep EXACTLY in sync with backend
+// (airHockey.js). The server is the single source of truth.
 // ============================================================
 const GAME_WIDTH = 400;
 const GAME_HEIGHT = 600;
-const PUCK_RADIUS = 20;
-const STRIKER_RADIUS = 35;
-const GOAL_WIDTH = 140;
-const GRAB_RADIUS = STRIKER_RADIUS * 1.8;
-const GOAL_DROP_MS = 450;
+const PUCK_RADIUS = 20;      // ← updated from 15
+const STRIKER_RADIUS = 35;   // ← updated from 25
+const GOAL_WIDTH = 140;      // ← updated from 120
+const GRAB_RADIUS = STRIKER_RADIUS * 1.8; // generous touch tolerance
+const GOAL_DROP_MS = 450;     // "falling into the hole" animation duration
+
+const lerp = (a, b, t) => a + (b - a) * t;
 
 // ---------------------------------------------------------------------
 // Input helpers
@@ -44,7 +47,7 @@ function clampStriker(pos, role) {
 }
 
 // ---------------------------------------------------------------------
-// Drawing helpers (unchanged except no interpolation needed)
+// Drawing helpers
 // ---------------------------------------------------------------------
 
 function drawBoardSurface(ctx, canvas) {
@@ -287,8 +290,10 @@ export default function AirHockeyBoard() {
   const [error, setError] = useState('');
 
   const canvasRef = useRef(null);
-  // We no longer need interpolation refs – just the latest state
-  const latestStateRef = useRef(null);
+  const gameStateRef = useRef(null);
+  const prevGameStateRef = useRef(null);
+  const currStateTimeRef = useRef(0);
+  const prevStateTimeRef = useRef(0);
   const myStrikerRef = useRef(null);
   const myRoleRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -297,6 +302,7 @@ export default function AirHockeyBoard() {
   const strikerOriginRef = useRef({ x: 0, y: 0 });
   const puckTrailRef = useRef([]);
   const goalDropRef = useRef(null);
+  const lastMoveEmit = useRef(0);
 
   const [uiState, setUiState] = useState({ score: { p1: 0, p2: 0 }, status: 'playing' });
   const [countdown, setCountdown] = useState(null);
@@ -373,17 +379,24 @@ export default function AirHockeyBoard() {
 
     const onAirHockeyRole = ({ role }) => setMyRole(role);
 
-    // --- HIGH‑FREQUENCY GAME STATE HANDLER (NO INTERPOLATION) ---
     const onHighFreqGameState = (state) => {
-      latestStateRef.current = state;
+      const now = performance.now();
+      const previous = gameStateRef.current;
 
-      // Keep your own striker position if you’re dragging,
-      // otherwise trust the server.
+      const hardReset = !previous || previous.status !== state.status;
+
+      prevGameStateRef.current = hardReset ? state : previous;
+      prevStateTimeRef.current = hardReset ? now : currStateTimeRef.current;
+      currStateTimeRef.current = now;
+      gameStateRef.current = state;
+
+      if (hardReset) {
+        puckTrailRef.current = [];
+      }
+
       const role = myRoleRef.current;
-      if (role) {
-        if (!isDraggingRef.current) {
-          myStrikerRef.current = { ...state.strikers[role] };
-        }
+      if (role && !isDraggingRef.current) {
+        myStrikerRef.current = { ...state.strikers[role] };
       }
 
       setUiState((prev) => {
@@ -397,7 +410,7 @@ export default function AirHockeyBoard() {
     const onCountdown = (count) => setCountdown(count === 0 ? null : count);
     const onGoalAnimation = () => {
       setShowGoal(true);
-      const lastPuck = latestStateRef.current?.puck;
+      const lastPuck = gameStateRef.current?.puck;
       if (lastPuck) {
         goalDropRef.current = { x: lastPuck.x, y: lastPuck.y, start: performance.now() };
       }
@@ -436,15 +449,12 @@ export default function AirHockeyBoard() {
     };
   }, [roomCode, navigate, location.state]);
 
-  // -----------------------------------------------------------------
-  // RENDER LOOP – directly uses latest server state (no interpolation)
-  // -----------------------------------------------------------------
   useEffect(() => {
     let animationId;
 
     const renderLoop = () => {
       const canvas = canvasRef.current;
-      const state = latestStateRef.current;
+      const state = gameStateRef.current;
 
       if (canvas && state && isPlaying) {
         const role = myRoleRef.current;
@@ -453,14 +463,23 @@ export default function AirHockeyBoard() {
         let trailToRender = [];
 
         if (role) {
-          // Opponent striker: directly from server
+          const prevState = prevGameStateRef.current || state;
+          const span = Math.max(currStateTimeRef.current - prevStateTimeRef.current, 1);
+          const t = Math.min(Math.max((performance.now() - currStateTimeRef.current) / span, 0), 1);
+
           const opponentRole = role === 'p1' ? 'p2' : 'p1';
+          puckToRender = {
+            x: lerp(prevState.puck.x, state.puck.x, t),
+            y: lerp(prevState.puck.y, state.puck.y, t),
+          };
           strikersToRender = {
-            [opponentRole]: state.strikers[opponentRole],
+            [opponentRole]: {
+              x: lerp(prevState.strikers[opponentRole].x, state.strikers[opponentRole].x, t),
+              y: lerp(prevState.strikers[opponentRole].y, state.strikers[opponentRole].y, t),
+            },
             [role]: myStrikerRef.current || state.strikers[role],
           };
 
-          // Trail for puck
           const speed = Math.hypot(state.puck.vx, state.puck.vy);
           if (speed > 3) {
             puckTrailRef.current.push({ x: puckToRender.x, y: puckToRender.y });
@@ -501,13 +520,10 @@ export default function AirHockeyBoard() {
     return () => cancelAnimationFrame(animationId);
   }, [isPlaying]);
 
-  // -----------------------------------------------------------------
-  // POINTER HANDLERS – instant emit, no throttle
-  // -----------------------------------------------------------------
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     const role = myRoleRef.current;
-    const state = latestStateRef.current;
+    const state = gameStateRef.current;
     if (!canvas || !role || !state || state.status !== 'playing') return;
 
     const raw = getCanvasPoint(e, canvas);
@@ -527,7 +543,7 @@ export default function AirHockeyBoard() {
   const handlePointerMove = (e) => {
     if (!isDraggingRef.current || e.pointerId !== dragPointerIdRef.current) return;
 
-    const state = latestStateRef.current;
+    const state = gameStateRef.current;
     if (!state || state.status !== 'playing') {
       isDraggingRef.current = false;
       dragPointerIdRef.current = null;
@@ -551,17 +567,14 @@ export default function AirHockeyBoard() {
       role
     );
 
-    // Only send if moved
-    if (
-      !myStrikerRef.current ||
-      next.x !== myStrikerRef.current.x ||
-      next.y !== myStrikerRef.current.y
-    ) {
-      myStrikerRef.current = next;
+    myStrikerRef.current = next;
 
-      const socket = connectSocket();
-      socket.emit('airHockeyMove', { roomId: roomCode, position: next });
-    }
+    const now = Date.now();
+    if (now - lastMoveEmit.current < 16) return;
+    lastMoveEmit.current = now;
+
+    const socket = connectSocket();
+    socket.emit('airHockeyMove', { roomId: roomCode, position: next });
   };
 
   const endDrag = (e) => {
