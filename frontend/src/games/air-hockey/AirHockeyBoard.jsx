@@ -10,11 +10,11 @@ import VoiceChat from '../../components/VoiceChat';
 // ============================================================
 const GAME_WIDTH = 400;
 const GAME_HEIGHT = 600;
-const PUCK_RADIUS = 20;      // ← updated from 15
-const STRIKER_RADIUS = 35;   // ← updated from 25
-const GOAL_WIDTH = 140;      // ← updated from 120
-const GRAB_RADIUS = STRIKER_RADIUS * 1.8; // generous touch tolerance
-const GOAL_DROP_MS = 450;     // "falling into the hole" animation duration
+const PUCK_RADIUS = 20;
+const STRIKER_RADIUS = 35;
+const GOAL_WIDTH = 140;
+const GRAB_RADIUS = STRIKER_RADIUS * 1.8;
+const GOAL_DROP_MS = 450;
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -302,7 +302,6 @@ export default function AirHockeyBoard() {
   const strikerOriginRef = useRef({ x: 0, y: 0 });
   const puckTrailRef = useRef([]);
   const goalDropRef = useRef(null);
-  const lastMoveEmit = useRef(0);
 
   const [uiState, setUiState] = useState({ score: { p1: 0, p2: 0 }, status: 'playing' });
   const [countdown, setCountdown] = useState(null);
@@ -379,6 +378,7 @@ export default function AirHockeyBoard() {
 
     const onAirHockeyRole = ({ role }) => setMyRole(role);
 
+    // --- High‑frequency game state handler (UPDATED) ---
     const onHighFreqGameState = (state) => {
       const now = performance.now();
       const previous = gameStateRef.current;
@@ -395,8 +395,13 @@ export default function AirHockeyBoard() {
       }
 
       const role = myRoleRef.current;
-      if (role && !isDraggingRef.current) {
-        myStrikerRef.current = { ...state.strikers[role] };
+      if (role) {
+        // Always trust the server’s striker position unless we’re currently dragging.
+        // Because the server now applies our target instantly, the server’s position
+        // for us is exactly what we intend – no need to keep a separate prediction.
+        if (!isDraggingRef.current) {
+          myStrikerRef.current = { ...state.strikers[role] };
+        }
       }
 
       setUiState((prev) => {
@@ -477,6 +482,7 @@ export default function AirHockeyBoard() {
               x: lerp(prevState.strikers[opponentRole].x, state.strikers[opponentRole].x, t),
               y: lerp(prevState.strikers[opponentRole].y, state.strikers[opponentRole].y, t),
             },
+            // Use local reference for our own striker (now kept in sync with the server)
             [role]: myStrikerRef.current || state.strikers[role],
           };
 
@@ -520,6 +526,7 @@ export default function AirHockeyBoard() {
     return () => cancelAnimationFrame(animationId);
   }, [isPlaying]);
 
+  // --- Pointer handlers (UPDATED – no throttle, immediate emit) ---
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     const role = myRoleRef.current;
@@ -567,14 +574,17 @@ export default function AirHockeyBoard() {
       role
     );
 
-    myStrikerRef.current = next;
+    // Send only if position actually changed (no throttle)
+    if (
+      !myStrikerRef.current ||
+      next.x !== myStrikerRef.current.x ||
+      next.y !== myStrikerRef.current.y
+    ) {
+      myStrikerRef.current = next;
 
-    const now = Date.now();
-    if (now - lastMoveEmit.current < 16) return;
-    lastMoveEmit.current = now;
-
-    const socket = connectSocket();
-    socket.emit('airHockeyMove', { roomId: roomCode, position: next });
+      const socket = connectSocket();
+      socket.emit('airHockeyMove', { roomId: roomCode, position: next });
+    }
   };
 
   const endDrag = (e) => {
