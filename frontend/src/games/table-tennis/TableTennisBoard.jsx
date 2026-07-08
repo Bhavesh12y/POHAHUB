@@ -4,6 +4,8 @@ import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
 
+const BALL_RADIUS = 14;
+
 // Reusable Chat Panel (unchanged)
 function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
