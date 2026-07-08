@@ -5,10 +5,10 @@ const STRIKER_RADIUS = 35;
 const GOAL_WIDTH = 140;
 const MAX_SCORE = 5;
 
-const FRICTION = 0.985;
-const MAX_PUCK_SPEED = 18;
-const MAX_STRIKER_HIT_SPEED = 13;
-const PHYSICS_SUBSTEPS = 4;          // 👈 increased for zero tunneling
+// --- Simulation Constants ---
+const FRICTION = 0.985;             // per tick at 60 Hz
+const MAX_PUCK_SPEED = 18;          // pixels per tick
+const MAX_STRIKER_SPEED = 13;       // pixels per tick (smooth movement)
 
 export default class AirHockeyGame {
     constructor(roomId, io) {
@@ -37,6 +37,7 @@ export default class AirHockeyGame {
             }
         };
 
+        // Smooth movement targets – initially identical to striker positions
         this.targets = {
             p1: { x: centerX, y: GAME_HEIGHT - 50 },
             p2: { x: centerX, y: 50 }
@@ -48,7 +49,8 @@ export default class AirHockeyGame {
             clearTimeout(this.destroyTimeout);
             this.destroyTimeout = null;
         }
-        if (this.players[socketId] || Object.keys(this.players).length >= 2) return false;
+        if (this.players[socketId]) return false;
+        if (Object.keys(this.players).length >= 2) return false;
 
         const role = Object.keys(this.players).length === 0 ? 'p1' : 'p2';
         this.players[socketId] = { id: playerId, role };
@@ -99,121 +101,98 @@ export default class AirHockeyGame {
         if (this.gameInterval) clearInterval(this.gameInterval);
         if (this.networkInterval) clearInterval(this.networkInterval);
 
-        // 60 Hz authoritative physics
+        // 60 Hz physics loop – now includes striker movement toward targets
         this.gameInterval = setInterval(() => {
             if (this.state.status !== 'playing') return;
             this.updateStrikers();
             this.updatePhysics();
         }, 1000 / 60);
 
-        // 60 Hz broadcast – no interpolation needed on the client
+        // 30 Hz network broadcast – interpolation on client fills gaps
         this.networkInterval = setInterval(() => {
             if (this.state.status !== 'playing') return;
             this.broadcastState();
-        }, 1000 / 60);
+        }, 1000 / 30);
     }
 
-    // ------------------------------------------------------------
-    //  Striker Movement – instant, with capped hit velocity
-    // ------------------------------------------------------------
+    // --- Striker Movement ---
+    // Smoothly interpolate actual position toward the client's target.
+    // This eliminates teleportation and gives a stable velocity vector.
     updateStrikers() {
         for (const role of ['p1', 'p2']) {
             const striker = this.state.strikers[role];
             const target = this.targets[role];
-
-            const oldX = striker.x;
-            const oldY = striker.y;
-
-            // Move directly to the (already clamped) target
-            striker.x = target.x;
-            striker.y = target.y;
-
-            let dx = striker.x - oldX;
-            let dy = striker.y - oldY;
+            const dx = target.x - striker.x;
+            const dy = target.y - striker.y;
             const dist = Math.hypot(dx, dy);
-            if (dist > MAX_STRIKER_HIT_SPEED && dist > 0) {
-                const scale = MAX_STRIKER_HIT_SPEED / dist;
-                dx *= scale;
-                dy *= scale;
+
+            if (dist < 0.5) {
+                // Already at target, no movement
+                striker.vx = 0;
+                striker.vy = 0;
+                striker.x = target.x;
+                striker.y = target.y;
+                continue;
             }
-            striker.vx = dx;
-            striker.vy = dy;
 
-            // Immediately push striker out of the puck
-            this.resolveStrikerPuckOverlap(role);
-        }
-    }
-
-    resolveStrikerPuckOverlap(role) {
-        const striker = this.state.strikers[role];
-        const puck = this.state.puck;
-        const dx = striker.x - puck.x;
-        const dy = striker.y - puck.y;
-        const dist = Math.hypot(dx, dy) || 0.01;
-        const minDist = PUCK_RADIUS + STRIKER_RADIUS;
-
-        if (dist < minDist) {
-            const overlap = minDist - dist;
+            const step = Math.min(dist, MAX_STRIKER_SPEED);
             const nx = dx / dist;
             const ny = dy / dist;
-            striker.x += nx * overlap;
-            striker.y += ny * overlap;
+
+            // Move one tick
+            striker.x += nx * step;
+            striker.y += ny * step;
+
+            // Velocity = actual displacement per tick (used in collision)
+            striker.vx = nx * step;
+            striker.vy = ny * step;
         }
     }
 
-    // ------------------------------------------------------------
-    //  Physics with sub‑stepping (no more tunneling)
-    // ------------------------------------------------------------
     updatePhysics() {
         const puck = this.state.puck;
-        const subVx = puck.vx / PHYSICS_SUBSTEPS;
-        const subVy = puck.vy / PHYSICS_SUBSTEPS;
+        // Apply friction
+        puck.vx *= FRICTION;
+        puck.vy *= FRICTION;
 
-        for (let step = 0; step < PHYSICS_SUBSTEPS; step++) {
-            // Apply friction per sub‑step
-            puck.vx *= FRICTION ** (1 / PHYSICS_SUBSTEPS);
-            puck.vy *= FRICTION ** (1 / PHYSICS_SUBSTEPS);
+        // Move puck
+        puck.x += puck.vx;
+        puck.y += puck.vy;
 
-            puck.x += subVx;
-            puck.y += subVy;
-
-            // Wall collisions
-            if (puck.x - PUCK_RADIUS <= 0) {
-                puck.vx = Math.abs(puck.vx);
-                puck.x = PUCK_RADIUS;
-            } else if (puck.x + PUCK_RADIUS >= GAME_WIDTH) {
-                puck.vx = -Math.abs(puck.vx);
-                puck.x = GAME_WIDTH - PUCK_RADIUS;
-            }
-
-            // Top wall / goal
-            if (puck.y - PUCK_RADIUS <= 0) {
-                const inGoal = puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2;
-                if (inGoal) {
-                    this.handleGoal('p1');
-                    return;
-                } else {
-                    puck.vy = Math.abs(puck.vy);
-                    puck.y = PUCK_RADIUS;
-                }
-            }
-
-            // Bottom wall / goal
-            if (puck.y + PUCK_RADIUS >= GAME_HEIGHT) {
-                const inGoal = puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2;
-                if (inGoal) {
-                    this.handleGoal('p2');
-                    return;
-                } else {
-                    puck.vy = -Math.abs(puck.vy);
-                    puck.y = GAME_HEIGHT - PUCK_RADIUS;
-                }
-            }
-
-            // Striker collisions (each sub‑step)
-            this.checkStrikerCollision('p1');
-            this.checkStrikerCollision('p2');
+        // Wall collisions (left/right)
+        if (puck.x - PUCK_RADIUS <= 0) {
+            puck.vx = Math.abs(puck.vx);
+            puck.x = PUCK_RADIUS;
+        } else if (puck.x + PUCK_RADIUS >= GAME_WIDTH) {
+            puck.vx = -Math.abs(puck.vx);
+            puck.x = GAME_WIDTH - PUCK_RADIUS;
         }
+
+        // Top wall and P2's goal
+        if (puck.y - PUCK_RADIUS <= 0) {
+            const inGoal = puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2;
+            if (inGoal) {
+                this.handleGoal('p1'); // p1 scored
+            } else {
+                puck.vy = Math.abs(puck.vy);
+                puck.y = PUCK_RADIUS;
+            }
+        }
+
+        // Bottom wall and P1's goal
+        if (puck.y + PUCK_RADIUS >= GAME_HEIGHT) {
+            const inGoal = puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2;
+            if (inGoal) {
+                this.handleGoal('p2'); // p2 scored
+            } else {
+                puck.vy = -Math.abs(puck.vy);
+                puck.y = GAME_HEIGHT - PUCK_RADIUS;
+            }
+        }
+
+        // Striker collisions
+        this.checkStrikerCollision('p1');
+        this.checkStrikerCollision('p2');
     }
 
     checkStrikerCollision(playerRole) {
@@ -222,34 +201,40 @@ export default class AirHockeyGame {
 
         const dx = puck.x - striker.x;
         const dy = puck.y - striker.y;
-        const distance = Math.hypot(dx, dy) || 0.01;
+        const distance = Math.hypot(dx, dy) || 0.01; // avoid division by zero
         const minDist = PUCK_RADIUS + STRIKER_RADIUS;
 
         if (distance < minDist) {
+            // --- Overlap resolution (separate both entities) ---
             const overlap = minDist - distance;
             const nx = dx / distance;
             const ny = dy / distance;
 
-            // Push puck out (striker is “heavier”)
+            // Assume striker mass >> puck mass => push puck out almost entirely
             puck.x += nx * overlap * 0.99;
             puck.y += ny * overlap * 0.99;
             striker.x -= nx * overlap * 0.01;
             striker.y -= ny * overlap * 0.01;
 
+            // --- Physics-based elastic collision with infinite mass striker ---
+            // Relative velocity
             const vRelX = puck.vx - striker.vx;
             const vRelY = puck.vy - striker.vy;
             const dot = vRelX * nx + vRelY * ny;
 
+            // Only reflect if objects are moving toward each other
             if (dot < 0) {
+                // Coefficient of restitution (0.9 for a tiny energy loss)
                 const e = 0.9;
-                puck.vx -= (1 + e) * dot * nx;
-                puck.vy -= (1 + e) * dot * ny;
+                // Reflect relative velocity, then add striker velocity back
+                puck.vx = puck.vx - (1 + e) * dot * nx;
+                puck.vy = puck.vy - (1 + e) * dot * ny;
 
+                // Clamp to max speed
                 const speed = Math.hypot(puck.vx, puck.vy);
                 if (speed > MAX_PUCK_SPEED) {
-                    const scale = MAX_PUCK_SPEED / speed;
-                    puck.vx *= scale;
-                    puck.vy *= scale;
+                    puck.vx = (puck.vx / speed) * MAX_PUCK_SPEED;
+                    puck.vy = (puck.vy / speed) * MAX_PUCK_SPEED;
                 }
             }
         }
@@ -274,6 +259,7 @@ export default class AirHockeyGame {
         const centerX = GAME_WIDTH / 2;
         const centerY = GAME_HEIGHT / 2;
         this.state.puck = { x: centerX, y: centerY, vx: 0, vy: 0 };
+        // Reset strikers and targets
         for (const role of ['p1', 'p2']) {
             const y = role === 'p1' ? GAME_HEIGHT - 50 : 50;
             this.state.strikers[role] = { x: centerX, y, vx: 0, vy: 0 };
@@ -281,17 +267,22 @@ export default class AirHockeyGame {
         }
     }
 
+    // Client sends its desired position (already in server coordinates).
+    // We only store it as a movement target – no direct teleportation.
     handlePlayerMove(socketId, position) {
         const player = this.players[socketId];
         if (!player || this.state.status !== 'playing') return;
 
         let { x, y } = position;
+
+        // Clamp to allowed half-field
         x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, x));
         if (player.role === 'p1') {
             y = Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, y));
         } else {
             y = Math.max(STRIKER_RADIUS, Math.min(GAME_HEIGHT / 2 - STRIKER_RADIUS, y));
         }
+
         this.targets[player.role] = { x, y };
     }
 
