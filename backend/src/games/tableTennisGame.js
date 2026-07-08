@@ -1,20 +1,24 @@
-const TABLE_WIDTH = 600;
-const TABLE_HEIGHT = 1000;
-const NET_Y = TABLE_HEIGHT / 2;         // middle horizontal line
+const GAME_WIDTH = 1000;
+const GAME_HEIGHT = 600;
 
-const PADDLE_WIDTH = 120;
-const PADDLE_HEIGHT = 20;
-const BALL_RADIUS = 14;
+// Physics Constants
+const GRAVITY = 0.35;
+const AIR_FRICTION = 0.995;
+const TABLE_BOUNCE = 0.85;       // Energy retained when hitting the table
+const RACKET_POWER = 0.5;        // How much paddle speed transfers to ball
+const MAX_BALL_SPEED = 22;
 
-const TABLE_FRICTION = 0.995;          // slight slowdown
-const PADDLE_MOMENTUM_FACTOR = 0.4;    // how much paddle motion transfers to the ball
-const MAX_BALL_SPEED = 14;
-const PADDLE_VELOCITY_DECAY = 0.7;
+const BALL_RADIUS = 12;
+const RACKET_RADIUS = 40;        // Circular hitbox for angled shots
+
+// Environment Bounds
+const TABLE_Y = 450;             // Height of the table surface
+const TABLE_LEFT = 100;
+const TABLE_RIGHT = 900;
+const NET_X = GAME_WIDTH / 2;
+const NET_TOP = 370;             // Top of the net
+
 const MAX_SCORE = 5;
-
-// Fixed paddle Y positions – they only move left/right
-const PADDLE_P1_Y = 80;                // Top
-const PADDLE_P2_Y = TABLE_HEIGHT - 80; // Bottom
 
 export default class TableTennisGame {
   constructor(roomId, io) {
@@ -24,7 +28,13 @@ export default class TableTennisGame {
     this.gameInterval = null;
     this.countdownInterval = null;
     this.destroyTimeout = null;
-    this.paddleVelocities = { p1: { vx: 0, vy: 0 }, p2: { vx: 0, vy: 0 } };
+    
+    // Store previous positions to calculate swing velocity
+    this.prevPaddles = { 
+      p1: { x: 150, y: 300 }, 
+      p2: { x: 850, y: 300 } 
+    };
+    
     this.resetGameState();
   }
 
@@ -33,14 +43,13 @@ export default class TableTennisGame {
       status: 'waiting',
       score: { p1: 0, p2: 0 },
       winner: null,
-      ball: { x: TABLE_WIDTH / 2, y: TABLE_HEIGHT / 2, vx: 0, vy: 0 },
+      ball: { x: GAME_WIDTH / 2, y: 100, vx: 0, vy: 0 },
       paddles: {
-        p1: { x: TABLE_WIDTH / 2, y: PADDLE_P1_Y },
-        p2: { x: TABLE_WIDTH / 2, y: PADDLE_P2_Y },
+        p1: { x: 150, y: 300 },
+        p2: { x: 850, y: 300 },
       },
-      dimensions: { width: TABLE_WIDTH, height: TABLE_HEIGHT, netY: NET_Y }
+      dimensions: { width: GAME_WIDTH, height: GAME_HEIGHT }
     };
-    this.paddleVelocities = { p1: { vx: 0, vy: 0 }, p2: { vx: 0, vy: 0 } };
   }
 
   addPlayer(socketId, playerId) {
@@ -100,74 +109,105 @@ export default class TableTennisGame {
       if (this.state.status !== 'playing') return;
       this.updatePhysics();
       this.broadcastState();
-    }, 1000 / 60); // 60 FPS
+      
+      // Update previous positions for velocity calculation next frame
+      this.prevPaddles.p1 = { ...this.state.paddles.p1 };
+      this.prevPaddles.p2 = { ...this.state.paddles.p2 };
+    }, 1000 / 60);
   }
 
   updatePhysics() {
     const ball = this.state.ball;
 
+    // 1. Apply Gravity & Friction
+    ball.vy += GRAVITY;
     ball.x += ball.vx;
     ball.y += ball.vy;
-    ball.vx *= TABLE_FRICTION;
-    ball.vy *= TABLE_FRICTION;
+    ball.vx *= AIR_FRICTION;
+    ball.vy *= AIR_FRICTION;
 
-    // Left & Right wall bounces (table edges)
+    // 2. Wall Bounces (Left/Right Ceilings)
     if (ball.x - BALL_RADIUS <= 0) {
       ball.vx = Math.abs(ball.vx);
       ball.x = BALL_RADIUS;
     }
-    if (ball.x + BALL_RADIUS >= TABLE_WIDTH) {
+    if (ball.x + BALL_RADIUS >= GAME_WIDTH) {
       ball.vx = -Math.abs(ball.vx);
-      ball.x = TABLE_WIDTH - BALL_RADIUS;
+      ball.x = GAME_WIDTH - BALL_RADIUS;
+    }
+    if (ball.y - BALL_RADIUS <= 0) {
+      ball.vy = Math.abs(ball.vy);
+      ball.y = BALL_RADIUS;
     }
 
-    // Scoring: ball leaves top/bottom edge
-    if (ball.y + BALL_RADIUS <= 0) {
-      this.handleGoal('p2');   // p2 scores when ball passes p1 (top)
-    } else if (ball.y - BALL_RADIUS >= TABLE_HEIGHT) {
-      this.handleGoal('p1');   // p1 scores when ball passes p2 (bottom)
+    // 3. Table Collision (Top surface of the table)
+    if (ball.y + BALL_RADIUS >= TABLE_Y && ball.y < TABLE_Y + 20) {
+      if (ball.x > TABLE_LEFT && ball.x < TABLE_RIGHT) {
+        ball.y = TABLE_Y - BALL_RADIUS;
+        ball.vy = -Math.abs(ball.vy) * TABLE_BOUNCE;
+      }
     }
 
-    // Paddle collisions
-    this.checkPaddleCollision('p1');
-    this.checkPaddleCollision('p2');
+    // 4. Net Collision
+    if (ball.x + BALL_RADIUS > NET_X - 5 && ball.x - BALL_RADIUS < NET_X + 5) {
+      if (ball.y > NET_TOP && ball.y < TABLE_Y) {
+        // Bounce horizontally off the net
+        ball.vx = ball.x < NET_X ? -Math.abs(ball.vx) : Math.abs(ball.vx);
+      } else if (ball.y + BALL_RADIUS > NET_TOP - 5 && ball.y < NET_TOP + 5) {
+        // Hit the very top of the net, bounce up
+        ball.vy = -Math.abs(ball.vy) * 0.8;
+      }
+    }
+
+    // 5. Floor Collision (Scoring)
+    if (ball.y > GAME_HEIGHT + BALL_RADIUS) {
+      // If it drops on the left side, P2 scores. If right side, P1 scores.
+      if (ball.x < NET_X) {
+        this.handleGoal('p2');
+      } else {
+        this.handleGoal('p1');
+      }
+    }
+
+    // 6. Racket Collisions
+    this.checkRacketCollision('p1');
+    this.checkRacketCollision('p2');
   }
 
-  checkPaddleCollision(role) {
-    const paddle = this.state.paddles[role];
+  checkRacketCollision(role) {
+    const racket = this.state.paddles[role];
+    const prev = this.prevPaddles[role];
     const ball = this.state.ball;
-    const vel = this.paddleVelocities[role];
 
-    const pLeft = paddle.x - PADDLE_WIDTH / 2;
-    const pRight = paddle.x + PADDLE_WIDTH / 2;
-    const pTop = paddle.y - PADDLE_HEIGHT / 2;
-    const pBottom = paddle.y + PADDLE_HEIGHT / 2;
+    // Calculate racket velocity (how fast player swung)
+    const rVx = racket.x - prev.x;
+    const rVy = racket.y - prev.y;
 
-    const closestX = Math.max(pLeft, Math.min(ball.x, pRight));
-    const closestY = Math.max(pTop, Math.min(ball.y, pBottom));
-    const dx = ball.x - closestX;
-    const dy = ball.y - closestY;
+    // Distance between ball center and racket center
+    const dx = ball.x - racket.x;
+    const dy = ball.y - racket.y;
     const dist = Math.hypot(dx, dy);
 
-    if (dist < BALL_RADIUS) {
-      const overlap = BALL_RADIUS - dist;
+    if (dist < BALL_RADIUS + RACKET_RADIUS) {
+      // Push ball out of the racket to prevent getting stuck
+      const overlap = (BALL_RADIUS + RACKET_RADIUS) - dist;
       const nx = dx / (dist || 1);
       const ny = dy / (dist || 1);
+      
       ball.x += nx * overlap;
       ball.y += ny * overlap;
 
-      // Vertical reflection (always bounce away from paddle)
-      ball.vy = role === 'p1' ? Math.abs(ball.vy) : -Math.abs(ball.vy);
-
-      // Add horizontal momentum based on paddle drag
-      ball.vx += (vel.vx || 0) * PADDLE_MOMENTUM_FACTOR;
-
-      // Cap speed
+      // Calculate new bounce based on the angle of impact
+      // This allows players to smash (hit from above) or lob (hit from below)
       const speed = Math.hypot(ball.vx, ball.vy);
-      if (speed > MAX_BALL_SPEED) {
-        ball.vx = (ball.vx / speed) * MAX_BALL_SPEED;
-        ball.vy = (ball.vy / speed) * MAX_BALL_SPEED;
-      }
+      const newSpeed = Math.min(speed * 0.8 + Math.hypot(rVx, rVy) * RACKET_POWER, MAX_BALL_SPEED);
+      
+      ball.vx = nx * newSpeed;
+      ball.vy = ny * newSpeed;
+      
+      // Ensure the ball moves forward across the net
+      if (role === 'p1' && ball.vx < 2) ball.vx = 4;
+      if (role === 'p2' && ball.vx > -2) ball.vx = -4;
     }
   }
 
@@ -184,39 +224,31 @@ export default class TableTennisGame {
   }
 
   resetBall() {
-    // Serve vertically towards a player
-    const speed = 7;
-    const directionY = Math.random() > 0.5 ? 1 : -1;
-    // Slight random X velocity between -3 and 3
-    const vx = (Math.random() - 0.5) * 6;
-    const vy = directionY * Math.sqrt(speed * speed - vx * vx);
-    
+    // Drop the ball from the ceiling, slightly towards the loser of the last point (or random)
+    const side = Math.random() > 0.5 ? -100 : 100;
     this.state.ball = {
-      x: TABLE_WIDTH / 2,
-      y: TABLE_HEIGHT / 2,
-      vx: vx,
-      vy: vy,
+      x: (GAME_WIDTH / 2) + side,
+      y: 50,
+      vx: 0,
+      vy: 2, // gentle drop
     };
   }
 
   handlePlayerMove(socketId, pos) {
     const player = this.players[socketId];
     if (!player || this.state.status !== 'playing') return;
+    if (!pos || typeof pos.x !== 'number' || typeof pos.y !== 'number') return;
 
-    // Safety: ignore invalid input
-    if (!pos || typeof pos.x !== 'number' || isNaN(pos.x)) return;
+    const racket = this.state.paddles[player.role];
 
-    const paddle = this.state.paddles[player.role];
-    const oldX = paddle.x;
-
-    // Paddle only moves horizontally – fixed Y
-    const newX = Math.max(PADDLE_WIDTH / 2, Math.min(TABLE_WIDTH - PADDLE_WIDTH / 2, pos.x));
-    paddle.x = newX;
-
-    // Track velocity for momentum transfer
-    const vel = this.paddleVelocities[player.role];
-    vel.vy = 0; 
-    vel.vx = vel.vx * PADDLE_VELOCITY_DECAY + (newX - oldX) * (1 - PADDLE_VELOCITY_DECAY);
+    // Constrain players to their side of the net and within the screen
+    if (player.role === 'p1') {
+      racket.x = Math.max(RACKET_RADIUS, Math.min(NET_X - RACKET_RADIUS, pos.x));
+    } else {
+      racket.x = Math.max(NET_X + RACKET_RADIUS, Math.min(GAME_WIDTH - RACKET_RADIUS, pos.x));
+    }
+    
+    racket.y = Math.max(RACKET_RADIUS, Math.min(GAME_HEIGHT - RACKET_RADIUS, pos.y));
   }
 
   handleRematch() {
