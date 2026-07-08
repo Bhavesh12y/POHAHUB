@@ -141,6 +141,7 @@ io.on('connection', (socket) => {
   });
 
   // --- TABLE TENNIS REAL-TIME EVENTS ---
+// --- TABLE TENNIS REAL-TIME EVENTS ---
   socket.on('tt:join', ({ roomId, playerInfo }) => {
     const room = roomManager.getRoom(roomId);
     if (room && room.gameType === 'table-tennis') {
@@ -151,10 +152,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('tt:move', ({ roomId, yPos }) => {
+  socket.on('tt:move', ({ roomId, pos }) => {
     const room = roomManager.getRoom(roomId);
     if (room && room.gameInstance) {
-      room.gameInstance.handlePlayerMove(socket.id, yPos);
+      room.gameInstance.handlePlayerMove(socket.id, pos);
     }
   });
 
