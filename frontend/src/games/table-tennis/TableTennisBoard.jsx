@@ -4,9 +4,11 @@ import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
 
-const BALL_RADIUS = 14;
+const GAME_WIDTH = 1000;
+const GAME_HEIGHT = 600;
+const BALL_RADIUS = 12;
+const RACKET_RADIUS = 40;
 
-// Reusable Chat Panel (unchanged)
 function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
@@ -73,7 +75,6 @@ export default function TableTennisBoard() {
   const navigate = useNavigate();
   const location = useLocation();
   const canvasRef = useRef(null);
-  const containerRef = useRef(null);
   
   const [room, setRoom] = useState(location.state?.room ?? null);
   const [error, setError] = useState('');
@@ -89,7 +90,9 @@ export default function TableTennisBoard() {
   const myPlayerId = socket.id;
   const isHost = room?.hostId === myPlayerId;
 
-  // 1. ROOM & CHAT SYNC (unchanged)
+  // Track ball trail for cool UI
+  const trailRef = useRef([]);
+
   useEffect(() => {
     if (!username) {
       navigate(`/games/table-tennis?join=${roomCode}`);
@@ -137,15 +140,24 @@ export default function TableTennisBoard() {
     };
   }, [roomCode, navigate, username, socket]);
 
-  // 2. GAME SYNC (unchanged)
   useEffect(() => {
     if (room?.status !== 'playing') return;
 
     socket.emit('tt:join', { roomId: roomCode.toUpperCase(), playerInfo: { id: myPlayerId, name: username } });
 
     socket.on('tt:role', ({ role }) => setMyRole(role));
-    socket.on('tt:gameState', (state) => setGameState(state));
-    socket.on('tt:countdown', (count) => setCountdown(count));
+    socket.on('tt:gameState', (state) => {
+      setGameState(state);
+      // Update trail
+      if (state.ball) {
+        trailRef.current.push({ x: state.ball.x, y: state.ball.y });
+        if (trailRef.current.length > 8) trailRef.current.shift();
+      }
+    });
+    socket.on('tt:countdown', (count) => {
+      setCountdown(count);
+      trailRef.current = []; // Clear trail on countdown
+    });
     
     return () => {
       socket.off('tt:role');
@@ -172,33 +184,33 @@ export default function TableTennisBoard() {
   };
 
   // ──────────────────────────────────────────
-  // 3. DRAG CONTROLS – ONLY HORIZONTAL MOVEMENT
+  // 2D POINTER CONTROLS (X and Y)
   // ──────────────────────────────────────────
   const processPointerMove = (e) => {
-    if (!gameState || gameState.status !== 'playing' || !containerRef.current) return;
+    if (!gameState || gameState.status !== 'playing' || !canvasRef.current || !myRole) return;
     
-    const rect = containerRef.current.getBoundingClientRect();
-    const scaleX = 600 / rect.width;   // game width = 600px
+    const rect = canvasRef.current.getBoundingClientRect();
+    const scaleX = GAME_WIDTH / rect.width;
+    const scaleY = GAME_HEIGHT / rect.height;
 
-    // Get X coordinate (works for mouse and touch)
     const clientX = e.clientX ?? (e.touches?.[0]?.clientX);
-    if (clientX === undefined) return;
+    const clientY = e.clientY ?? (e.touches?.[0]?.clientY);
+    if (clientX === undefined || clientY === undefined) return;
 
     const relativeX = (clientX - rect.left) * scaleX;
+    const relativeY = (clientY - rect.top) * scaleY;
 
-    // Send only X to server – paddle moves left/right
+    // Send full 2D position to server
     socket.emit('tt:move', { 
       roomId: roomCode.toUpperCase(), 
-      pos: { x: relativeX }
+      pos: { x: relativeX, y: relativeY }
     });
   };
 
   const handlePointerDown = (e) => {
     if (gameState?.status !== 'playing') return;
     setIsDragging(true);
-    try {
-      e.target.setPointerCapture(e.pointerId);
-    } catch (err) {}
+    try { e.target.setPointerCapture(e.pointerId); } catch (err) {}
     processPointerMove(e);
   };
 
@@ -209,76 +221,102 @@ export default function TableTennisBoard() {
 
   const handlePointerUp = (e) => {
     setIsDragging(false);
-    try {
-      e.target.releasePointerCapture(e.pointerId);
-    } catch (err) {}
+    try { e.target.releasePointerCapture(e.pointerId); } catch (err) {}
   };
 
   // ──────────────────────────────────────────
-  // 4. CANVAS RENDERING – VERTICAL (PORTRAIT)
+  // CANVAS RENDERING (Side Profile)
   // ──────────────────────────────────────────
   useEffect(() => {
     if (!gameState || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width = 600;
-    const h = canvas.height = 1000;
+    const w = canvas.width;
+    const h = canvas.height;
 
-    // Flip Y for Player 2 so they always appear at bottom
-    const drawY = (y) => myRole === 'p2' ? h - y : y;
-
-    // Clear & background
-    ctx.fillStyle = '#ffffff';
+    // Background Gradient (Arcade Neon Gym)
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#0f172a');
+    bg.addColorStop(1, '#1e293b');
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 
-    // Faint grid
-    ctx.strokeStyle = '#f0f0f0';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < w; i += 40) {
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
-    }
-    for (let j = 0; j < h; j += 40) {
-      ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(w, j); ctx.stroke();
-    }
+    // Draw Floor
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, h - 20, w, 20);
 
-    // Net – horizontal line in the middle
-    const netY = drawY(gameState.dimensions.netY);
-    ctx.strokeStyle = '#a3a3a3';
-    ctx.lineWidth = 4;
+    // Draw Table (Side View)
+    ctx.fillStyle = '#1e3a8a'; // Dark blue table
+    ctx.fillRect(100, 450, 800, 20);
+    ctx.fillStyle = '#3b82f6'; // Bright blue table top
+    ctx.fillRect(100, 450, 800, 5);
+    // Table Legs
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(150, 470, 15, h - 470 - 20);
+    ctx.fillRect(835, 470, 15, h - 470 - 20);
+
+    // Draw Net
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(w / 2 - 4, 370, 8, 80);
+    ctx.fillStyle = '#f8fafc'; // White tape on top of net
+    ctx.fillRect(w / 2 - 5, 370, 10, 5);
+
+    // Draw Ball Trail
+    ctx.save();
+    trailRef.current.forEach((pos, i) => {
+      const alpha = (i + 1) / trailRef.current.length;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, BALL_RADIUS * 0.8, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(250, 204, 21, ${alpha * 0.5})`; // Yellow trail
+      ctx.fill();
+    });
+    ctx.restore();
+
+    // Draw Ball
     ctx.beginPath();
-    ctx.moveTo(0, netY);
-    ctx.lineTo(w, netY);
-    ctx.stroke();
-
-    // Paddles – wide, thin rectangles
-    const p1 = gameState.paddles.p1;
-    const p2 = gameState.paddles.p2;
-
-    // P1 paddle (blue) – at the top (Y fixed, X moves)
-    ctx.fillStyle = '#3b82f6';
-    ctx.fillRect(p1.x - 60, drawY(p1.y) - 10, 120, 20);
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(p1.x - 60, drawY(p1.y) - 10, 120, 20);
-
-    // P2 paddle (red) – at the bottom
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(p2.x - 60, drawY(p2.y) - 10, 120, 20);
-    ctx.strokeRect(p2.x - 60, drawY(p2.y) - 10, 120, 20);
-
-    // Ball
-    const ballY = drawY(gameState.ball.y);
-    ctx.beginPath();
-    ctx.arc(gameState.ball.x, ballY, BALL_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = '#000000';
+    ctx.arc(gameState.ball.x, gameState.ball.y, BALL_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = '#facc15'; // Yellow ball
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#facc15';
     ctx.fill();
+    ctx.shadowBlur = 0; // reset
+    
+    // Helper to draw Racket
+    const drawRacket = (racket, color, isP1) => {
+      ctx.save();
+      ctx.translate(racket.x, racket.y);
+      // Tilt racket based on which side they are on
+      ctx.rotate(isP1 ? Math.PI / 6 : -Math.PI / 6); 
+      
+      // Draw Handle
+      ctx.fillStyle = '#b45309'; // Brown wooden handle
+      ctx.fillRect(-6, 0, 12, 50);
+      
+      // Draw Rubber Head
+      ctx.beginPath();
+      ctx.arc(0, 0, RACKET_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000';
+      ctx.stroke();
+      
+      ctx.restore();
+    };
+
+    // P1 Paddle (Blue)
+    drawRacket(gameState.paddles.p1, '#3b82f6', true);
+    // P2 Paddle (Red)
+    drawRacket(gameState.paddles.p2, '#ef4444', false);
 
   }, [gameState, myRole]);
 
-  // Scoreboard – YOU always on the bottom? Better: keep the same logic as before
-  const leftPlayer = myRole === 'p2' ? 'p2' : 'p1';   // we still show "YOU" on left side of scoreboard
-  const rightPlayer = myRole === 'p2' ? 'p1' : 'p2';
-  const leftColor = myRole === 'p2' ? 'text-[#ef4444]' : 'text-[#3b82f6]';
-  const rightColor = myRole === 'p2' ? 'text-[#3b82f6]' : 'text-[#ef4444]';
+  const leftPlayer = 'p1';
+  const rightPlayer = 'p2';
+  
+  const getPlayerLabel = (role) => role === myRole ? '⭐ YOU' : 'OPPONENT';
+  const leftColor = myRole === 'p1' ? 'text-[#3b82f6]' : 'text-gray-500';
+  const rightColor = myRole === 'p2' ? 'text-[#ef4444]' : 'text-gray-500';
 
   if (!room) {
     return (
@@ -372,14 +410,14 @@ export default function TableTennisBoard() {
               </div>
             )}
 
-            {/* THE GAME CANVAS – portrait orientation */}
+            {/* THE GAME CANVAS – Landscape Orientation */}
             {gameState && (
-              <div className="w-full mt-4">
+              <div className="w-full mt-4 max-w-[900px] mx-auto">
                 
-                {/* Scoreboard – horizontal layout */}
+                {/* Scoreboard */}
                 <div className="flex justify-between items-center bg-white border-[4px] border-black p-4 mb-6 shadow-[8px_8px_0px_#000] rotate-1 text-black">
                   <div className="text-center w-1/3">
-                    <p className={`text-sm font-bold uppercase ${leftColor}`}>⭐ YOU</p>
+                    <p className={`text-sm font-bold uppercase ${leftColor}`}>{getPlayerLabel('p1')}</p>
                     <p className="text-4xl font-black">{gameState.score[leftPlayer]}</p>
                   </div>
                   <div className="text-center w-1/3">
@@ -387,15 +425,14 @@ export default function TableTennisBoard() {
                     <p className="text-2xl font-black bg-[#22d3ee] px-4 py-1 border-[3px] border-black shadow-[4px_4px_0px_#000] inline-block">VS</p>
                   </div>
                   <div className="text-center w-1/3">
-                    <p className={`text-sm font-bold uppercase ${rightColor}`}>OPPONENT</p>
+                    <p className={`text-sm font-bold uppercase ${rightColor}`}>{getPlayerLabel('p2')}</p>
                     <p className="text-4xl font-black">{gameState.score[rightPlayer]}</p>
                   </div>
                 </div>
 
-                {/* Canvas container – aspect ratio 6/10 (portrait) */}
+                {/* Canvas container */}
                 <div 
-                  ref={containerRef}
-                  className={`relative w-full aspect-[6/10] max-w-[600px] mx-auto bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] -rotate-1 overflow-hidden touch-none select-none transition-all duration-200 ${isDragging ? 'cursor-grabbing ring-4 ring-[#facc15]' : 'cursor-grab'}`}
+                  className={`relative w-full aspect-[10/6] bg-black border-[4px] border-black shadow-[12px_12px_0px_#000] -rotate-1 overflow-hidden touch-none select-none transition-all duration-200 ${isDragging ? 'cursor-grabbing ring-4 ring-[#facc15]' : 'cursor-grab'}`}
                   
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
@@ -405,13 +442,13 @@ export default function TableTennisBoard() {
                 >
                   <canvas 
                     ref={canvasRef} 
-                    width={600} 
-                    height={1000} 
+                    width={GAME_WIDTH} 
+                    height={GAME_HEIGHT} 
                     className="w-full h-full object-contain pointer-events-none"
                   />
 
                   {gameState.status === 'countdown' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
                       <h1 className="text-[10rem] font-black text-[#facc15] animate-bounce" style={{ WebkitTextStroke: '6px black' }}>
                         {countdown > 0 ? countdown : 'SERVE!'}
                       </h1>
@@ -421,7 +458,7 @@ export default function TableTennisBoard() {
                 
                 <div className="flex justify-center mt-8">
                   <p className={`text-center text-sm font-bold uppercase tracking-widest px-4 py-2 border-[3px] border-black shadow-[4px_4px_0px_#000] rotate-1 transition-all ${isDragging ? 'bg-[#facc15] text-black scale-105' : 'bg-[#222] text-white'}`}>
-                    {isDragging ? '🏓 SWINGING!' : '👈 DRAG LEFT & RIGHT TO MOVE'}
+                    {isDragging ? '🏓 SWINGING!' : '👈 DRAG ANYWHERE TO MOVE RACKET'}
                   </p>
                 </div>
               </div>
