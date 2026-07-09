@@ -1,14 +1,10 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
 
-const GAME_WIDTH = 1000;
-const GAME_HEIGHT = 600;
-const BALL_RADIUS = 12;
-const RACKET_RADIUS = 40;
-
+// Reusable Chat Panel (With Scrollbar Fix & Crash Protection)
 function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
   const listRef = useRef(null);
@@ -27,7 +23,8 @@ function ChatPanel({ messages = [], onSend, disabled }) {
   };
 
   return (
-    <div className="flex flex-col w-full h-[400px] lg:h-[550px] shrink-0 bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
+<div className="flex flex-col w-full h-[400px] lg:h-[550px] shrink-0 bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
+      
       <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold uppercase tracking-widest text-xs text-gray-200 bg-[#222] shrink-0">
         Room Chat
       </div>
@@ -70,60 +67,77 @@ function ChatPanel({ messages = [], onSend, disabled }) {
   );
 }
 
-export default function TableTennisBoard() {
+export default function TicTacToeBoard() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const canvasRef = useRef(null);
-  
-  const [room, setRoom] = useState(location.state?.room ?? null);
-  const [error, setError] = useState('');
-  const [connected, setConnected] = useState(false);
 
-  const [gameState, setGameState] = useState(null);
-  const [myRole, setMyRole] = useState(null);
-  const [countdown, setCountdown] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  
-  const socket = connectSocket();
-  const username = localStorage.getItem('pohahub_username');
-  const myPlayerId = socket.id;
+  const [room, setRoom] = useState(location.state?.room ?? null);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState('');
+  const [pendingMove, setPendingMove] = useState(null);
+
+  const myPlayerId = room?.viewerId;
+  const gameState = room?.gameState;
+  const isPlaying = room?.status === 'playing';
+  const isMyTurn = gameState?.currentPlayerId === myPlayerId;
+  const mySymbol = gameState?.players?.find((p) => p.id === myPlayerId)?.symbol; // 'X' or 'O'
   const isHost = room?.hostId === myPlayerId;
 
-  // Track ball trail for cool UI
-  const trailRef = useRef([]);
+  // Assume backend sends winningCells as an array of indices: e.g., [0, 1, 2]
+  const winningSet = new Set(gameState?.winningCells ?? []);
 
   useEffect(() => {
+    const socket = connectSocket();
+    const username = localStorage.getItem('pohahub_username');
+
     if (!username) {
-      navigate(`/games/table-tennis?join=${roomCode}`);
+      navigate(`/games/tic-tac-toe?join=${roomCode}`);
       return;
     }
 
     const syncRoom = async () => {
+      if (!username || !roomCode) return;
       const result = await emitWithAck('room:join', {
         roomCode: roomCode.toUpperCase(),
         playerName: username,
       });
-      if (result.ok) setRoom(result.room);
-      else setError(result.error || 'Could not join room');
+      if (result.ok) {
+        setRoom(result.room);
+      } else if (!location.state?.room) {
+        setError(result.error || 'Could not join room');
+      }
     };
 
     const onConnect = () => {
       setConnected(true);
       syncRoom();
     };
+
     const onDisconnect = () => setConnected(false);
+
     const onRoomUpdate = (updatedRoom) => {
-      if (updatedRoom.code === roomCode?.toUpperCase()) setRoom(updatedRoom);
+      if (updatedRoom.code === roomCode?.toUpperCase()) {
+        setRoom(updatedRoom);
+      }
     };
+
     const onChatMessage = (msg) => {
-      setRoom((prev) => prev ? { ...prev, chat: [...(prev.chat ?? []), msg] } : prev);
+      setRoom((prev) =>
+        prev ? { ...prev, chat: [...(prev.chat ?? []), msg] } : prev,
+      );
+    };
+
+    const onRoomClosed = () => {
+      setError('Room was closed');
+      setTimeout(() => navigate('/games/tic-tac-toe'), 2000);
     };
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('room:update', onRoomUpdate);
     socket.on('chat:message', onChatMessage);
+    socket.on('room:closed', onRoomClosed);
 
     if (socket.connected) {
       setConnected(true);
@@ -137,225 +151,118 @@ export default function TableTennisBoard() {
       socket.off('disconnect', onDisconnect);
       socket.off('room:update', onRoomUpdate);
       socket.off('chat:message', onChatMessage);
+      socket.off('room:closed', onRoomClosed);
     };
-  }, [roomCode, navigate, username, socket]);
-
-  useEffect(() => {
-    if (room?.status !== 'playing') return;
-
-    socket.emit('tt:join', { roomId: roomCode.toUpperCase(), playerInfo: { id: myPlayerId, name: username } });
-
-    socket.on('tt:role', ({ role }) => setMyRole(role));
-    socket.on('tt:gameState', (state) => {
-      setGameState(state);
-      // Update trail
-      if (state.ball) {
-        trailRef.current.push({ x: state.ball.x, y: state.ball.y });
-        if (trailRef.current.length > 8) trailRef.current.shift();
-      }
-    });
-    socket.on('tt:countdown', (count) => {
-      setCountdown(count);
-      trailRef.current = []; // Clear trail on countdown
-    });
-    
-    return () => {
-      socket.off('tt:role');
-      socket.off('tt:gameState');
-      socket.off('tt:countdown');
-    };
-  }, [room?.status, roomCode, myPlayerId, username, socket]);
+  }, [roomCode, navigate, location.state]);
 
   const handleStart = async () => {
     setError('');
     const result = await emitWithAck('room:start', {});
-    if (!result.ok) setError(result.error);
+    if (!result.ok) {
+      setError(result.error);
+    }
   };
+
+  const handleCellClick = useCallback(
+    async (index) => {
+      // Prevent click if it's not our turn, game isn't playing, cell is taken, or waiting on server
+      if (!isPlaying || !isMyTurn || pendingMove !== null || gameState.board[index] !== null) return;
+      
+      setPendingMove(index);
+      setError('');
+      // Emit the move to the server
+      const result = await emitWithAck('game:move', { index });
+      setPendingMove(null);
+      
+      if (!result.ok) {
+        setError(result.error);
+      }
+    },
+    [isPlaying, isMyTurn, pendingMove, gameState?.board],
+  );
 
   const handleChat = async (message) => {
     await emitWithAck('chat:message', { message });
   };
 
-  const handleRematch = async () => {
+  const handlePlayAgain = async () => {
+    setError('');
     const result = await emitWithAck('game:reset', {});
-    if (result.ok) {
-      socket.emit('tt:rematch', roomCode.toUpperCase());
+    if (!result.ok) {
+      setError(result.error || 'Failed to start a new game');
     }
   };
-
-  // ──────────────────────────────────────────
-  // 2D POINTER CONTROLS (X and Y)
-  // ──────────────────────────────────────────
-  const processPointerMove = (e) => {
-    if (!gameState || gameState.status !== 'playing' || !canvasRef.current || !myRole) return;
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    const scaleX = GAME_WIDTH / rect.width;
-    const scaleY = GAME_HEIGHT / rect.height;
-
-    const clientX = e.clientX ?? (e.touches?.[0]?.clientX);
-    const clientY = e.clientY ?? (e.touches?.[0]?.clientY);
-    if (clientX === undefined || clientY === undefined) return;
-
-    const relativeX = (clientX - rect.left) * scaleX;
-    const relativeY = (clientY - rect.top) * scaleY;
-
-    // Send full 2D position to server
-    socket.emit('tt:move', { 
-      roomId: roomCode.toUpperCase(), 
-      pos: { x: relativeX, y: relativeY }
-    });
-  };
-
-  const handlePointerDown = (e) => {
-    if (gameState?.status !== 'playing') return;
-    setIsDragging(true);
-    try { e.target.setPointerCapture(e.pointerId); } catch (err) {}
-    processPointerMove(e);
-  };
-
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
-    processPointerMove(e);
-  };
-
-  const handlePointerUp = (e) => {
-    setIsDragging(false);
-    try { e.target.releasePointerCapture(e.pointerId); } catch (err) {}
-  };
-
-  // ──────────────────────────────────────────
-  // CANVAS RENDERING (Side Profile)
-  // ──────────────────────────────────────────
-  useEffect(() => {
-    if (!gameState || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
-
-    // Background Gradient (Arcade Neon Gym)
-    const bg = ctx.createLinearGradient(0, 0, 0, h);
-    bg.addColorStop(0, '#0f172a');
-    bg.addColorStop(1, '#1e293b');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, w, h);
-
-    // Draw Floor
-    ctx.fillStyle = '#020617';
-    ctx.fillRect(0, h - 20, w, 20);
-
-    // Draw Table (Side View)
-    ctx.fillStyle = '#1e3a8a'; // Dark blue table
-    ctx.fillRect(100, 450, 800, 20);
-    ctx.fillStyle = '#3b82f6'; // Bright blue table top
-    ctx.fillRect(100, 450, 800, 5);
-    // Table Legs
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(150, 470, 15, h - 470 - 20);
-    ctx.fillRect(835, 470, 15, h - 470 - 20);
-
-    // Draw Net
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(w / 2 - 4, 370, 8, 80);
-    ctx.fillStyle = '#f8fafc'; // White tape on top of net
-    ctx.fillRect(w / 2 - 5, 370, 10, 5);
-
-    // Draw Ball Trail
-    ctx.save();
-    trailRef.current.forEach((pos, i) => {
-      const alpha = (i + 1) / trailRef.current.length;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, BALL_RADIUS * 0.8, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(250, 204, 21, ${alpha * 0.5})`; // Yellow trail
-      ctx.fill();
-    });
-    ctx.restore();
-
-    // Draw Ball
-    ctx.beginPath();
-    ctx.arc(gameState.ball.x, gameState.ball.y, BALL_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = '#facc15'; // Yellow ball
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = '#facc15';
-    ctx.fill();
-    ctx.shadowBlur = 0; // reset
-    
-    // Helper to draw Racket
-    const drawRacket = (racket, color, isP1) => {
-      ctx.save();
-      ctx.translate(racket.x, racket.y);
-      // Tilt racket based on which side they are on
-      ctx.rotate(isP1 ? Math.PI / 6 : -Math.PI / 6); 
-      
-      // Draw Handle
-      ctx.fillStyle = '#b45309'; // Brown wooden handle
-      ctx.fillRect(-6, 0, 12, 50);
-      
-      // Draw Rubber Head
-      ctx.beginPath();
-      ctx.arc(0, 0, RACKET_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#000';
-      ctx.stroke();
-      
-      ctx.restore();
-    };
-
-    // P1 Paddle (Blue)
-    drawRacket(gameState.paddles.p1, '#3b82f6', true);
-    // P2 Paddle (Red)
-    drawRacket(gameState.paddles.p2, '#ef4444', false);
-
-  }, [gameState, myRole]);
-
-  const leftPlayer = 'p1';
-  const rightPlayer = 'p2';
-  
-  const getPlayerLabel = (role) => role === myRole ? '⭐ YOU' : 'OPPONENT';
-  const leftColor = myRole === 'p1' ? 'text-[#3b82f6]' : 'text-gray-500';
-  const rightColor = myRole === 'p2' ? 'text-[#ef4444]' : 'text-gray-500';
 
   if (!room) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-24 text-center">
         <div className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-10 rounded-lg max-w-md mx-auto -rotate-1">
-          <div className="animate-pulse text-gray-500 font-bold mb-2 tracking-widest uppercase text-sm">Connecting to Table...</div>
+          <div className="animate-pulse text-gray-500 font-bold mb-2 tracking-widest uppercase text-sm">Connecting to room...</div>
           <p className="text-3xl text-black font-black font-mono">{roomCode}</p>
+          {!connected && (
+            <p className="text-sm text-[#ef4444] font-bold mt-4">
+              Server connection failed.
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
+  const statusMessage = (() => {
+    if (room.status === 'waiting') return `Waiting for players (${room.players.length}/${room.maxPlayers})`;
+    if (gameState?.status === 'won') return `${gameState.winner?.name ?? 'Someone'} wins!`;
+    if (gameState?.status === 'draw') return "It's a draw!";
+    if (isMyTurn) return 'Your turn — make a move';
+    const current = gameState?.players?.find((p) => p.id === gameState.currentPlayerId);
+    return `${current?.name ?? 'Opponent'}'s turn`;
+  })();
+
   return (
     <div className="w-full max-w-[1600px] mx-auto px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(1rem,3vw,2rem)] relative font-sans">
       
-      {/* MATCH FINISHED POPUP */}
-      {gameState?.status === 'finished' && (
+      {/* INJECTED CSS FOR POPUP */}
+      <style>{`
+        @keyframes popIn {
+          0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); }
+          100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); }
+        }
+        .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      `}</style>
+
+      {/* PREMIUM CELEBRATION POPUP */}
+      {(gameState?.status === 'won' || gameState?.status === 'draw') && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300" />
           <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-10 text-center animate-pop-in rounded-xl -rotate-2">
+            
             <div className="relative z-10 text-black">
-              <div className="text-sm font-bold tracking-widest uppercase text-gray-500 mb-2">Match Concluded</div>
-              <h2 className="text-[clamp(2.5rem,5vw,3.5rem)] font-black mb-2 text-[#22d3ee] tracking-tighter uppercase leading-none" style={{ WebkitTextStroke: '2px black' }}>
-                {gameState.winner === myRole ? 'You Won!' : 'You Lost'}
-              </h2>
-              <div className="w-full h-[3px] bg-black my-6" />
+              {gameState.status === 'won' ? (
+                <>
+                  <div className="text-sm font-bold tracking-widest uppercase text-gray-500 mb-2">Match Concluded</div>
+                  <h2 className="text-[clamp(2.5rem,6vw,4rem)] font-black mb-2 text-[#f9a8d4] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
+                    {gameState.winner?.name ?? 'Someone'}
+                  </h2>
+                  <h3 className="text-2xl font-bold mb-8 uppercase">claims the victory!</h3>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm font-bold tracking-widest uppercase text-gray-500 mb-2">Match Concluded</div>
+                  <h2 className="text-5xl font-black mb-8 text-black tracking-tighter uppercase">Stalemate</h2>
+                </>
+              )}
+              
+              <div className="w-full h-[3px] bg-black mb-8" />
+              
               <div className="flex flex-col gap-3">
-                {isHost ? (
-                  <button 
-                    onClick={handleRematch}
-                    className="bg-[#4ade80] w-full block py-4 text-sm font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black transition-all duration-150 rounded"
-                  >
-                    Play Again
-                  </button>
-                ) : (
-                  <p className="text-gray-600 font-bold uppercase text-sm mb-2">Waiting for host to restart...</p>
-                )}
+                <button 
+                  onClick={handlePlayAgain}
+                  className="bg-[#facc15] w-full block py-4 text-sm font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black transition-all duration-150 rounded"
+                >
+                  Play Again
+                </button>
                 <Link 
-                  to="/games/table-tennis" 
+                  to="/games/tic-tac-toe" 
                   className="bg-gray-200 w-full block py-4 text-sm font-bold tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black text-center transition-all duration-150 rounded"
                 >
                   Return to Hub
@@ -366,24 +273,24 @@ export default function TableTennisBoard() {
         </div>
       )}
 
-      {/* MAIN LAYOUT */}
+      {/* MAIN SPLIT LAYOUT */}
       <div className="flex flex-col lg:flex-row gap-[clamp(1rem,3vw,2rem)] items-stretch">
         
-        {/* GAME COLUMN */}
+        {/* LEFT COLUMN: GAME OR LOBBY */}
         <div className="flex-1 w-full min-w-0 flex flex-col">
           <div className="bg-[#333333] border-[3px] border-black rounded-lg p-6 sm:p-8 shadow-[8px_8px_0px_#000] -rotate-1 text-white">
             
+            {/* Header Info */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b-[3px] border-black pb-6">
               <div>
                 <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">Room Code</p>
                 <p className="text-[clamp(1.5rem,4vw,2.25rem)] font-black tracking-widest text-white uppercase">{room.code}</p>
               </div>
+              {/* INJECT VOICE CONTROLS HERE */}
               <VoiceChat roomCode={room.code} />
               <div className="text-right">
                 <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">Status</p>
-                <p className="font-black text-[#facc15] text-[clamp(0.8rem,2vw,1rem)] uppercase">
-                  {room.status === 'waiting' ? 'Waiting Lobby' : 'Match in Progress'}
-                </p>
+                <p className="font-black text-[#facc15] text-[clamp(0.8rem,2vw,1rem)] uppercase">{statusMessage}</p>
               </div>
             </div>
 
@@ -400,73 +307,62 @@ export default function TableTennisBoard() {
                 playerCount={room.players.length}
                 maxPlayers={2}
                 onStart={handleStart}
-                gamePath="table-tennis/room"
+                gamePath="tic-tac-toe/room"
               />
             )}
 
-            {room.status === 'playing' && !gameState && (
-              <div className="text-center font-black uppercase text-2xl py-20 animate-pulse text-white">
-                Syncing Table...
-              </div>
-            )}
-
-            {/* THE GAME CANVAS – Landscape Orientation */}
+            {/* THE TIC TAC TOE BOARD */}
             {gameState && (
-              <div className="w-full mt-4 max-w-[900px] mx-auto">
+              <div className="mx-auto w-full max-w-[min(90vw,28rem)] mt-4">
                 
-                {/* Scoreboard */}
-                <div className="flex justify-between items-center bg-white border-[4px] border-black p-4 mb-6 shadow-[8px_8px_0px_#000] rotate-1 text-black">
-                  <div className="text-center w-1/3">
-                    <p className={`text-sm font-bold uppercase ${leftColor}`}>{getPlayerLabel('p1')}</p>
-                    <p className="text-4xl font-black">{gameState.score[leftPlayer]}</p>
-                  </div>
-                  <div className="text-center w-1/3">
-                    <p className="text-xs font-bold tracking-widest uppercase text-gray-500 mb-1">Score</p>
-                    <p className="text-2xl font-black bg-[#22d3ee] px-4 py-1 border-[3px] border-black shadow-[4px_4px_0px_#000] inline-block">VS</p>
-                  </div>
-                  <div className="text-center w-1/3">
-                    <p className={`text-sm font-bold uppercase ${rightColor}`}>{getPlayerLabel('p2')}</p>
-                    <p className="text-4xl font-black">{gameState.score[rightPlayer]}</p>
+                {/* Board Wrapper */}
+                <div className="bg-white border-[4px] border-black p-3 sm:p-4 rounded-xl shadow-[8px_8px_0px_#000] rotate-1">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {gameState.board.map((cellValue, index) => {
+                      const isWinningCell = winningSet.has(index);
+                      
+                      // Neo-Brutalist cell styling
+                      let cellStyle = 'bg-gray-100 hover:bg-gray-200 hover:-translate-y-1 hover:shadow-[4px_4px_0px_#000] cursor-pointer';
+                      if (cellValue !== null) cellStyle = 'bg-white shadow-[inset_2px_2px_0px_rgba(0,0,0,0.1)] cursor-default';
+                      if (isWinningCell) cellStyle = 'bg-[#facc15] shadow-[4px_4px_0px_#000] z-10 scale-105';
+
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => handleCellClick(index)}
+                          disabled={!isPlaying || !isMyTurn || cellValue !== null || pendingMove !== null}
+                          className={`aspect-square flex items-center justify-center rounded border-[3px] border-black text-[clamp(2.5rem,8vw,5rem)] font-black transition-all duration-150 uppercase disabled:hover:translate-y-0 disabled:hover:shadow-none ${cellStyle}`}
+                        >
+                          {cellValue === 'X' && (
+                            <span className="text-[#3b82f6] animate-pop-in" style={{ WebkitTextStroke: '0px black' }}>
+                              X
+                            </span>
+                          )}
+                          {cellValue === 'O' && (
+                            <span className="text-[#ef4444] animate-pop-in" style={{ WebkitTextStroke: 'Opx black' }}>
+                              O
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Canvas container */}
-                <div 
-                  className={`relative w-full aspect-[10/6] bg-black border-[4px] border-black shadow-[12px_12px_0px_#000] -rotate-1 overflow-hidden touch-none select-none transition-all duration-200 ${isDragging ? 'cursor-grabbing ring-4 ring-[#facc15]' : 'cursor-grab'}`}
-                  
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerLeave={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
-                >
-                  <canvas 
-                    ref={canvasRef} 
-                    width={GAME_WIDTH} 
-                    height={GAME_HEIGHT} 
-                    className="w-full h-full object-contain pointer-events-none"
-                  />
-
-                  {gameState.status === 'countdown' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-                      <h1 className="text-[10rem] font-black text-[#facc15] animate-bounce" style={{ WebkitTextStroke: '6px black' }}>
-                        {countdown > 0 ? countdown : 'SERVE!'}
-                      </h1>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex justify-center mt-8">
-                  <p className={`text-center text-sm font-bold uppercase tracking-widest px-4 py-2 border-[3px] border-black shadow-[4px_4px_0px_#000] rotate-1 transition-all ${isDragging ? 'bg-[#facc15] text-black scale-105' : 'bg-[#222] text-white'}`}>
-                    {isDragging ? '🏓 SWINGING!' : '👈 DRAG ANYWHERE TO MOVE RACKET'}
+                {mySymbol && (
+                  <p className="text-center text-sm font-black uppercase text-white mt-8 tracking-widest border-[3px] border-black bg-[#222] py-2 rounded rotate-1">
+                    You are playing as{' '}
+                    <span className={`${mySymbol === 'X' ? 'text-[#3b82f6]' : 'text-[#ef4444]'}`} style={{ WebkitTextStroke: '1px black' }}>
+                      {mySymbol}
+                    </span>
                   </p>
-                </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* CHAT PANEL */}
+        {/* RIGHT COLUMN: CHAT PANEL */}
         <div className="w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0">
           <ChatPanel messages={room.chat ?? []} onSend={handleChat} disabled={!connected} />
         </div>
