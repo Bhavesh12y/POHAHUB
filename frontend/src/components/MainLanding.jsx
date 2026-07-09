@@ -219,9 +219,10 @@ export default function MainLanding() {
     }
   };
 
+
   const handleSinglePlayerClick = () => {
     if (playerName) {
-      setGameMode('singleplayer');
+      navigate('/single-player');
     } else {
       setShowNameModal(true);
     }
@@ -232,9 +233,9 @@ export default function MainLanding() {
     if (playerNameInput.trim()) {
       const newName = playerNameInput.trim();
       localStorage.setItem('Doozles-player-name', newName);
-      setPlayerName(newName); // Update local state immediately
+      setPlayerName(newName); 
       setShowNameModal(false);
-      setGameMode('singleplayer');
+      navigate('/single-player'); // Navigate instead of setting state
     }
   };
 
