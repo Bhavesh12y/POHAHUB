@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Core Hubs -->
+Remove-Item -Recurse -Force .\dist
   <url>
     <loc>https://doozles.xyz/</loc>
     <changefreq>daily</changefreq>
@@ -12,7 +12,7 @@
     <priority>0.9</priority>
   </url>
 
-  <!-- Legal & Info Pages -->
+
   <url>
     <loc>https://doozles.xyz/about</loc>
     <changefreq>monthly</changefreq>
@@ -34,7 +34,6 @@
     <priority>0.7</priority>
   </url>
 
-  <!-- Game Routes (Using SEO Aliases) -->
   <url>
     <loc>https://doozles.xyz/ludo</loc>
     <changefreq>weekly</changefreq>
