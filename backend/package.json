@@ -12,6 +12,7 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "firebase-admin": "^13.10.0",
+    "react-ga4": "^3.0.1",
     "socket.io": "^4.8.1"
   }
 }

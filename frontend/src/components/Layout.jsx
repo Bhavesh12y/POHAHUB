@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import ReactGA from 'react-ga4';
 
 export function useDesktopScalingFix() {
   useEffect(() => {
@@ -53,6 +54,19 @@ export default function Layout() {
 
   const isHome = location.pathname === '/';
   const isInGameRoom = location.pathname.includes('/room/');
+
+// --- NEW: Crash-Proof Google Analytics Page Tracking ---
+  useEffect(() => {
+    try {
+      ReactGA.send({ 
+        hitType: "pageview", 
+        page: location.pathname + location.search 
+      });
+    } catch (error) {
+      console.warn("Analytics not ready yet:", error);
+    }
+  }, [location]);
+  // -------------------------------------------------------
 
  useEffect(() => {
   if (!isInGameRoom) return;
