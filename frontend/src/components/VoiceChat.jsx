@@ -8,9 +8,10 @@ export default function VoiceChat({ roomCode }) {
   const localStream = useRef(null);
   const peers = useRef({});
   const remoteAudios = useRef({});
+  // FIX 1: We need a queue to hold ICE candidates that arrive too early
+  const pendingCandidates = useRef({}); 
   const socket = connectSocket();
 
-  // We use a ref for the speaker state so the useEffect doesn't constantly re-trigger
   const speakerOnRef = useRef(speakerOn);
   useEffect(() => { speakerOnRef.current = speakerOn; }, [speakerOn]);
 
@@ -19,14 +20,18 @@ export default function VoiceChat({ roomCode }) {
   };
 
   useEffect(() => {
-    const createPeer = (peerId) => {
+    // FIX 2: Pass an isInitiator flag to prevent Offer Glare
+    const createPeer = (peerId, isInitiator) => {
       const peer = new RTCPeerConnection(rtcConfig);
       peers.current[peerId] = peer;
+      pendingCandidates.current[peerId] = []; // Initialize empty queue
 
-      // 1. Tell the connection we want to RECEIVE audio, even if we have no mic yet!
-      peer.addTransceiver('audio', { direction: 'recvonly' });
+      // Only the initiator sets up the initial receiver. The other player 
+      // will automatically set theirs up when they answer the offer.
+      if (isInitiator) {
+        peer.addTransceiver('audio', { direction: 'recvonly' });
+      }
 
-      // 2. If we already turned our mic on, add it to this new connection
       if (localStream.current) {
         localStream.current.getTracks().forEach(track => {
           peer.addTrack(track, localStream.current);
@@ -45,24 +50,19 @@ export default function VoiceChat({ roomCode }) {
       peer.ontrack = (event) => {
         if (!remoteAudios.current[peerId]) {
           const audio = new Audio();
-          // Fallback for older browsers that use event.track instead of event.streams
           audio.srcObject = event.streams[0] || new MediaStream([event.track]);
           audio.autoplay = true;
           audio.muted = !speakerOnRef.current;
           remoteAudios.current[peerId] = audio;
 
-          // Force play and catch autoplay policy blocks
           audio.play().catch(err => {
             console.warn("Autoplay blocked. User interaction required:", err);
           });
         }
       };
 
-      // 3. AUTOMATIC RENEGOTIATION: This fires automatically when a track is added
       peer.onnegotiationneeded = async () => {
-        // Prevent glare: don't create an offer if we are processing an incoming offer
         if (peer.signalingState !== "stable") return; 
-
         try {
           const offer = await peer.createOffer();
           await peer.setLocalDescription(offer);
@@ -76,23 +76,45 @@ export default function VoiceChat({ roomCode }) {
     };
 
     const handleUserJoined = ({ socketId }) => {
-      createPeer(socketId); // Someone joined, create a connection
+      // Because I am already in the room, I initiate the call with the newcomer
+      createPeer(socketId, true);
     };
 
     const handleSignal = async ({ senderId, signalData }) => {
       let peer = peers.current[senderId];
-      if (!peer) peer = createPeer(senderId);
 
       try {
         if (signalData.type === 'offer') {
+          // Because I am receiving an offer, I am NOT the initiator
+          if (!peer) peer = createPeer(senderId, false);
+
           await peer.setRemoteDescription(new RTCSessionDescription(signalData));
           const answer = await peer.createAnswer();
           await peer.setLocalDescription(answer);
           socket.emit('voice:signal', { targetId: senderId, signalData: peer.localDescription });
+
+          // FIX 3: Now that the remote description is set, flush any ICE candidates 
+          // that got stuck waiting in the queue!
+          if (pendingCandidates.current[senderId]) {
+            for (const candidate of pendingCandidates.current[senderId]) {
+              await peer.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+            pendingCandidates.current[senderId] = [];
+          }
+          
         } else if (signalData.type === 'answer') {
-          await peer.setRemoteDescription(new RTCSessionDescription(signalData));
+          if (peer) await peer.setRemoteDescription(new RTCSessionDescription(signalData));
+          
         } else if (signalData.type === 'candidate') {
-          await peer.addIceCandidate(new RTCIceCandidate(signalData.candidate));
+          // FIX 4: Prevent the "Error processing ICE candidate" crash
+          if (!peer || !peer.remoteDescription || !peer.remoteDescription.type) {
+            // The remote description isn't ready yet. Safely queue it.
+            if (!pendingCandidates.current[senderId]) pendingCandidates.current[senderId] = [];
+            pendingCandidates.current[senderId].push(signalData.candidate);
+          } else {
+            // It's safe to add it immediately
+            await peer.addIceCandidate(new RTCIceCandidate(signalData.candidate));
+          }
         }
       } catch (err) {
         console.error("Signal handling error:", err);
@@ -102,20 +124,18 @@ export default function VoiceChat({ roomCode }) {
     socket.on('voice:user_joined', handleUserJoined);
     socket.on('voice:signal', handleSignal);
 
-    // Join network IMMEDIATELY as a listener when the component mounts
     socket.emit('voice:join', { roomCode });
 
     return () => {
       socket.off('voice:user_joined', handleUserJoined);
       socket.off('voice:signal', handleSignal);
     };
-  }, [roomCode]); // Removed the 'hasJoined' block completely
+  }, [roomCode]);
 
-  // Cleanup on dismount
   useEffect(() => {
     return () => {
       Object.values(peers.current).forEach(peer => peer.close());
-      peers.current = {}; // Wipe the object clean to prevent stale references
+      peers.current = {};
       
       if (localStream.current) {
         localStream.current.getTracks().forEach(track => track.stop());
@@ -126,17 +146,12 @@ export default function VoiceChat({ roomCode }) {
   const initVoice = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          noiseSuppression: true,
-          echoCancellation: true,
-          autoGainControl: true
-        } 
+        audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true } 
       });
       
       localStream.current = stream;
       setMicOn(true);
 
-      // IMPORTANT: Inject the new mic track into ALL existing connections!
       Object.values(peers.current).forEach(peer => {
         stream.getTracks().forEach(track => {
           peer.addTrack(track, stream);
@@ -150,12 +165,10 @@ export default function VoiceChat({ roomCode }) {
   };
 
   const toggleMic = () => {
-    // If stream doesn't exist, ask for permissions
     if (!localStream.current) {
       initVoice(); 
       return;
     }
-    // Otherwise, just soft-mute the track without breaking the network
     const audioTrack = localStream.current?.getAudioTracks()[0];
     if (audioTrack) {
       audioTrack.enabled = !micOn;
@@ -166,7 +179,6 @@ export default function VoiceChat({ roomCode }) {
   const toggleSpeaker = () => {
     const newState = !speakerOn;
     setSpeakerOn(newState);
-    // Apply speaker mute/unmute to all active peers immediately
     Object.values(remoteAudios.current).forEach(audio => {
       audio.muted = !newState;
     });
@@ -174,7 +186,6 @@ export default function VoiceChat({ roomCode }) {
 
   return (
     <div className="flex gap-3 bg-[#222] p-2 rounded-lg border-[3px] border-black shadow-[4px_4px_0px_#000]">
-      {/* Mic Button */}
       <button
         onClick={toggleMic}
         className={`flex items-center justify-center w-10 h-10 rounded border-[2px] border-black transition-all shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-[1px_1px_0px_#000] ${
@@ -189,7 +200,6 @@ export default function VoiceChat({ roomCode }) {
         )}
       </button>
 
-      {/* Speaker Button */}
       <button
         onClick={toggleSpeaker}
         className={`flex items-center justify-center w-10 h-10 rounded border-[2px] border-black transition-all shadow-[2px_2px_0px_#000] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-[1px_1px_0px_#000] ${
