@@ -73,7 +73,7 @@ export const SEO_CONFIG = {
       description:
         'Play Snake and Ladder online with friends. Roll dice, climb ladders, avoid snakes, and race to the finish in a free browser game.',
       keywords:
-        'snake and ladder online, play snakes and ladders with friends, snake ladder multiplayer, free board games online, play free multiplayer games online, browser games without downloading',
+        'snake and ladder online, play snakes and ladders with friends, snake ladder multiplayer, free board games online, play free multiplayer games online, browser games without    downloading   ',
     },
     'stone-paper-scissor': {
       name: 'Stone Paper Scissor',
@@ -84,7 +84,7 @@ export const SEO_CONFIG = {
       description:
         'Play Stone Paper Scissor online with a friend on Doozles. Choose your move, win quick rounds, and play instantly in the browser.',
       keywords:
-        'stone paper scissor online, rock paper scissors online, play rock paper scissors with friends, quick 1v1 browser games, play free multiplayer games online, browser games without downloading',
+        'stone paper scissor online, rock paper scissors online, play rock paper scissors with friends, quick 1v1 browser games, play   free multiplayer games    online, browser games without downloading',
     },
     tambola: {
       name: 'Tambola',
