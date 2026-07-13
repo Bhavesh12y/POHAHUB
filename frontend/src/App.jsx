@@ -35,6 +35,7 @@ const HelixJump = lazy(() => import('./games/helix-jump/HelixJump.jsx'));
 const TableTennisLanding = lazy(() => import('./games/table-tennis/landing.jsx'));
 const TableTennisRoom = lazy(() => import('./games/table-tennis/TableTennisBoard.jsx'));
 const SinglePlayerLanding = lazy(() => import('./components/SinglePlayerLanding.jsx'));
+const StickerSystem = lazy(() => import('./components/StickerSystem.jsx')); 
 
 function RouteFallback() {
   return (
@@ -110,6 +111,7 @@ export default function App() {
           <Route path="games/table-tennis" element={<TableTennisLanding />} />
           <Route path="games/table-tennis/room/:roomCode" element={<TableTennisRoom />} />
           <Route path="single-player" element={<SinglePlayerLanding />} />
+    
 
           <Route
             path="*"

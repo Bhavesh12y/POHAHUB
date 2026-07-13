@@ -20,47 +20,43 @@ function ChatPanel({ messages, onSend, disabled }) {
   };
 
   return (
-    <div className="flex flex-col w-full h-[400px] lg:h-[550px] shrink-0 bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
+    
+    
+<div className="flex flex-col w-full h-[400px] lg:h-[550px] shrink-0 bg-[#333333] border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] rotate-1 text-white">
       <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold tracking-widest text-xs uppercase text-gray-200 bg-[#222]">
         Guesses & Chat
       </div>
-      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
-        {messages.length === 0 && (
-          <p className="text-gray-400 text-center py-4 font-bold italic">No messages yet</p>
-        )}
-        {messages.map((msg) => {
-          const isSystem = msg.playerId === 'SYSTEM';
-          const isSuccess = msg.message.includes('Guessed the word!');
-          
-          return (
-            <div key={msg.id} className={`break-words ${
-              isSystem ? 'text-center my-3 bg-[#f9a8d4] text-black border-[2px] border-black rounded p-2 shadow-[2px_2px_0px_#000]' : 
-              isSuccess ? 'text-[#4ade80] font-black uppercase' : ''
-            }`}>
-              {!isSystem && (
-                <span className="font-black text-[#facc15] tracking-wider uppercase">{msg.playerName}: </span>
-              )}
-              <span className={isSystem ? 'font-black text-[11px] uppercase tracking-widest' : 'text-white font-medium'}>
-                {msg.message}
-              </span>
-            </div>
-          );
-        })}
+        <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
+                {messages.map((msg) => (
+                <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-3 bg-[#facc15] border-[2px] border-black rounded p-2 shadow-[2px_2px_0px_#000]' : ''}`}>
+                    {/* Only show the Player Name and colon if it's NOT a system message */}
+                    {msg.playerId !== 'SYSTEM' && (
+                    <span className="font-bold text-[#facc15]">{msg.playerName}: </span>
+                    )}
+                    
+                    {/* Style the text differently if it's a System message, a Winner message, or regular chat */}
+                    <span className={
+                    msg.playerId === 'SYSTEM' ? 'text-black font-bold text-[11px] uppercase tracking-widest' :
+                    msg.message.includes('🎉') ? 'text-[#10b981] font-black tracking-wide' : 
+                    'text-gray-100 font-medium'
+                    }>
+                    {msg.message}
+                    </span>
+                </div>
+                ))}
       </div>
-      
-      <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg shrink-0">
+      <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg">
         <input
           type="text"
           className="py-2 px-3 text-sm flex-1 bg-black border-[2px] border-black rounded text-white focus:outline-none focus:ring-2 focus:ring-[#facc15]"
-          placeholder={disabled ? "You can't chat right now..." : "Type your guess..."}
+          placeholder="Guess..."
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={disabled}
-          maxLength={100}
         />
-        <button
-          type="submit"
-          className="bg-[#facc15] text-black font-black uppercase border-[2px] border-black rounded px-4 py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-50 shrink-0"
+        <button 
+          type="submit" 
+          className="bg-[#facc15] text-black font-bold uppercase border-[2px] border-black rounded px-4 py-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-50" 
           disabled={disabled}
         >
           Send
@@ -70,392 +66,370 @@ function ChatPanel({ messages, onSend, disabled }) {
   );
 }
 
+// --- HIGH PERFORMANCE FLOOD FILL ALGORITHM ---
+const performFloodFill = (ctx, startX, startY, fillColorHex) => {
+  const canvasWidth = ctx.canvas.width;
+  const canvasHeight = ctx.canvas.height;
+  
+  // Ensure coordinates are within bounds
+  if (startX < 0 || startX >= canvasWidth || startY < 0 || startY >= canvasHeight) return;
+
+  const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+  const data = imageData.data;
+
+  const startPos = (startY * canvasWidth + startX) * 4;
+  const startR = data[startPos];
+  const startG = data[startPos + 1];
+  const startB = data[startPos + 2];
+  const startA = data[startPos + 3];
+
+  // Convert Hex to RGB
+  const fillR = parseInt(fillColorHex.slice(1, 3), 16);
+  const fillG = parseInt(fillColorHex.slice(3, 5), 16);
+  const fillB = parseInt(fillColorHex.slice(5, 7), 16);
+  const fillA = 255;
+
+  // If the target color is the exact same as the start color, stop to prevent infinite loops
+  if (startR === fillR && startG === fillG && startB === fillB && startA === fillA) return;
+
+  const matchStartColor = (pos) => {
+    return data[pos] === startR && data[pos + 1] === startG && data[pos + 2] === startB && data[pos + 3] === startA;
+  };
+
+  const colorPixel = (pos) => {
+    data[pos] = fillR;
+    data[pos + 1] = fillG;
+    data[pos + 2] = fillB;
+    data[pos + 3] = fillA;
+  };
+
+  // Stack-based approach (much faster and avoids Maximum Call Stack Size errors vs recursion)
+  const stack = [startX, startY];
+
+  while (stack.length > 0) {
+    const y = stack.pop();
+    const x = stack.pop();
+    const pos = (y * canvasWidth + x) * 4;
+
+    if (matchStartColor(pos)) {
+      colorPixel(pos);
+      if (x + 1 < canvasWidth) { stack.push(x + 1, y); }
+      if (x - 1 >= 0) { stack.push(x - 1, y); }
+      if (y + 1 < canvasHeight) { stack.push(x, y + 1); }
+      if (y - 1 >= 0) { stack.push(x, y - 1); }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+};
+
 export default function ScribbleBoard() {
   const { roomCode } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  const [room, setRoom] = useState(location.state?.room ?? null);
-  const [connected, setConnected] = useState(false);
-  const [error, setError] = useState('');
 
+  const [room, setRoom] = useState(location.state?.room ?? null);
+  const [timeLeft, setTimeLeft] = useState(0);
+  
+  // Drawing & Tool State
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
+  const [color, setColor] = useState('#000000'); // Default to Black for white canvas
+  const [brushSize, setBrushSize] = useState(5);
+  const [activeTool, setActiveTool] = useState('brush'); // 'brush' or 'fill'
 
-  const socket = connectSocket();
-  const username = localStorage.getItem('pohahub_username');
-  
-  // FIX 1: Retrieve device token so guest sockets bind to the room successfully
-  const deviceToken = localStorage.getItem('pohahub_device_token'); 
-
-  const myPlayerId = socket.id;
+  const gameState = room?.gameState;
+  const myPlayerId = room?.viewerId;
+  const isMyTurn = gameState?.drawerId === myPlayerId;
   const isHost = room?.hostId === myPlayerId;
-  const isDrawer = room?.gameState?.drawerId === myPlayerId;
-  const me = room?.gameState?.players?.find(p => p.id === myPlayerId);
+
+  // Swapped to neo-brutalist palette: Black is first, White is last (Eraser)
+  const COLORS = ['#000000', '#ef4444', '#facc15', '#10b981', '#3b82f6', '#a855f7', '#ffffff'];
 
   useEffect(() => {
+    const socket = connectSocket();
+    const username = sessionStorage.getItem('pohahub_username');
     if (!username) {
       navigate(`/games/scribble?join=${roomCode}`);
       return;
     }
 
     const syncRoom = async () => {
-      const result = await emitWithAck('room:join', {
-        roomCode: roomCode.toUpperCase(),
-        playerName: username,
-        deviceToken // FIX 1 (Continued): Send token in the payload
-      });
-      if (result.ok) setRoom(result.room);
-      else if (!location.state?.room) setError(result.error || 'Could not join room');
+      const res = await emitWithAck('room:join', { roomCode: roomCode.toUpperCase(), playerName: username });
+      if (res.ok) setRoom(res.room);
     };
 
-    const onConnect = () => {
-      setConnected(true);
-      syncRoom();
-    };
-
-    const onDisconnect = () => setConnected(false);
-
-    const onRoomUpdate = (updatedRoom) => {
-      if (updatedRoom.code === roomCode?.toUpperCase()) {
-        setRoom(updatedRoom);
-      }
-    };
-
-    const onChatMessage = (msg) => {
+    socket.on('connect', syncRoom);
+    socket.on('room:update', (updatedRoom) => {
+      if (updatedRoom.code === roomCode?.toUpperCase()) setRoom(updatedRoom);
+    });
+    socket.on('chat:message', (msg) => {
       setRoom((prev) => prev ? { ...prev, chat: [...(prev.chat ?? []), msg] } : prev);
+    });
+
+    // Drawing Sync Listeners
+    socket.on('draw:line', ({ x0, y0, x1, y1, color, size }) => drawLine(x0, y0, x1, y1, color, size, false));
+    socket.on('draw:fill', ({ color }) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+
+    socket.on('draw:clear', () => {
+      const ctx = canvasRef.current?.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, 800, 600); // Clears to transparent (revealing white bg)
+    });
+
+    if (socket.connected) syncRoom();
+    else socket.connect();
+
+    return () => {
+      socket.off('connect'); socket.off('room:update'); socket.off('chat:message');
+      socket.off('draw:line'); socket.off('draw:fill'); socket.off('draw:clear');
     };
+  }, [roomCode, navigate]);
 
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('room:update', onRoomUpdate);
-    socket.on('chat:message', onChatMessage);
-
-    if (socket.connected) {
-      setConnected(true);
-      syncRoom();
+  // Local Timer Loop
+  useEffect(() => {
+    let interval;
+    if (gameState?.turnState === 'drawing' && gameState?.startTime) {
+      interval = setInterval(() => {
+        const elapsed = (Date.now() - gameState.startTime) / 1000;
+        const remaining = Math.max(0, Math.floor(gameState.timeLimit - elapsed));
+        setTimeLeft(remaining);
+      }, 500);
     } else {
-      socket.connect();
+      setTimeLeft(0);
     }
+    return () => clearInterval(interval);
+  }, [gameState?.turnState, gameState?.startTime, gameState?.timeLimit]);
 
-    return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('room:update', onRoomUpdate);
-      socket.off('chat:message', onChatMessage);
-    };
-  }, [roomCode, navigate, username, socket, deviceToken]);
+  const handleStart = async () => emitWithAck('room:start', {});
+  const handleChat = async (message) => emitWithAck('chat:message', { message });
+  const selectWord = (word) => emitWithAck('game:selectWord', { word });
 
-  // --- Socket Listeners for Drawing ---
-  useEffect(() => {
-    if (room?.status !== 'playing') return;
-
-    const handleDrawLine = (data) => {
-      if (isDrawer) return; 
-      const ctx = canvasRef.current?.getContext('2d');
-      if (!ctx) return;
-      ctx.lineWidth = data.thickness || 3;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = data.color || '#000000';
-      ctx.beginPath();
-      ctx.moveTo(data.x0, data.y0);
-      ctx.lineTo(data.x1, data.y1);
-      ctx.stroke();
-    };
-
-    const handleDrawFill = (data) => {
-      if (isDrawer) return;
-      const ctx = canvasRef.current?.getContext('2d');
-      if (!ctx) return;
-      ctx.fillStyle = data.color;
-      ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    };
-
-    const handleDrawClear = () => {
-      if (isDrawer) return;
-      const ctx = canvasRef.current?.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    };
-
-    socket.on('draw:line', handleDrawLine);
-    socket.on('draw:fill', handleDrawFill);
-    socket.on('draw:clear', handleDrawClear);
-
-    return () => {
-      socket.off('draw:line', handleDrawLine);
-      socket.off('draw:fill', handleDrawFill);
-      socket.off('draw:clear', handleDrawClear);
-    };
-  }, [room?.status, isDrawer, socket]);
-
-  // --- Initial Render of Stroke History ---
-  useEffect(() => {
-    if (room?.status === 'playing' && canvasRef.current && room.gameState?.history) {
-      const ctx = canvasRef.current.getContext('2d');
-      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      room.gameState.history.forEach(stroke => {
-        if (stroke.type === 'fill') {
-          ctx.fillStyle = stroke.color;
-          ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        } else if (stroke.type === 'line') {
-          ctx.lineWidth = stroke.thickness || 3;
-          ctx.lineCap = 'round';
-          ctx.strokeStyle = stroke.color || '#000000';
-          ctx.beginPath();
-          ctx.moveTo(stroke.x0, stroke.y0);
-          ctx.lineTo(stroke.x1, stroke.y1);
-          ctx.stroke();
-        }
-      });
-    }
-  }, [room?.status, room?.gameState?.turnState]);
-
-  const handleStart = async () => {
-    setError('');
-    const result = await emitWithAck('room:start', {});
-    if (!result.ok) setError(result.error);
-  };
-
-  const handleChat = async (message) => {
-    await emitWithAck('chat:message', { message });
-  };
-
-  const handleSelectWord = async (word) => {
-    await emitWithAck('game:selectWord', { word });
-  };
-
-  // --- Drawing Logic ---
-  const [color, setColor] = useState('#000000');
-  const [thickness, setThickness] = useState(3);
-  const [tool, setTool] = useState('pen');
-
-  const getPointerPos = (e) => {
+  // --- CANVAS INTERACTION LOGIC ---
+  const getMousePos = (e) => {
     const canvas = canvasRef.current;
-    if (!canvas) return null;
+    if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.clientX ?? e.touches?.[0]?.clientX;
-    const clientY = e.clientY ?? e.touches?.[0]?.clientY;
-    
-    // Calculate scaling factors
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-  
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height)
     };
   };
 
-  const startDrawing = (e) => {
-    if (!isDrawer || room.gameState?.turnState !== 'drawing') return;
+  const drawLine = (x0, y0, x1, y1, strokeColor, lineWidth, emit = true) => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+    ctx.strokeStyle = strokeColor; ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); ctx.closePath();
+    if (emit) emitWithAck('draw:line', { x0, y0, x1, y1, color: strokeColor, size: lineWidth });
+  };
+
+  const onMouseDown = (e) => {
+    if (!isMyTurn || gameState?.turnState !== 'drawing') return; 
     
-    if (tool === 'fill') {
-      const ctx = canvasRef.current.getContext('2d');
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      socket.emit('draw:fill', { color });
+    const curPos = getMousePos(e);
+
+    // If bucket fill is selected
+    if (activeTool === 'fill') {
+      const ctx = canvasRef.current?.getContext('2d');
+      if (ctx) {
+        const rx = Math.round(curPos.x);
+        const ry = Math.round(curPos.y);
+        performFloodFill(ctx, rx, ry, color);
+        emitWithAck('draw:fill', { x: rx, y: ry, color });
+      }
       return;
     }
 
-    isDrawing.current = true;
-    lastPos.current = getPointerPos(e);
+    // If brush is selected
+    isDrawing.current = true; 
+    lastPos.current = curPos;
   };
 
-  const draw = (e) => {
-    if (!isDrawing.current || !isDrawer || room.gameState?.turnState !== 'drawing') return;
-    const currentPos = getPointerPos(e);
-    if (!currentPos) return;
-
-    const ctx = canvasRef.current.getContext('2d');
-    const drawColor = tool === 'eraser' ? '#ffffff' : color;
-    const drawThickness = tool === 'eraser' ? 20 : thickness;
-
-    ctx.lineWidth = drawThickness;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = drawColor;
-    
-    ctx.beginPath();
-    ctx.moveTo(lastPos.current.x, lastPos.current.y);
-    ctx.lineTo(currentPos.x, currentPos.y);
-    ctx.stroke();
-
-    socket.emit('draw:line', {
-      x0: lastPos.current.x, y0: lastPos.current.y,
-      x1: currentPos.x, y1: currentPos.y,
-      color: drawColor, thickness: drawThickness
-    });
-
-    lastPos.current = currentPos;
+  const onMouseMove = (e) => {
+    if (!isDrawing.current || activeTool !== 'brush') return;
+    const cur = getMousePos(e);
+    drawLine(lastPos.current.x, lastPos.current.y, cur.x, cur.y, color, brushSize, true);
+    lastPos.current = cur;
   };
 
-  const stopDrawing = () => {
-    isDrawing.current = false;
-  };
-
+  const onMouseUp = () => isDrawing.current = false;
+  
   const clearCanvas = () => {
-    if (!isDrawer) return;
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    socket.emit('draw:clear');
+    if (!isMyTurn) return;
+    canvasRef.current?.getContext('2d').clearRect(0, 0, 800, 600);
+    emitWithAck('draw:clear', {});
   };
 
-  if (!room) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-24 text-center">
-        <div className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-10 rounded-lg max-w-md mx-auto -rotate-1">
-          <div className="animate-pulse text-gray-500 font-bold mb-2 tracking-widest uppercase text-sm">Connecting to Room...</div>
-          <p className="text-3xl text-black font-black font-mono">{roomCode}</p>
-        </div>
-      </div>
-    );
-  }
+  if (!room) return (
+    <div className="text-center py-24 text-black font-bold uppercase tracking-widest animate-pulse">
+        Connecting to the server...
+    </div>
+  );
+
+  const sortedPlayers = [...(gameState?.players || [])].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(1rem,3vw,2rem)] relative font-sans">
+    <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-8 relative font-sans">
       
-      {/* HEADER INFO */}
-      <div className="bg-[#333333] border-[3px] border-black rounded-lg p-4 sm:p-6 shadow-[6px_6px_0px_#000] -rotate-1 text-white mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">Room Code</p>
-            <p className="text-xl sm:text-2xl font-black tracking-widest text-white uppercase">{room.code}</p>
+      {/* POPUP & CUSTOM CURSOR CSS */}
+      <style>{`
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(30px) rotate(-5deg); } 100% { opacity: 1; transform: scale(1) translateY(0) rotate(-2deg); } }
+        .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        /* High Contrast Custom Cursor for Drawing */
+        .custom-cursor-brush {
+            cursor: url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 2v20M2 12h20' stroke='%23ffffff' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M12 2v20M2 12h20' stroke='%23000000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair !important;
+        }
+      `}</style>
+
+      {/* WINNER POPUP */}
+      {(gameState?.status === 'won') && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-6 sm:p-10 text-center animate-pop-in rounded-xl -rotate-2">
+            <div className="text-xs font-bold tracking-[0.3em] uppercase text-gray-500 mb-4">Match Concluded</div>
+            <h2 className="text-[clamp(1.5rem,5vw,3rem)] font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
+                {gameState.winner?.name}
+            </h2>
+            <h3 className="text-lg sm:text-xl font-bold text-black mb-2 uppercase">is the Grand Artist!</h3>
+            <div className="w-full h-[3px] bg-black my-6" />
+            <p className="text-black text-xl font-bold mb-8">{gameState.winner?.score} points</p>
+            <Link 
+              to="/games/scribble" 
+              className="bg-[#facc15] w-full block py-4 text-sm font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black transition-all duration-150 rounded"
+            >
+              Return to Hub
+            </Link>
           </div>
-          <VoiceChat roomCode={room.code} />
-          <div className="text-right">
-            <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">Status</p>
-            <p className="font-black text-[#facc15] text-sm sm:text-base uppercase">
-              {room.status === 'waiting' ? 'Waiting Lobby' : 'Match in Progress'}
-            </p>
-          </div>
+        </div>
+      )}
+
+      {/* RESPONSIVE TOP STATUS BAR */}
+      <div className="bg-[#333333] border-[3px] border-black p-4 sm:p-6 mb-4 sm:mb-6 grid grid-cols-2 md:flex md:flex-row justify-between items-center rounded-lg shadow-[8px_8px_0px_#000] gap-3 sm:gap-4 relative overflow-hidden -rotate-1">
+        
+        {/* Timer Bar */}
+        {gameState?.turnState === 'drawing' && (
+           <div className="absolute top-0 left-0 h-2 bg-[#facc15] border-b-[3px] border-black transition-all duration-500 ease-linear" 
+                style={{ width: `${(timeLeft / gameState.timeLimit) * 100}%` }} />
+        )}
+
+        <div className="order-2 md:order-1 col-span-1 text-left mt-2 md:mt-0">
+          <p className="text-[9px] sm:text-xs font-bold tracking-[0.2em] uppercase text-gray-400">Round {gameState?.round || 1}/{gameState?.maxRounds || 3}</p>
+          <p className="text-base sm:text-2xl font-black text-white">
+            {gameState?.turnState === 'drawing' ? `⏳ ${timeLeft}s` : 'Waiting'}
+          </p>
+        </div>
+        
+        <div className="order-1 md:order-2 col-span-2 md:col-span-1 text-center bg-[#222] border-[3px] border-black shadow-[inset_3px_3px_0px_rgba(0,0,0,0.5)] md:bg-transparent md:border-none md:shadow-none rounded-lg py-3 md:py-0 mt-2 md:mt-0">
+          <p className="text-[9px] sm:text-xs font-bold tracking-[0.2em] uppercase text-gray-400 mb-1">Word</p>
+          <p className="text-[clamp(1rem,3vw,2rem)] font-black tracking-widest text-[#facc15] min-h-[32px] uppercase">
+            {gameState?.currentWord || "_ _ _ _ _"}
+          </p>
+        </div>
+
+        {/* INJECT VOICE CONTROLS HERE */}
+         <VoiceChat roomCode={room.code} />
+
+        <div className="order-3 md:order-3 col-span-1 text-right mt-2 md:mt-0">
+          <p className="text-[9px] sm:text-xs font-bold tracking-[0.2em] uppercase text-gray-400">Status</p>
+          <p className="text-xs sm:text-lg font-bold text-white uppercase">
+            {room.status === 'waiting' ? 'Waiting...' : gameState?.turnState === 'selecting' ? 'Picking...' : isMyTurn ? "Draw!" : "Guess!"}
+          </p>
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 px-4 py-3 bg-[#ef4444] border-[3px] border-black rounded text-black font-black uppercase shadow-[4px_4px_0px_#000] -rotate-1">
-          {error}
-        </div>
-      )}
-
-      {/* GAME OVER MODAL */}
-      {room.status === 'playing' && room.gameState?.turnState === 'finished' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-8 max-w-md w-full text-center rounded-xl -rotate-2">
-            <h2 className="text-4xl font-black mb-6 uppercase text-[#3b82f6]">Game Over!</h2>
-            <div className="space-y-3 mb-8">
-              {[...room.gameState.players].sort((a,b) => b.score - a.score).map((p, i) => (
-                <div key={p.id} className="flex justify-between items-center text-lg font-bold border-b-2 border-dashed border-gray-300 pb-2">
-                  <span>{i===0?'🏆 ':''}{p.name}</span>
-                  <span className="text-[#facc15] bg-black px-2 rounded border-2 border-black">{p.score} pts</span>
+          <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 flex flex-col gap-4">
+          
+          {room.status === 'waiting' ? (
+             <WaitingLobby 
+                roomCode={room.code} 
+                isHost={isHost} 
+                playerCount={room.players.length} 
+                onStart={handleStart} 
+                gamePath="scribble/room" 
+             />
+          ) : (
+            <>
+              {/* RESPONSIVE TOOLS PANEL */}
+              <div className={`flex flex-col md:flex-row justify-between items-center p-3 sm:p-4 bg-white border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] gap-3 transition-opacity ${(!isMyTurn || gameState?.turnState !== 'drawing') && 'opacity-50 pointer-events-none'}`}>
+            
+                {/* Tool Toggles */}
+                <div className="flex bg-gray-200 p-1 rounded border-[3px] border-black">
+                    <button 
+                        onClick={() => setActiveTool('brush')} 
+                        className={`px-4 py-1.5 rounded text-sm font-bold border-[2px] transition-all ${activeTool === 'brush' ? 'bg-[#facc15] border-black shadow-[2px_2px_0px_#000]' : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-300'}`}
+                    >
+                        ✏️ Brush
+                    </button>
+                    <button 
+                        onClick={() => setActiveTool('fill')} 
+                        className={`px-4 py-1.5 rounded text-sm font-bold border-[2px] transition-all ${activeTool === 'fill' ? 'bg-[#facc15] border-black shadow-[2px_2px_0px_#000]' : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-300'}`}
+                    >
+                        🪣 Fill
+                    </button>
                 </div>
-              ))}
-            </div>
-            {isHost && (
-              <button 
-                onClick={handleStart}
-                className="w-full bg-[#facc15] text-black px-6 py-4 font-black text-xl uppercase border-[3px] border-black rounded shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all"
-              >
-                Play Again
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
-      <div className="flex flex-col lg:flex-row gap-[clamp(1rem,3vw,2rem)] items-stretch">
-        
-        {/* LEFT COLUMN: GAME BOARD / LOBBY */}
-        <div className="flex-1 w-full min-w-0 flex flex-col">
-          {room.status === 'waiting' && (
-            <WaitingLobby
-              roomCode={room.code}
-              isHost={isHost}
-              playerCount={room.players.length}
-              maxPlayers={8}
-              onStart={handleStart}
-              gamePath="scribble/room"
-            />
-          )}
+                {/* Colors - Grid View */}
+                <div className="flex items-center gap-4 bg-gray-200 p-2 rounded border-[3px] border-black">
+                    <div className="grid grid-cols-7 gap-2">
+                    {COLORS.slice(0, 7).map(c => (
+                        <button 
+                        key={c} 
+                        onClick={() => setColor(c)} 
+                        className={`w-6 h-6 rounded border-[2px] border-black transition-all ${color === c ? 'scale-125 shadow-[2px_2px_0px_#000] z-10' : 'hover:scale-110'}`} 
+                        style={{ backgroundColor: c }} 
+                        title={c === '#ffffff' ? 'Eraser' : 'Color'}
+                        />
+                    ))}
+                    </div>
 
-          {room.status === 'playing' && (
-            <div className="flex flex-col items-center w-full max-w-3xl mx-auto">
-              
-              <div className="w-full flex justify-between items-center bg-white border-[3px] border-black p-3 mb-4 rounded-lg shadow-[4px_4px_0px_#000]">
-                 <div className="font-black text-xl text-black">
-                   {room.gameState?.turnState === 'drawing' ? (
-                     isDrawer ? (
-                       <span>DRAW: <span className="text-blue-600 tracking-widest">{room.gameState.currentWord}</span></span>
-                     ) : (
-                       <span>GUESS THE WORD!</span>
-                     )
-                   ) : (
-                     <span>Waiting for turn...</span>
-                   )}
-                 </div>
-                 <div className="font-bold uppercase tracking-widest text-gray-500">
-                   Round {room.gameState?.currentRound || 1} / {room.gameState?.maxRounds || 3}
-                 </div>
+                    {/* Advanced Dropper Icon */}
+                    <div className="relative group border-l-[3px] border-black pl-3 flex items-center justify-center">
+                    <label className="cursor-pointer flex flex-col items-center">
+                        <span className="text-xl hover:scale-110 transition-transform">💧</span>
+                        <input 
+                        type="color" 
+                        value={color} 
+                        onChange={(e) => setColor(e.target.value)}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                    </label>
+                    </div>
+                </div>
+
+                <button 
+                    onClick={clearCanvas} 
+                    className="bg-[#ef4444] text-white border-[3px] border-black px-4 py-2 rounded font-bold uppercase shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all"
+                >
+                    Clear
+                </button>
               </div>
 
-              {/* Player List */}
-              {room.gameState?.players && (
-                <div className="w-full flex flex-wrap justify-center gap-2 sm:gap-4 mb-4">
-                  {room.gameState.players.map((player, index) => {
-                    const isDrawer = player.id === room.gameState.drawerId;
-                    const hasGuessed = room.gameState.guessedPlayers.includes(player.id);
-                    return (
-                      <div 
-                        key={player.id} 
-                        className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-lg border-[3px] border-black transition-all ${
-                            isDrawer ? 'bg-[#3b82f6] text-white shadow-[4px_4px_0px_#000]' : 
-                            hasGuessed ? 'bg-[#10b981] text-black shadow-[4px_4px_0px_#000]' : 
-                            'bg-white text-black shadow-[3px_3px_0px_#000]'
-                        }`}
-                      >
-                        <div className="font-black text-lg w-3 sm:w-4">{index + 1}</div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-[11px] sm:text-sm font-bold truncate">
-                            {player.name} {isDrawer && '✏️'} {hasGuessed && '✔️'}
-                          </span>
-                          <span className={`text-[10px] sm:text-xs font-bold ${isDrawer ? 'text-blue-200' : 'text-gray-600'}`}>
-                            {player.score ?? 0} pts
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* CANVAS WRAPPER */}
-              <div className="relative w-full border-[4px] border-black rounded-lg shadow-[8px_8px_0px_#000] overflow-hidden bg-white mb-4">
+              {/* THE CANVAS */}
+              <div className={`relative w-full aspect-[4/3] sm:aspect-video rounded-lg overflow-hidden bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] rotate-1`}>
                 
-                {/* TIMER OVERLAY */}
-                {room.gameState?.turnState === 'drawing' && (
-                  <div className="absolute top-4 right-4 bg-black text-[#facc15] px-4 py-2 font-black text-2xl border-[3px] border-black rounded z-10 animate-pulse shadow-[4px_4px_0px_#facc15]">
-                    {Math.max(0, Math.ceil(room.gameState.timeLimit - ((Date.now() - room.gameState.startTime) / 1000)))}s
-                  </div>
-                )}
-
-                {/* HINT OVERLAY */}
-                {!isDrawer && room.gameState?.turnState === 'drawing' && room.gameState?.hint && (
-                  <div className="absolute top-4 left-4 bg-white/90 text-black px-4 py-2 font-black text-xl border-[3px] border-black tracking-[0.2em] rounded z-10 shadow-[4px_4px_0px_#000]">
-                    {room.gameState.hint}
-                  </div>
-                )}
-
-                {/* WORD SELECTION OVERLAY */}
-                {room.gameState?.turnState === 'selecting' && (
-                  <div className="absolute inset-0 bg-black/80 z-20 flex flex-col items-center justify-center p-4 text-center">
-                    {isDrawer ? (
-                      <div>
-                        <h2 className="text-3xl font-black text-white mb-6 uppercase">Choose a word</h2>
-                        <div className="flex flex-wrap justify-center gap-4">
-                          {room.gameState.wordOptions.map(w => (
-                            <button
-                              key={w}
-                              onClick={() => handleSelectWord(w)}
-                              className="bg-[#facc15] text-black px-6 py-3 font-black text-xl uppercase border-[3px] border-black rounded shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all"
+                {gameState?.turnState === 'selecting' && (
+                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    {isMyTurn ? (
+                      <div className="text-center animate-pop-in w-full max-w-lg bg-white border-[4px] border-black p-8 rounded-xl shadow-[12px_12px_0px_#000] -rotate-2">
+                        <h3 className="text-xl sm:text-3xl font-black uppercase text-black mb-6 sm:mb-8">Choose your word</h3>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                          {gameState.wordOptions.map(w => (
+                            <button 
+                                key={w} 
+                                onClick={() => selectWord(w)} 
+                                className="bg-[#3b82f6] text-white hover:bg-[#facc15] hover:text-black py-3 sm:py-4 px-6 sm:px-8 text-sm sm:text-lg rounded font-bold uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all"
                             >
                               {w}
                             </button>
@@ -463,60 +437,59 @@ export default function ScribbleBoard() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-[#facc15] text-2xl font-black uppercase animate-pulse">
-                        {room.players.find(p => p.id === room.gameState.drawerId)?.name || 'Player'} is choosing a word...
+                      <div className="text-center bg-white border-[3px] border-black p-6 rounded-lg shadow-[6px_6px_0px_#000] animate-pulse text-black font-bold uppercase text-sm sm:text-xl">
+                        The Drawer is picking a word...
                       </div>
                     )}
                   </div>
                 )}
 
-                <canvas
-                  ref={canvasRef}
-                  width={800}
-                  height={600}
-                  className={`w-full aspect-[4/3] bg-white rounded cursor-crosshair touch-none ${!isDrawer ? 'pointer-events-none' : ''}`}
-                  onPointerDown={startDrawing}
-                  onPointerMove={draw}
-                  onPointerUp={stopDrawing}
-                  onPointerLeave={stopDrawing}
-                  onPointerCancel={stopDrawing}
-                />
+                {/* THE FIX: Replaced custom-crosshair logic with the new custom-cursor-brush class */}
+                <canvas ref={canvasRef} width={800} height={600} 
+                  className={`w-full h-full relative z-10 touch-none ${(isMyTurn && gameState?.turnState === 'drawing') ? (activeTool === 'fill' ? 'cursor-cell' : 'custom-cursor-brush') : 'cursor-default'}`}
+                  onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseOut={onMouseUp}
+                  onTouchStart={onMouseDown} onTouchMove={onMouseMove} onTouchEnd={onMouseUp} />
               </div>
-
-              {/* DRAWING CONTROLS */}
-              {isDrawer && room.gameState?.turnState === 'drawing' && (
-                <div className="w-full bg-[#222] p-3 rounded-lg border-[3px] border-black flex flex-wrap gap-4 items-center justify-between shadow-[4px_4px_0px_#000]">
-                  <div className="flex gap-2">
-                    {['#000000', '#ef4444', '#3b82f6', '#10b981', '#facc15', '#a855f7'].map(c => (
-                      <button
-                        key={c}
-                        onClick={() => { setColor(c); setTool('pen'); }}
-                        className={`w-8 h-8 rounded-full border-[3px] border-black shadow-[2px_2px_0px_#000] hover:scale-110 transition-transform ${color === c && tool === 'pen' ? 'scale-110 ring-4 ring-white' : ''}`}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setTool('pen')} className={`px-4 py-2 font-black uppercase text-xs border-[2px] border-black rounded shadow-[2px_2px_0px_#000] ${tool === 'pen' ? 'bg-[#facc15] text-black' : 'bg-gray-700 text-white'}`}>Pen</button>
-                    <button onClick={() => setTool('fill')} className={`px-4 py-2 font-black uppercase text-xs border-[2px] border-black rounded shadow-[2px_2px_0px_#000] ${tool === 'fill' ? 'bg-[#facc15] text-black' : 'bg-gray-700 text-white'}`}>Fill</button>
-                    <button onClick={() => setTool('eraser')} className={`px-4 py-2 font-black uppercase text-xs border-[2px] border-black rounded shadow-[2px_2px_0px_#000] ${tool === 'eraser' ? 'bg-white text-black' : 'bg-gray-700 text-white'}`}>Eraser</button>
-                    <button onClick={clearCanvas} className="px-4 py-2 font-black uppercase text-xs bg-red-500 text-white border-[2px] border-black rounded shadow-[2px_2px_0px_#000]">Clear</button>
-                  </div>
-                </div>
-              )}
-            </div>
+              
+              {/* RESPONSIVE LEADERBOARD */}
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 mt-2">
+                {sortedPlayers.map((player, index) => {
+                  const isDrawer = player.id === gameState?.drawerId;
+                  const hasGuessed = gameState?.guessedPlayers?.includes(player.id);
+                  return (
+                    <div 
+                        key={player.id} 
+                        className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-lg border-[3px] border-black transition-all ${
+                            isDrawer ? 'bg-[#3b82f6] text-white shadow-[4px_4px_0px_#000]' : 
+                            hasGuessed ? 'bg-[#10b981] text-black shadow-[4px_4px_0px_#000]' : 
+                            'bg-white text-black shadow-[3px_3px_0px_#000]'
+                        }`}
+                    >
+                      <div className="font-black text-lg w-3 sm:w-4">{index + 1}</div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[11px] sm:text-sm font-bold truncate">
+                          {player.name} {isDrawer && '✏️'} {hasGuessed && '✔️'}
+                        </span>
+                        <span className={`text-[10px] sm:text-xs font-bold ${isDrawer ? 'text-blue-200' : 'text-gray-600'}`}>
+                          {player.score ?? 0} pts
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
 
-        {/* RIGHT COLUMN: Chat / Guess Panel (FIX 2: ALWAYS VISIBLE SO PLAYERS SEE CHAT IN LOBBY) */}
-        <div className="w-full lg:w-80 h-[400px] lg:h-auto shrink-0 flex flex-col mt-4 lg:mt-0">
-          <ChatPanel
-            messages={room.chat ?? []}
-            onSend={handleChat}
-            disabled={!room || (room.status === 'playing' && isDrawer)}
-          />
+        {/* CHAT / GUESS PANEL */}
+           <div className="lg:w-80 h-[300px] lg:h-auto mt-4 lg:mt-0">
+            <ChatPanel 
+                messages={room?.chat ?? []} 
+                onSend={handleChat} 
+                disabled={!room} 
+            />
         </div>
-
       </div>
     </div>
   );
