@@ -115,6 +115,16 @@ io.on('connection', (socket) => {
     emitRoomUpdate(result.room);
   });
 
+
+
+socket.on('sendSticker', ({ roomId, sticker }) => {
+    // Broadcast to everyone in the room, including the sender
+    io.to(roomId).emit('receiveSticker', { 
+        sticker, 
+        senderId: socket.id 
+    });
+});
+
   // --- AIR HOCKEY REAL-TIME EVENTS ---
   socket.on('joinAirHockey', ({ roomId, playerInfo }) => {
     const room = roomManager.getRoom(roomId);
