@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url';
 const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSktbZaUpHjnxmV8iMjXTc-NrcknJl7EaWJPhHw4z1blDlwKTissKkzflUyunBEPpnFwtpw33zGrgBb/pub?output=csv';
 
 // --- FALLBACK WORDS ---
-// Just in case Google goes down or the server loses internet
 let WORDS = [
   'APPLE', 'ASTRONAUT', 'BACKPACK', 'BANANA', 'BICYCLE', 'BUTTERFLY', 'CAMERA', 'CASTLE', 
   'COMPASS', 'COMPUTER', 'DIAMOND', 'DRAGON', 'ELEPHANT', 'FIRETRUCK', 'GUITAR', 'HAMBURGER'
@@ -20,10 +19,9 @@ async function fetchWordsFromGoogleSheet() {
     
     const csvText = await response.text();
     
-    // Clean up the data: Split by line breaks, uppercase it, trim spaces, remove empty rows
     const sheetWords = csvText
       .split('\n')
-      .map(word => word.replace(/,/g, '').trim().toUpperCase()) // Remove rogue commas just in case
+      .map(word => word.replace(/,/g, '').trim().toUpperCase())
       .filter(word => word.length > 0);
 
     if (sheetWords.length > 0) {
@@ -35,11 +33,8 @@ async function fetchWordsFromGoogleSheet() {
   }
 }
 
-// 1. Fetch immediately when the server boots up
 fetchWordsFromGoogleSheet();
-
-// 2. Automatically re-fetch every 1 hour (3600000 ms) to get any new words you added!
-setInterval(fetchWordsFromGoogleSheet, 3600000); 
+setInterval(fetchWordsFromGoogleSheet, 3600000);
 
 function getThreeRandomWords() {
   return [...WORDS].sort(() => 0.5 - Math.random()).slice(0, 3);
@@ -47,7 +42,6 @@ function getThreeRandomWords() {
 
 // --- GAME STATE LOGIC ---
 export function createScribbleState(players) {
-  // RANDOMIZE STARTING PLAYER
   const startIndex = Math.floor(Math.random() * players.length);
 
   return {
@@ -60,6 +54,7 @@ export function createScribbleState(players) {
     turnState: 'selecting',
     wordOptions: getThreeRandomWords(),
     currentWord: '',
+    lastWord: '',                     // ← NEW: to reveal after time runs out
     guessedPlayers: [],
     hints: [],
     hintsRevealed: 0,
@@ -82,9 +77,10 @@ export function revealHint(state) {
 }
 
 export function endScribbleTurn(state) {
+  // Keep the word for the “time’s up” pop‑up
+  state.lastWord = state.currentWord;
+
   state.drawerIndex++;
-  
-  // If everyone has drawn, move to the next round
   if (state.drawerIndex >= state.players.length) {
     state.drawerIndex = 0;
     state.round++;
@@ -135,9 +131,59 @@ export function serializeScribbleState(state, viewerId) {
     turnState: state.turnState,
     wordOptions: sentWordOptions,
     currentWord: displayWord,
+    lastWord: state.lastWord || '',    // ← NEW: revealed after turn ends
     startTime: state.startTime,
     timeLimit: state.timeLimit,
     winner: state.winner,
     guessedPlayers: state.guessedPlayers
   };
+}
+
+// --- NEW: Levenshtein distance for “close” guesses ---
+function levenshtein(a, b) {
+  const an = a.length;
+  const bn = b.length;
+  const matrix = [];
+
+  for (let i = 0; i <= bn; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= an; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= bn; i++) {
+    for (let j = 1; j <= an; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+  return matrix[bn][an];
+}
+
+/**
+ * Check a guess against the real word.
+ * Returns { result: 'correct' | 'close' | 'wrong', message }
+ */
+export function checkGuess(guess, currentWord, playerName) {
+  const normGuess = guess.trim().toUpperCase();
+  const normWord = currentWord.toUpperCase();
+
+  if (normGuess === normWord) {
+    return { result: 'correct', message: `${playerName} guessed the word! 🎉` };
+  }
+
+  const distance = levenshtein(normGuess, normWord);
+  // “very close” = max 1 letter difference (and lengths not wildly different)
+  if (distance <= 2 && Math.abs(normGuess.length - normWord.length) <= 1) {
+    return { result: 'close', message: `So close, ${playerName}! You're almost there.` };
+  }
+
+  return { result: 'wrong', message: '' };
 }
