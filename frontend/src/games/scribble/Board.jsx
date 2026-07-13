@@ -24,24 +24,21 @@ function ChatPanel({ messages, onSend, disabled }) {
       <div className="px-4 py-3 sm:py-4 border-b-[3px] border-black font-bold tracking-widest text-xs uppercase text-gray-200 bg-[#222]">
         Guesses & Chat
       </div>
-        <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
-                {messages.map((msg) => (
-                <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-3 bg-[#facc15] border-[2px] border-black rounded p-2 shadow-[2px_2px_0px_#000]' : ''}`}>
-                    {/* Only show the Player Name and colon if it's NOT a system message */}
-                    {msg.playerId !== 'SYSTEM' && (
-                    <span className="font-bold text-[#facc15]">{msg.playerName}: </span>
-                    )}
-                    
-                    {/* Style the text differently if it's a System message, a Winner message, or regular chat */}
-                    <span className={
-                    msg.playerId === 'SYSTEM' ? 'text-black font-bold text-[11px] uppercase tracking-widest' :
-                    msg.message.includes('🎉') ? 'text-[#10b981] font-black tracking-wide' : 
-                    'text-gray-100 font-medium'
-                    }>
-                    {msg.message}
-                    </span>
-                </div>
-                ))}
+      <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-600 bg-[#333]">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`break-words ${msg.playerId === 'SYSTEM' ? 'text-center my-3 bg-[#facc15] border-[2px] border-black rounded p-2 shadow-[2px_2px_0px_#000]' : ''}`}>
+            {msg.playerId !== 'SYSTEM' && (
+              <span className="font-bold text-[#facc15]">{msg.playerName}: </span>
+            )}
+            <span className={
+              msg.playerId === 'SYSTEM' ? 'text-black font-bold text-[11px] uppercase tracking-widest' :
+              msg.message.includes('🎉') ? 'text-[#10b981] font-black tracking-wide' : 
+              'text-gray-100 font-medium'
+            }>
+              {msg.message}
+            </span>
+          </div>
+        ))}
       </div>
       <form onSubmit={handleSubmit} className="p-2 sm:p-3 border-t-[3px] border-black flex gap-2 bg-[#2a2a2a] rounded-b-lg">
         <input
@@ -124,6 +121,8 @@ export default function ScribbleBoard() {
 
   const [room, setRoom] = useState(location.state?.room ?? null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [revealWord, setRevealWord] = useState(null);          // ← NEW
+  const [closeMessage, setCloseMessage] = useState(null);      // ← NEW
   
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
@@ -138,6 +137,9 @@ export default function ScribbleBoard() {
   const isHost = room?.hostId === myPlayerId;
 
   const COLORS = ['#000000', '#ef4444', '#facc15', '#10b981', '#3b82f6', '#a855f7', '#ffffff'];
+
+  // Track previous turn state to detect when a drawing round ends
+  const prevTurnState = useRef(gameState?.turnState);
 
   useEffect(() => {
     const socket = connectSocket();
@@ -174,14 +176,35 @@ export default function ScribbleBoard() {
       if (ctx) ctx.clearRect(0, 0, 800, 600); 
     });
 
+    // ───── NEW: listen for close‑guess notification (private to this player) ─────
+    socket.on('game:closeGuess', (data) => {
+      setCloseMessage(data.message || 'So close!');
+      setTimeout(() => setCloseMessage(null), 3000);
+    });
+    // ─────────────────────────────────────────────────────────────────────────────
+
     if (socket.connected) syncRoom();
     else socket.connect();
 
     return () => {
       socket.off('connect'); socket.off('room:update'); socket.off('chat:message');
       socket.off('draw:line'); socket.off('draw:fill'); socket.off('draw:clear');
+      socket.off('game:closeGuess');   // clean up new listener
     };
   }, [roomCode, navigate]);
+
+  // ───── Word‑reveal pop‑up when a drawing round ends ─────
+  useEffect(() => {
+    if (!gameState) return;
+
+    if (prevTurnState.current === 'drawing' && gameState.turnState === 'selecting' && gameState.lastWord) {
+      setRevealWord(gameState.lastWord);
+      setTimeout(() => setRevealWord(null), 4000);   // disappear after 4 seconds
+    }
+
+    prevTurnState.current = gameState.turnState;
+  }, [gameState?.turnState, gameState?.lastWord]);
+  // ─────────────────────────────────────────────────────
 
   useEffect(() => {
     let interval;
@@ -275,6 +298,26 @@ export default function ScribbleBoard() {
         }
       `}</style>
 
+      {/* ───── NEW: Word‑reveal pop‑up ───── */}
+      {revealWord && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] rounded-xl p-4 px-6 animate-pop-in text-center max-w-[90vw]">
+          <p className="text-sm font-bold uppercase text-gray-500 mb-1">Time’s up!</p>
+          <p className="text-2xl font-black text-black leading-tight">
+            The word was{' '}
+            <span className="text-[#ef4444] underline decoration-wavy decoration-2">
+              {revealWord}
+            </span>
+          </p>
+        </div>
+      )}
+
+      {/* ───── NEW: “So close” toast (private to the guesser) ───── */}
+      {closeMessage && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#facc15] border-[4px] border-black shadow-[6px_6px_0px_#000] rounded-xl px-6 py-3 animate-pop-in text-center">
+          <p className="text-xl font-black text-black">{closeMessage}</p>
+        </div>
+      )}
+
       {(gameState?.status === 'won') && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -301,7 +344,7 @@ export default function ScribbleBoard() {
         {/* LEFT COLUMN: Drawing Interface */}
         <div className="flex-1 flex flex-col gap-4">
           
-          {/* STICKY MOBILE WRAPPER */}
+          {/* STICKY MOBILE WRAPPER – canvas stays visible while scrolling chat */}
           <div className="sticky top-0 z-40 bg-white pt-2 pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 sm:bg-transparent sm:pt-0 sm:pb-0 sm:relative sm:z-auto">
             
             <div className="bg-[#333333] border-[3px] border-black p-4 sm:p-6 mb-4 sm:mb-6 grid grid-cols-2 md:flex md:flex-row justify-between items-center rounded-lg shadow-[8px_8px_0px_#000] gap-3 sm:gap-4 relative overflow-hidden -rotate-1">
@@ -345,6 +388,7 @@ export default function ScribbleBoard() {
                />
             ) : (
               <>
+                {/* Only the active drawer sees the drawing tools – reduces mobile clutter */}
                 {(isMyTurn && gameState?.turnState === 'drawing') && (
                   <div className="flex flex-col md:flex-row justify-between items-center p-3 sm:p-4 mb-4 bg-white border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] gap-3 transition-opacity">
                 
@@ -434,7 +478,7 @@ export default function ScribbleBoard() {
             )}
           </div>
 
-          {/* LEADERBOARD (Allowed to scroll on mobile) */}
+          {/* LEADERBOARD */}
           {room.status !== 'waiting' && (
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 mt-2">
               {sortedPlayers.map((player, index) => {
