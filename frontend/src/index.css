@@ -7,6 +7,28 @@
 .backface-hidden { backface-visibility: hidden; transform-style: preserve-3d; }
 .relative { transform-style: preserve-3d; }
 
+@keyframes floatUp {
+  0% { 
+    transform: translateY(0) scale(0.5); 
+    opacity: 0; 
+  }
+  15% { 
+    transform: translateY(-20px) scale(1.2); 
+    opacity: 1; 
+  }
+  80% { 
+    transform: translateY(-150px) scale(1); 
+    opacity: 1; 
+  }
+  100% { 
+    transform: translateY(-200px) scale(0.8); 
+    opacity: 0; 
+  }
+}
+
+.animate-float-up {
+  animation: floatUp 3s ease-out forwards;
+}
 
 @layer base {
   html {
