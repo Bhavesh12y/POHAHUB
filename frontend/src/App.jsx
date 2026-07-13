@@ -8,6 +8,7 @@ const ComingSoon = lazy(() => import('./components/ComingSoon.jsx'));
 const GameSeoPage = lazy(() => import('./pages/GameSeoPage.jsx'));
 const TrustPage = lazy(() => import('./pages/TrustPage.jsx'));
 
+
 const ConnectFourLanding = lazy(() => import('./games/connect-four/Landing.jsx'));
 const ConnectFourBoard = lazy(() => import('./games/connect-four/Board.jsx'));
 const TicTacToeLanding = lazy(() => import('./games/tictactoe/Landing.jsx'));

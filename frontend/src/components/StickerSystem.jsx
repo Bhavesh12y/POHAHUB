@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import socket from '../lib/socket'; // Adjust path if necessary
+import { connectSocket } from '../lib/socket.js';
 
 // You can mix native emojis and URLs to custom images from your /public folder
 const STICKERS = [
