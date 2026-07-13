@@ -298,183 +298,52 @@ export default function ScribbleBoard() {
 
       <div className="flex flex-col lg:flex-row gap-6">
         
-        {/* LEFT COLUMN: Drawing Interface */}
-        <div className="flex-1 flex flex-col gap-4">
-          
-          {/* STICKY MOBILE WRAPPER */}
-          <div className="sticky top-0 z-40 bg-white pt-2 pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 sm:bg-transparent sm:pt-0 sm:pb-0 sm:relative sm:z-auto">
-            
-            <div className="bg-[#333333] border-[3px] border-black p-4 sm:p-6 mb-4 sm:mb-6 grid grid-cols-2 md:flex md:flex-row justify-between items-center rounded-lg shadow-[8px_8px_0px_#000] gap-3 sm:gap-4 relative overflow-hidden -rotate-1">
-              
-              {gameState?.turnState === 'drawing' && (
-                 <div className="absolute top-0 left-0 h-2 bg-[#facc15] border-b-[3px] border-black transition-all duration-500 ease-linear" 
-                      style={{ width: `${(timeLeft / gameState.timeLimit) * 100}%` }} />
-              )}
+       {/* LEFT COLUMN: Drawing Interface */}
+<div className="flex-1 flex flex-col gap-4">
+  
+  {/* --- STICKY MOBILE WRAPPER --- */}
+  {/* This locks the canvas to the top on mobile so you can see it while typing in chat */}
+  <div className="sticky top-0 z-40 bg-white pt-2 pb-4 -mx-2 px-2 sm:mx-0 sm:px-0 sm:bg-transparent sm:pt-0 sm:pb-0 sm:relative sm:z-auto">
+    
+    {/* 1. YOUR RESPONSIVE TOP STATUS BAR */}
+    <div className="bg-[#333333] border-[3px] border-black p-4 sm:p-6 mb-4 sm:mb-6 grid ...">
+      {/* ... timer, word, and status code ... */}
+    </div>
 
-              <div className="order-2 md:order-1 col-span-1 text-left mt-2 md:mt-0">
-                <p className="text-[9px] sm:text-xs font-bold tracking-[0.2em] uppercase text-gray-400">Round {gameState?.round || 1}/{gameState?.maxRounds || 3}</p>
-                <p className="text-base sm:text-2xl font-black text-white">
-                  {gameState?.turnState === 'drawing' ? `⏳ ${timeLeft}s` : 'Waiting'}
-                </p>
-              </div>
-              
-              <div className="order-1 md:order-2 col-span-2 md:col-span-1 text-center bg-[#222] border-[3px] border-black shadow-[inset_3px_3px_0px_rgba(0,0,0,0.5)] md:bg-transparent md:border-none md:shadow-none rounded-lg py-3 md:py-0 mt-2 md:mt-0">
-                <p className="text-[9px] sm:text-xs font-bold tracking-[0.2em] uppercase text-gray-400 mb-1">Word</p>
-                <p className="text-[clamp(1rem,3vw,2rem)] font-black tracking-widest text-[#facc15] min-h-[32px] uppercase">
-                  {gameState?.currentWord || "_ _ _ _ _"}
-                </p>
-              </div>
+    {/* 2. YOUR CONDITIONAL TOOLS PANEL */}
+    {(isMyTurn && gameState?.turnState === 'drawing') && (
+      <div className="flex flex-col md:flex-row justify-between items-center p-3 sm:p-4 mb-4 ...">
+        {/* ... brush, fill, colors, clear code ... */}
+      </div>
+    )}
 
-               <VoiceChat roomCode={room.code} />
+    {/* 3. YOUR CANVAS */}
+    <div className={`relative w-full aspect-[4/3] sm:aspect-video rounded-lg overflow-hidden ...`}>
+      {/* ... word selection and canvas code ... */}
+    </div>
 
-              <div className="order-3 md:order-3 col-span-1 text-right mt-2 md:mt-0">
-                <p className="text-[9px] sm:text-xs font-bold tracking-[0.2em] uppercase text-gray-400">Status</p>
-                <p className="text-xs sm:text-lg font-bold text-white uppercase">
-                  {room.status === 'waiting' ? 'Waiting...' : gameState?.turnState === 'selecting' ? 'Picking...' : isMyTurn ? "Draw!" : "Guess!"}
-                </p>
-              </div>
-            </div>
+  </div> 
+  {/* --- END OF STICKY WRAPPER --- */}
 
-            {room.status === 'waiting' ? (
-               <WaitingLobby 
-                  roomCode={room.code} 
-                  isHost={isHost} 
-                  playerCount={room.players.length} 
-                  onStart={handleStart} 
-                  gamePath="scribble/room" 
-               />
-            ) : (
-              <>
-                {(isMyTurn && gameState?.turnState === 'drawing') && (
-                  <div className="flex flex-col md:flex-row justify-between items-center p-3 sm:p-4 mb-4 bg-white border-[3px] border-black rounded-lg shadow-[6px_6px_0px_#000] gap-3 transition-opacity">
-                
-                    <div className="flex bg-gray-200 p-1 rounded border-[3px] border-black">
-                        <button 
-                            onClick={() => setActiveTool('brush')} 
-                            className={`px-4 py-1.5 rounded text-sm font-bold border-[2px] transition-all ${activeTool === 'brush' ? 'bg-[#facc15] border-black shadow-[2px_2px_0px_#000]' : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-300'}`}
-                        >
-                            ✏️ Brush
-                        </button>
-                        <button 
-                            onClick={() => setActiveTool('fill')} 
-                            className={`px-4 py-1.5 rounded text-sm font-bold border-[2px] transition-all ${activeTool === 'fill' ? 'bg-[#facc15] border-black shadow-[2px_2px_0px_#000]' : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-300'}`}
-                        >
-                            🪣 Fill
-                        </button>
-                    </div>
+  {/* LEADERBOARD (Outside the sticky wrapper so it can scroll) */}
+  {room.status !== 'waiting' && (
+    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 mt-2">
+      {/* ... players map code ... */}
+    </div>
+  )}
 
-                    <div className="flex items-center gap-4 bg-gray-200 p-2 rounded border-[3px] border-black">
-                        <div className="grid grid-cols-7 gap-2">
-                        {COLORS.slice(0, 7).map(c => (
-                            <button 
-                            key={c} 
-                            onClick={() => setColor(c)} 
-                            className={`w-6 h-6 rounded border-[2px] border-black transition-all ${color === c ? 'scale-125 shadow-[2px_2px_0px_#000] z-10' : 'hover:scale-110'}`} 
-                            style={{ backgroundColor: c }} 
-                            title={c === '#ffffff' ? 'Eraser' : 'Color'}
-                            />
-                        ))}
-                        </div>
+</div>
 
-                        <div className="relative group border-l-[3px] border-black pl-3 flex items-center justify-center">
-                        <label className="cursor-pointer flex flex-col items-center">
-                            <span className="text-xl hover:scale-110 transition-transform">💧</span>
-                            <input 
-                            type="color" 
-                            value={color} 
-                            onChange={(e) => setColor(e.target.value)}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                            />
-                        </label>
-                        </div>
-                    </div>
-
-                    <button 
-                        onClick={clearCanvas} 
-                        className="bg-[#ef4444] text-white border-[3px] border-black px-4 py-2 rounded font-bold uppercase shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all"
-                    >
-                        Clear
-                    </button>
-                  </div>
-                )}
-
-                <div className={`relative w-full aspect-[4/3] sm:aspect-video rounded-lg overflow-hidden bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] rotate-1`}>
-                  
-                  {gameState?.turnState === 'selecting' && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                      {isMyTurn ? (
-                        <div className="text-center animate-pop-in w-full max-w-lg bg-white border-[4px] border-black p-8 rounded-xl shadow-[12px_12px_0px_#000] -rotate-2">
-                          <h3 className="text-xl sm:text-3xl font-black uppercase text-black mb-6 sm:mb-8">Choose your word</h3>
-                          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            {gameState.wordOptions.map(w => (
-                              <button 
-                                  key={w} 
-                                  onClick={() => selectWord(w)} 
-                                  className="bg-[#3b82f6] text-white hover:bg-[#facc15] hover:text-black py-3 sm:py-4 px-6 sm:px-8 text-sm sm:text-lg rounded font-bold uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all"
-                              >
-                                {w}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center bg-white border-[3px] border-black p-6 rounded-lg shadow-[6px_6px_0px_#000] animate-pulse text-black font-bold uppercase text-sm sm:text-xl">
-                          The Drawer is picking a word...
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <canvas ref={canvasRef} width={800} height={600} 
-                    className={`w-full h-full relative z-10 touch-none ${(isMyTurn && gameState?.turnState === 'drawing') ? (activeTool === 'fill' ? 'cursor-cell' : 'custom-cursor-brush') : 'cursor-default'}`}
-                    onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseOut={onMouseUp}
-                    onTouchStart={onMouseDown} onTouchMove={onMouseMove} onTouchEnd={onMouseUp} />
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* LEADERBOARD (Allowed to scroll on mobile) */}
-          {room.status !== 'waiting' && (
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-4 mt-2">
-              {sortedPlayers.map((player, index) => {
-                const isDrawer = player.id === gameState?.drawerId;
-                const hasGuessed = gameState?.guessedPlayers?.includes(player.id);
-                return (
-                  <div 
-                      key={player.id} 
-                      className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-lg border-[3px] border-black transition-all ${
-                          isDrawer ? 'bg-[#3b82f6] text-white shadow-[4px_4px_0px_#000]' : 
-                          hasGuessed ? 'bg-[#10b981] text-black shadow-[4px_4px_0px_#000]' : 
-                          'bg-white text-black shadow-[3px_3px_0px_#000]'
-                      }`}
-                  >
-                    <div className="font-black text-lg w-3 sm:w-4">{index + 1}</div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[11px] sm:text-sm font-bold truncate">
-                        {player.name} {isDrawer && '✏️'} {hasGuessed && '✔️'}
-                      </span>
-                      <span className={`text-[10px] sm:text-xs font-bold ${isDrawer ? 'text-blue-200' : 'text-gray-600'}`}>
-                        {player.score ?? 0} pts
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT COLUMN: Chat / Guess Panel */}
-        {room.status !== 'waiting' && (
-            <div className="lg:w-80 h-[300px] lg:h-auto mt-4 lg:mt-0">
-                <ChatPanel 
-                    messages={room?.chat ?? []} 
-                    onSend={handleChat} 
-                    disabled={!room} 
-                />
-            </div>
-        )}
+{/* RIGHT COLUMN: Chat / Guess Panel (Outside so it scrolls underneath the sticky canvas) */}
+{room.status !== 'waiting' && (
+    <div className="lg:w-80 h-[300px] lg:h-auto mt-4 lg:mt-0">
+        <ChatPanel 
+            messages={room?.chat ?? []} 
+            onSend={handleChat} 
+            disabled={!room} 
+        />
+    </div>
+)}
       </div>
     </div>
   );
