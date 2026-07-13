@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
-import { StickerPicker, StickerOverlay } from '../../components/StickerSystem'; 
 
 const COLS = 7;
 const ROWS = 6;
@@ -269,13 +268,6 @@ export default function ConnectFourBoard() {
   return (
     <div className="w-full max-w-[1600px] mx-auto px-[clamp(0.5rem,2vw,1.5rem)] py-[clamp(1rem,3vw,2rem)] relative font-sans">
       
-      <StickerOverlay />
-
-   
-      <div className="fixed bottom-6 right-6 z-50 lg:right-10">
-        <StickerPicker roomId={roomCode} />
-      </div>
-
       {/* INJECTED CSS FOR POPUP ANIMATION */}
       <style>{`
         @keyframes popIn {
@@ -377,8 +369,6 @@ export default function ConnectFourBoard() {
                 <p className="text-xs font-bold uppercase text-gray-400 mb-1">Status</p>
                 <p className="font-bold text-[#facc15] text-[clamp(0.8rem,2vw,1rem)] uppercase">{statusMessage}</p>
               </div>
-
-              
             </div>
 
             {error && (
