@@ -425,7 +425,7 @@ export default function HelixJump() {
           </div>
         </div>
         <div className="flex justify-between items-center mb-4 sm:mb-6 gap-4">
-          <button onClick={() => navigate('/')} className="flex-1 bg-[#48cae4] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer">&larr; Back</button>
+          <button onClick={() => navigate('/single-player')} className="flex-1 bg-[#48cae4] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer">&larr; Back</button>
         </div>
         <div className={`mx-auto bg-white border-[4px] border-black shadow-[8px_8px_0_0_#000] relative overflow-hidden mb-8 touch-none select-none cursor-grab active:cursor-grabbing ${isShaking ? 'animate-shake' : ''}`} style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }} onPointerDown={handlePointerDown}>
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgMjBoMjBWMEgwem0xOS0xdjEtMWgtMXYxLTEtMS0xIiBmaWxsPSJub25lIiBzdHJva2U9IiNlNWU3ZWIiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')] opacity-50 z-0 pointer-events-none" />

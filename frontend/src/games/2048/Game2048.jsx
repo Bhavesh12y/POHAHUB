@@ -312,7 +312,7 @@ export default function Game2048() {
         {/* Controls */}
         <div className="flex justify-between items-center mb-2 sm:mb-8 gap-4">
           <button 
-            onClick={() => navigate('/')} 
+            onClick={() => navigate('/single-player')} 
             className="flex-1 bg-[#48cae4] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer"
           >
             &larr; Back
