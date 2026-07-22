@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import { initAnalytics, trackPageView } from './lib/analytics.js';
 
+
 const MainLanding = lazy(() => import('./components/MainLanding.jsx'));
 const ComingSoon = lazy(() => import('./components/ComingSoon.jsx'));
 const GameSeoPage = lazy(() => import('./pages/GameSeoPage.jsx'));
@@ -35,6 +36,7 @@ const HelixJump = lazy(() => import('./games/helix-jump/HelixJump.jsx'));
 const TableTennisLanding = lazy(() => import('./games/table-tennis/landing.jsx'));
 const TableTennisRoom = lazy(() => import('./games/table-tennis/TableTennisBoard.jsx'));
 const SinglePlayerLanding = lazy(() => import('./components/SinglePlayerLanding.jsx'));
+const TrafficRun = lazy(() => import('./games/traffic-run/TrafficRun.jsx'));
 
 function RouteFallback() {
   return (
@@ -110,6 +112,7 @@ export default function App() {
           <Route path="games/table-tennis" element={<TableTennisLanding />} />
           <Route path="games/table-tennis/room/:roomCode" element={<TableTennisRoom />} />
           <Route path="single-player" element={<SinglePlayerLanding />} />
+          <Route path="games/traffic-run" element={<TrafficRun />} />
 
           <Route
             path="*"
