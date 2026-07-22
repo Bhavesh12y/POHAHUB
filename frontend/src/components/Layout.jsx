@@ -26,17 +26,6 @@ export function useDesktopScalingFix() {
       const targetElement = document.getElementById('root') || document.body;
 
       targetElement.style.zoom = targetZoom; 
-      
-      /* // Method B: The "Nuclear Option" (CSS Transform)
-      // If you are on Firefox or 'zoom' STILL fails, comment out Method A above
-      // and uncomment these lines. CSS Transform works universally on all browsers.
-      
-      targetElement.style.transform = `scale(${targetZoom})`;
-      targetElement.style.transformOrigin = 'top left';
-      // We have to expand the width/height container to compensate for the scale down
-      targetElement.style.width = `${100 / targetZoom}%`;
-      targetElement.style.height = `${100 / targetZoom}%`;
-      */
     };
 
     applyReverseZoom();
@@ -54,8 +43,23 @@ export default function Layout() {
 
   const isHome = location.pathname === '/';
   const isInGameRoom = location.pathname.includes('/room/');
+  
+  // --- Single Player Routing Logic ---
+  const singlePlayerGames = [
+    '/games/2048', 
+    '/games/block-blaster', 
+    '/games/dino', 
+    '/games/flappy-bird', 
+    '/games/helix-jump', 
+    '/games/traffic-run'
+  ];
+  const isSinglePlayerGame = singlePlayerGames.some(path => location.pathname.startsWith(path));
+  
+  // Set the dynamic target and text
+  const backTarget = isSinglePlayerGame ? '/single-player' : '/';
+  const backText = isSinglePlayerGame ? 'Back to Solo' : 'Back to Hub';
 
-// --- NEW: Crash-Proof Google Analytics Page Tracking ---
+  // --- NEW: Crash-Proof Google Analytics Page Tracking ---
   useEffect(() => {
     try {
       ReactGA.send({ 
@@ -68,26 +72,23 @@ export default function Layout() {
   }, [location]);
   // -------------------------------------------------------
 
- useEffect(() => {
-  if (!isInGameRoom) return;
+  useEffect(() => {
+    if (!isInGameRoom) return;
 
-  const handleBeforeUnload = (e) => {
-    // Required for Chrome, Edge, Firefox
-    e.preventDefault();
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
 
-    // Required for Chrome
-    e.returnValue = '';
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
-    return '';
-  };
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isInGameRoom]);
 
-  window.addEventListener('beforeunload', handleBeforeUnload);
-
-  return () => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-  };
-}, [isInGameRoom]);
-
+  // RESTORED: The actual navigation handler function
   const handleNavigation = (e, path) => {
     if (isInGameRoom) {
       e.preventDefault();
@@ -125,14 +126,14 @@ export default function Layout() {
             </div>
           </Link>
 
-          {/* BACK TO HUB BUTTON */}
+          {/* DYNAMIC BACK BUTTON */}
           {!isHome && (
             <Link
-              to="/"
-              onClick={(e) => handleNavigation(e, '/')}
+              to={backTarget}
+              onClick={(e) => handleNavigation(e, backTarget)}
               className="bg-[#7dd3fc] text-black font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] px-4 py-2 text-xs sm:text-sm transition-all rounded-sm rotate-1"
             >
-              Back to Hub
+              {backText}
             </Link>
           )}
         </div>
@@ -143,6 +144,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <Analytics />
+      <SpeedInsights />
 
       <footer className="border-t-[4px] border-black bg-white mt-12">
         <div className="max-w-7xl mx-auto px-5 py-8 flex flex-col gap-6 text-sm font-black uppercase tracking-widest text-black">
