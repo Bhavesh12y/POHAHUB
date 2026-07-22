@@ -167,14 +167,14 @@ const SINGLE_PLAYER_GAMES = [
     id: 'traffic-run',
     title: 'Traffic Run',
     description: 'Dodge cars in a 3-lane dash. Speed increases as you go!',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/traffic.jpg', // Replace with an actual thumbnail link if you have one
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/traffic.png', // Replace with an actual thumbnail link if you have one
     path: '/games/traffic-run',
     available: true,
     headerColor: 'bg-[#ffb5a7]', // Uses one of your pastel theme colors
     buttonColor: 'bg-[#a9def9]', // Uses one of your pastel theme colors
     tilt: '-rotate-1',
   },
-  
+
    {
 
   id: 'helix-jump',
