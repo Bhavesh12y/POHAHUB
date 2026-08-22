@@ -288,8 +288,8 @@ export default function Game2048() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden py-10">
-      <div className="w-full max-w-[500px] p-2 sm:p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden py-6 sm:py-10">
+      <div className="w-full max-w-[500px] md:max-w-[620px] lg:max-w-[700px] p-2 sm:p-4">
         
         {/* Header */}
         <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 gap-2">
@@ -327,7 +327,7 @@ export default function Game2048() {
 
         {/* Game Grid Container */}
         <div 
-          className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-1 sm:p-4 touch-none select-none relative cursor-grab active:cursor-grabbing mx-auto w-fit max-w-full"
+          className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-2 sm:p-4 md:p-6 touch-none select-none relative cursor-grab active:cursor-grabbing mx-auto w-fit max-w-full"
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp} 
@@ -346,12 +346,12 @@ export default function Game2048() {
             </div>
           )}
           
-          <div className="grid grid-cols-4 gap-1 sm:gap-3 pointer-events-none">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-3 md:gap-4 pointer-events-none">
             {board.map((row, rIdx) => 
               row.map((cell, cIdx) => (
                 <div 
                   key={`${rIdx}-${cIdx}`} 
-                  className={`w-[21vw] h-[21vw] max-w-[90px] max-h-[90px] sm:w-24 sm:h-24 text-2xl sm:text-4xl ${getTileStyle(cell)}`}
+                  className={`w-[20vw] h-[20vw] max-w-[90px] max-h-[90px] sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 text-2xl sm:text-4xl md:text-5xl ${getTileStyle(cell)}`}
                 >
                   {cell !== 0 ? cell : ''}
                 </div>
@@ -359,6 +359,7 @@ export default function Game2048() {
             )}
           </div>
         </div>
+
 
         {/* Footer text */}
         <p className="mt-4 mb-8 text-black text-center px-4 font-bold uppercase tracking-wider text-[11px] sm:text-base bg-[#fcf6bd] border-[3px] border-black p-2 sm:p-3 shadow-[4px_4px_0_0_#000] transform rotate-1">

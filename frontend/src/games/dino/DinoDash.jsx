@@ -206,12 +206,12 @@ export default function DinoDash() {
   const showRightLeg = isRunning && (renderState.frames % 12 >= 6);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none py-10">
-      <div className="w-full max-w-[500px] p-2 sm:p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden select-none py-6 sm:py-10">
+      <div className="w-full max-w-[500px] sm:max-w-[700px] md:max-w-[850px] p-2 sm:p-4">
         
         {/* Header */}
         <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 gap-2">
-          <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">Dino<br/>Dash</h1>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">Dino<br/>Dash</h1>
           <div className="flex gap-2 sm:gap-4 shrink-0">
             <div className="bg-[#a9def9] border-[3px] border-black shadow-[2px_2px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] px-2 sm:px-4 py-1 sm:py-2 text-black text-center min-w-[70px] sm:min-w-[90px]">
               <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Score</div>
@@ -230,7 +230,8 @@ export default function DinoDash() {
         </div>
 
         {/* Game Area */}
-        <div className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] relative mx-auto w-full h-[35vh] min-h-[220px] max-h-[300px] sm:h-[300px] mb-2 overflow-hidden cursor-pointer touch-manipulation group" onPointerDown={jump}>
+        <div className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] relative mx-auto w-full h-[35vh] min-h-[220px] sm:h-[340px] md:h-[380px] mb-2 overflow-hidden cursor-pointer touch-manipulation group" onPointerDown={jump}>
+
           {!renderState.isPlaying && !renderState.isGameOver && (
             <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/40 backdrop-blur-[2px]">
               <div className="bg-[#fcf6bd] border-[3px] border-black shadow-[4px_4px_0_0_#000] p-4 text-center transform -rotate-2 animate-pulse transition-transform group-hover:scale-105"><h2 className="text-2xl font-black text-black uppercase">Tap to Start!</h2></div>

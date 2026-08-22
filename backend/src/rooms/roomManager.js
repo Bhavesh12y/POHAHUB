@@ -238,7 +238,11 @@ class RoomManager {
     if (room.players.length < 2) return { ok: false, error: 'Need 2+ players' };
 
     if (room.gameType === 'connect-four') {
-      room.gameState = createConnectFourState(room.players.map((p, i) => ({ ...p, color: PLAYER_COLORS[i] })));
+      const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
+      room.gameState = createConnectFourState(
+        room.players.map((p, i) => ({ ...p, color: PLAYER_COLORS[i] })),
+        previousStartingIndex
+      );
     } else if (room.gameType === 'tic-tac-toe') {
       const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
       room.gameState = createTicTacToeState(
@@ -248,8 +252,13 @@ class RoomManager {
     } else if (room.gameType === 'scribble') {
       room.gameState = createScribbleState(room.players.map((p) => ({ id: p.id, name: p.name })));
     } else if (room.gameType === 'snake-and-ladder') {
-      room.gameState = createSnakeAndLadderState(room.players.map((p) => ({ id: p.id, name: p.name })));
+      const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
+      room.gameState = createSnakeAndLadderState(
+        room.players.map((p, i) => ({ ...p, color: PLAYER_COLORS[i % PLAYER_COLORS.length] })),
+        previousStartingIndex
+      );
     } else if (room.gameType === 'tambola') {
+
       room.gameState = createTambolaState(
         room.players.map((p) => ({ id: p.id, name: p.name })),
         room.hostId

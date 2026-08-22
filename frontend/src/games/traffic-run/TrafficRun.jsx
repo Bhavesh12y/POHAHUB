@@ -8,42 +8,66 @@ const randomCarColor = () => carColors[Math.floor(Math.random() * carColors.leng
 const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 const rid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-// --- Chunky CSS Art (Fixed Vertical Orientation) ---
+// --- High Polish Arcade Vehicle and Obstacle Components ---
 function Vehicle({ color, isPlayer, isTruck }) {
   return (
-    <div className="w-full h-full flex items-center justify-center py-[2%]">
-      {/* Constrained width (50%) to force a vertical rectangular shape */}
+    <div className="w-full h-full flex items-center justify-center py-[2%] select-none">
       <div
-        className={`relative w-[50%] ${isTruck ? 'h-full' : 'h-[85%]'} border-[3px] border-black shadow-[4px_4px_0_0_#000] rounded-lg transition-transform`}
+        className={`relative w-[60%] sm:w-[54%] ${isTruck ? 'h-full' : 'h-[88%]'} border-[3px] border-black shadow-[4px_4px_0_0_#000] rounded-xl transition-transform overflow-hidden`}
         style={{ backgroundColor: color }}
       >
-        {/* Windshield (Top) */}
-        <div className="absolute top-[15%] left-[10%] right-[10%] h-[20%] bg-sky-200 border-[2px] border-black rounded-sm"></div>
-        
-        {/* Rear Window (Cars only, Bottom) */}
+        {/* Underbody Shadow / Depth */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-black/30 pointer-events-none" />
+
+        {/* Headlight beams (Only on top edge) */}
+        <div className="absolute -top-[3px] left-[10%] w-3 h-3 bg-yellow-300 border-[2px] border-black rounded-t-sm shadow-[0_0_8px_#fde047]" />
+        <div className="absolute -top-[3px] right-[10%] w-3 h-3 bg-yellow-300 border-[2px] border-black rounded-t-sm shadow-[0_0_8px_#fde047]" />
+
+        {/* Front Windshield */}
+        <div className="absolute top-[14%] left-[12%] right-[12%] h-[22%] bg-gradient-to-b from-sky-200 to-sky-400 border-[2px] border-black rounded-md shadow-inner flex items-center justify-center">
+          <div className="w-[80%] h-[2px] bg-white/70 rounded-full" />
+        </div>
+
+        {/* Roof scoop / details */}
         {!isTruck && (
-          <div className="absolute bottom-[10%] left-[15%] right-[15%] h-[15%] bg-black/60 border-[2px] border-black rounded-sm"></div>
+          <div className="absolute top-[40%] left-[25%] right-[25%] h-[15%] bg-black/15 border border-black/30 rounded-sm" />
         )}
 
-        {/* Truck Cargo Details */}
+        {/* Rear Window (Cars) */}
+        {!isTruck && (
+          <div className="absolute bottom-[16%] left-[16%] right-[16%] h-[16%] bg-gradient-to-t from-slate-900 to-slate-700 border-[2px] border-black rounded-md" />
+        )}
+
+        {/* Spoiler Wing (Player & Fast Cars) */}
+        {!isTruck && (
+          <div className="absolute -bottom-[2px] left-[10%] right-[10%] h-[6px] bg-black border border-black rounded-sm shadow-[0_2px_0_#000]" />
+        )}
+
+        {/* Truck Cargo Body */}
         {isTruck && (
-          <div className="absolute bottom-[5%] left-[10%] right-[10%] h-[50%] bg-black/20 border-[2px] border-black rounded-sm flex flex-col justify-evenly p-1">
-            <div className="w-full h-[2px] bg-black/30 rounded-full"></div>
-            <div className="w-full h-[2px] bg-black/30 rounded-full"></div>
-            <div className="w-full h-[2px] bg-black/30 rounded-full"></div>
+          <div className="absolute top-[40%] bottom-[8%] left-[8%] right-[8%] bg-gradient-to-b from-slate-100 to-slate-300 border-[2px] border-black rounded-sm flex flex-col justify-evenly p-1">
+            <div className="w-full h-[3px] bg-black/20 rounded-full" />
+            <div className="w-full h-[3px] bg-black/20 rounded-full" />
+            <div className="w-full h-[3px] bg-black/20 rounded-full" />
+            <div className="text-[8px] font-black text-center text-black/50 uppercase tracking-widest leading-none">CARGO</div>
           </div>
         )}
 
-        {/* Headlights (Top Edge) */}
-        <div className="absolute -top-[4px] left-[15%] w-2.5 h-2 bg-yellow-300 border-[2px] border-black rounded-sm"></div>
-        <div className="absolute -top-[4px] right-[15%] w-2.5 h-2 bg-yellow-300 border-[2px] border-black rounded-sm"></div>
+        {/* Taillights */}
+        <div className="absolute -bottom-[2px] left-[12%] w-3 h-2 bg-red-600 border-[2px] border-black rounded-b-sm shadow-[0_0_6px_#ef4444]" />
+        <div className="absolute -bottom-[2px] right-[12%] w-3 h-2 bg-red-600 border-[2px] border-black rounded-b-sm shadow-[0_0_6px_#ef4444]" />
 
-        {/* Taillights (Bottom Edge) */}
-        <div className="absolute -bottom-[4px] left-[15%] w-2.5 h-2 bg-red-500 border-[2px] border-black rounded-sm"></div>
-        <div className="absolute -bottom-[4px] right-[15%] w-2.5 h-2 bg-red-500 border-[2px] border-black rounded-sm"></div>
+        {/* Player Dual Racing Stripes */}
+        {isPlayer && (
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex gap-1 pointer-events-none">
+            <div className="w-1 sm:w-1.5 bg-white/90 shadow-sm" />
+            <div className="w-1 sm:w-1.5 bg-white/90 shadow-sm" />
+          </div>
+        )}
 
-        {/* Player Racing Stripe (Vertical Center) */}
-        {isPlayer && <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1.5 sm:w-2 bg-white/70"></div>}
+        {/* Side Mirrors */}
+        <div className="absolute top-[22%] -left-[4px] w-2 h-2.5 bg-black rounded-l-sm" />
+        <div className="absolute top-[22%] -right-[4px] w-2 h-2.5 bg-black rounded-r-sm" />
       </div>
     </div>
   );
@@ -51,9 +75,16 @@ function Vehicle({ color, isPlayer, isTruck }) {
 
 function Cone() {
   return (
-    <div className="w-full h-full flex items-center justify-center p-[10%]">
-      <div className="w-[45%] h-[70%] bg-[#ff7b00] border-[3px] border-black shadow-[3px_3px_0_0_#000] rounded-t-full relative">
-        <div className="absolute top-[30%] w-full h-[25%] bg-white border-y-[3px] border-black"></div>
+    <div className="w-full h-full flex items-center justify-center p-[8%] select-none">
+      <div className="relative w-[50%] h-[75%] flex flex-col items-center justify-end">
+        {/* Cone Body */}
+        <div className="w-[70%] h-[80%] bg-gradient-to-t from-[#ea580c] to-[#f97316] border-[3px] border-black shadow-[3px_3px_0_0_#000] rounded-t-full relative overflow-hidden flex flex-col justify-center items-center">
+          {/* Reflective Stripes */}
+          <div className="w-full h-[22%] bg-white border-y-[2px] border-black shadow-inner my-0.5" />
+          <div className="w-full h-[18%] bg-white border-y-[2px] border-black shadow-inner" />
+        </div>
+        {/* Heavy Rubber Base */}
+        <div className="w-full h-[18%] bg-[#1f2937] border-[3px] border-black shadow-[3px_3px_0_0_#000] rounded-md -mt-1" />
       </div>
     </div>
   );
@@ -61,9 +92,20 @@ function Cone() {
 
 function Barrier() {
   return (
-    <div className="w-full h-full flex items-center justify-center p-[5%]">
-      <div className="w-[85%] h-[40%] bg-yellow-400 border-[3px] border-black shadow-[4px_4px_0_0_#000] rounded-sm relative overflow-hidden flex flex-col justify-center">
-        <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,#000,#000_10px,transparent_10px,transparent_20px)] opacity-80"></div>
+    <div className="w-full h-full flex items-center justify-center p-[4%] select-none">
+      <div className="w-[90%] h-[55%] bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0_0_#000] rounded-md relative overflow-hidden flex flex-col justify-between p-1">
+        {/* Warning Hazard Pattern */}
+        <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,#000_0px,#000_12px,#facc15_12px,#facc15_24px)] opacity-90" />
+        {/* Warning Light on Top */}
+        <div className="relative z-10 flex justify-between px-2 -mt-2">
+          <div className="w-3 h-3 bg-amber-400 border-[2px] border-black rounded-full shadow-[0_0_8px_#f59e0b] animate-ping" />
+          <div className="w-3 h-3 bg-amber-400 border-[2px] border-black rounded-full shadow-[0_0_8px_#f59e0b] animate-ping" />
+        </div>
+        {/* Bottom Stand Feet */}
+        <div className="relative z-10 flex justify-between px-2 -mb-2">
+          <div className="w-3 h-2 bg-black rounded-b" />
+          <div className="w-3 h-2 bg-black rounded-b" />
+        </div>
       </div>
     </div>
   );
@@ -77,6 +119,7 @@ function Obstacle({ obstacle }) {
     default: return <Vehicle color={obstacle.color} isTruck={false} />;
   }
 }
+
 
 // --- Main Game Component ---
 export default function TrafficRun() {
@@ -324,24 +367,32 @@ export default function TrafficRun() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden py-10">
+    <div className="flex flex-col items-center justify-center min-h-screen font-[var(--font-family,'Comic_Sans_MS',cursive)] bg-transparent overflow-hidden py-6 sm:py-10">
       <style>{`
         @keyframes roadDash {
           from { background-position-y: 0px; }
-          to { background-position-y: 60px; }
+          to { background-position-y: 80px; }
+        }
+        @keyframes curbDash {
+          from { background-position-y: 0px; }
+          to { background-position-y: 40px; }
         }
         .road-lane-divider {
-          background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,0.7) 0 30px, transparent 30px 60px);
+          background-image: repeating-linear-gradient(to bottom, #fde047 0 35px, transparent 35px 75px);
           animation: roadDash 0.2s linear infinite;
         }
-        .road-lane-divider.paused {
+        .road-curb {
+          background-image: repeating-linear-gradient(to bottom, #ef4444 0 20px, #ffffff 20px 40px);
+          animation: curbDash 0.15s linear infinite;
+        }
+        .road-lane-divider.paused, .road-curb.paused {
           animation-play-state: paused;
         }
       `}</style>
-      <div className="w-full max-w-[500px] p-2 sm:p-4">
+      <div className="w-full max-w-[500px] sm:max-w-[580px] md:max-w-[660px] p-2 sm:p-4">
         {/* Header */}
         <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 gap-2">
-          <h1 className="text-3xl sm:text-5xl font-black text-black tracking-tighter uppercase shrink-0">Traffic Run</h1>
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-black tracking-tighter uppercase shrink-0">Traffic Run</h1>
           <div className="flex gap-2 sm:gap-4 shrink-0">
             <div className="bg-[#ff99c8] border-[3px] border-black shadow-[2px_2px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] px-2 sm:px-4 py-1 sm:py-2 text-black text-center min-w-[70px] sm:min-w-[90px]">
               <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Score</div>
@@ -366,39 +417,44 @@ export default function TrafficRun() {
             onClick={startNewGame}
             className="flex-1 bg-[#ffb5a7] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer"
           >
-            {gameStarted ? 'Restart' : 'Start'}
+            {gameStarted ? 'Restart' : 'Start Engine'}
           </button>
         </div>
 
         {/* Level indicator */}
-        <div className="flex justify-center mb-4 sm:mb-6">
+        <div className="flex justify-center mb-3 sm:mb-6">
           <div className="bg-[#caffbf] border-[3px] border-black shadow-[3px_3px_0_0_#000] px-4 py-1 text-black text-center inline-block -rotate-1">
-            <span className="text-[10px] sm:text-sm uppercase font-bold tracking-wider mr-2">Level</span>
+            <span className="text-[10px] sm:text-sm uppercase font-bold tracking-wider mr-2">Speed Level</span>
             <span className="text-base sm:text-xl font-black">{level}</span>
           </div>
         </div>
 
         {/* Game Canvas */}
         <div
-          className="bg-[#596575] border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] touch-none select-none relative cursor-grab active:cursor-grabbing mx-auto w-full aspect-[3/4] overflow-hidden rounded-sm"
+          className="bg-[#334155] border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] touch-none select-none relative cursor-grab active:cursor-grabbing mx-auto w-full aspect-[3/4] overflow-hidden rounded-lg"
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
+          {/* Red/White Track Curbs on Edges */}
+          <div className={`road-curb absolute top-0 bottom-0 left-0 w-3 border-r-2 border-black z-10 ${gameStarted && !gameOver ? '' : 'paused'}`} />
+          <div className={`road-curb absolute top-0 bottom-0 right-0 w-3 border-l-2 border-black z-10 ${gameStarted && !gameOver ? '' : 'paused'}`} />
+
           {/* Lane dividers */}
-          <div className={`road-lane-divider absolute top-0 bottom-0 left-1/3 w-[4px] -translate-x-1/2 ${gameStarted && !gameOver ? '' : 'paused'}`}></div>
-          <div className={`road-lane-divider absolute top-0 bottom-0 left-2/3 w-[4px] -translate-x-1/2 ${gameStarted && !gameOver ? '' : 'paused'}`}></div>
+          <div className={`road-lane-divider absolute top-0 bottom-0 left-1/3 w-[5px] -translate-x-1/2 ${gameStarted && !gameOver ? '' : 'paused'}`} />
+          <div className={`road-lane-divider absolute top-0 bottom-0 left-2/3 w-[5px] -translate-x-1/2 ${gameStarted && !gameOver ? '' : 'paused'}`} />
 
           {!gameStarted && !gameOver && (
-            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-4">
               <button
                 onClick={startNewGame}
                 className="bg-[#06d6a0] border-[4px] border-black shadow-[6px_6px_0_0_#000] text-black font-black py-4 px-8 text-2xl uppercase transition-all hover:scale-105 rotate-2"
               >
-                Start Engine
+                🏁 Start Engine!
               </button>
             </div>
           )}
+
 
           {gameOver && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border-[4px] border-black m-[-4px]">

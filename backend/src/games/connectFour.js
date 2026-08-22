@@ -2,11 +2,15 @@ const ROWS = 6;
 const COLS = 7;
 const WIN_LENGTH = 4;
 
-export function createConnectFourState(players) {
-   const startIndex = Math.floor(Math.random() * players.length); 
+export function createConnectFourState(players, previousStartingIndex = null) {
+  const startIndex = previousStartingIndex !== null 
+    ? (previousStartingIndex + 1) % players.length 
+    : Math.floor(Math.random() * players.length); 
+
   return {
     board: Array.from({ length: ROWS }, () => Array(COLS).fill(null)),
     players: players.map((p) => ({ id: p.id, name: p.name, color: p.color })),
+    startingIndex: startIndex,
     currentTurnIndex: startIndex, 
     winner: null,
     winningCells: [],
@@ -14,6 +18,7 @@ export function createConnectFourState(players) {
     lastMove: null,
   };
 }
+
 
 
 
@@ -114,6 +119,7 @@ export function serializeConnectFourState(state) {
   return {
     board: state.board,
     players: state.players,
+    startingIndex: state.startingIndex,
     currentTurnIndex: state.currentTurnIndex,
     currentPlayerId: getCurrentPlayer(state)?.id ?? null,
     winner: state.winner,
@@ -122,5 +128,6 @@ export function serializeConnectFourState(state) {
     lastMove: state.lastMove,
   };
 }
+
 
 export { ROWS, COLS };

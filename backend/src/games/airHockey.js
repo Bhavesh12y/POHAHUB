@@ -6,9 +6,9 @@ const GOAL_WIDTH = 140;
 const MAX_SCORE = 5;
 
 // --- Simulation Constants ---
-const FRICTION = 0.985;             // per tick at 60 Hz
-const MAX_PUCK_SPEED = 18;          // pixels per tick
-const MAX_STRIKER_SPEED = 13;       // pixels per tick (smooth movement)
+const FRICTION = 0.988;             // per tick at 60 Hz
+const MAX_PUCK_SPEED = 24;          // max puck velocity in pixels per tick
+const SUB_STEPS = 4;                // 4 physics sub-steps per frame for continuous collision
 
 export default class AirHockeyGame {
     constructor(roomId, io) {
@@ -32,15 +32,14 @@ export default class AirHockeyGame {
             winner: null,
             puck: { x: centerX, y: centerY, vx: 0, vy: 0 },
             strikers: {
-                p1: { x: centerX, y: GAME_HEIGHT - 50, vx: 0, vy: 0 },
-                p2: { x: centerX, y: 50, vx: 0, vy: 0 }
+                p1: { x: centerX, y: GAME_HEIGHT - 60, vx: 0, vy: 0 },
+                p2: { x: centerX, y: 60, vx: 0, vy: 0 }
             }
         };
 
-        // Smooth movement targets – initially identical to striker positions
         this.targets = {
-            p1: { x: centerX, y: GAME_HEIGHT - 50 },
-            p2: { x: centerX, y: 50 }
+            p1: { x: centerX, y: GAME_HEIGHT - 60 },
+            p2: { x: centerX, y: 60 }
         };
     }
 
@@ -101,70 +100,58 @@ export default class AirHockeyGame {
         if (this.gameInterval) clearInterval(this.gameInterval);
         if (this.networkInterval) clearInterval(this.networkInterval);
 
-        // 60 Hz physics loop – now includes striker movement toward targets
+        // 60 Hz physics loop with 4 sub-steps
         this.gameInterval = setInterval(() => {
             if (this.state.status !== 'playing') return;
             this.updateStrikers();
-            this.updatePhysics();
+            
+            const dt = 1 / SUB_STEPS;
+            for (let s = 0; s < SUB_STEPS; s++) {
+                this.updatePhysicsSubstep(dt);
+            }
         }, 1000 / 60);
 
-        // 30 Hz network broadcast – interpolation on client fills gaps
+        // High frequency 45 Hz network broadcast for low-latency smoothness
         this.networkInterval = setInterval(() => {
             if (this.state.status !== 'playing') return;
             this.broadcastState();
-        }, 1000 / 30);
+        }, 1000 / 45);
     }
 
-    // --- Striker Movement ---
-    // Smoothly interpolate actual position toward the client's target.
-    // This eliminates teleportation and gives a stable velocity vector.
+    // Direct, instant response: mallet follows touch with instantaneous velocity calculation
     updateStrikers() {
         for (const role of ['p1', 'p2']) {
             const striker = this.state.strikers[role];
             const target = this.targets[role];
             const dx = target.x - striker.x;
             const dy = target.y - striker.y;
-            const dist = Math.hypot(dx, dy);
 
-            if (dist < 0.5) {
-                // Already at target, no movement
-                striker.vx = 0;
-                striker.vy = 0;
-                striker.x = target.x;
-                striker.y = target.y;
-                continue;
-            }
-
-            const step = Math.min(dist, MAX_STRIKER_SPEED);
-            const nx = dx / dist;
-            const ny = dy / dist;
-
-            // Move one tick
-            striker.x += nx * step;
-            striker.y += ny * step;
-
-            // Velocity = actual displacement per tick (used in collision)
-            striker.vx = nx * step;
-            striker.vy = ny * step;
+            // Velocity is exact frame-by-frame displacement
+            striker.vx = dx;
+            striker.vy = dy;
+            striker.x = target.x;
+            striker.y = target.y;
         }
     }
 
-    updatePhysics() {
+    updatePhysicsSubstep(dt) {
         const puck = this.state.puck;
-        // Apply friction
-        puck.vx *= FRICTION;
-        puck.vy *= FRICTION;
+        const subFriction = Math.pow(FRICTION, dt);
 
-        // Move puck
-        puck.x += puck.vx;
-        puck.y += puck.vy;
+        // Apply friction
+        puck.vx *= subFriction;
+        puck.vy *= subFriction;
+
+        // Move puck by delta
+        puck.x += puck.vx * dt;
+        puck.y += puck.vy * dt;
 
         // Wall collisions (left/right)
         if (puck.x - PUCK_RADIUS <= 0) {
-            puck.vx = Math.abs(puck.vx);
+            puck.vx = Math.abs(puck.vx) * 0.98;
             puck.x = PUCK_RADIUS;
         } else if (puck.x + PUCK_RADIUS >= GAME_WIDTH) {
-            puck.vx = -Math.abs(puck.vx);
+            puck.vx = -Math.abs(puck.vx) * 0.98;
             puck.x = GAME_WIDTH - PUCK_RADIUS;
         }
 
@@ -173,8 +160,9 @@ export default class AirHockeyGame {
             const inGoal = puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2;
             if (inGoal) {
                 this.handleGoal('p1'); // p1 scored
+                return;
             } else {
-                puck.vy = Math.abs(puck.vy);
+                puck.vy = Math.abs(puck.vy) * 0.98;
                 puck.y = PUCK_RADIUS;
             }
         }
@@ -184,8 +172,9 @@ export default class AirHockeyGame {
             const inGoal = puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2;
             if (inGoal) {
                 this.handleGoal('p2'); // p2 scored
+                return;
             } else {
-                puck.vy = -Math.abs(puck.vy);
+                puck.vy = -Math.abs(puck.vy) * 0.98;
                 puck.y = GAME_HEIGHT - PUCK_RADIUS;
             }
         }
@@ -201,44 +190,43 @@ export default class AirHockeyGame {
 
         const dx = puck.x - striker.x;
         const dy = puck.y - striker.y;
-        const distance = Math.hypot(dx, dy) || 0.01; // avoid division by zero
+        const distance = Math.hypot(dx, dy) || 0.001;
         const minDist = PUCK_RADIUS + STRIKER_RADIUS;
 
         if (distance < minDist) {
-            // --- Overlap resolution (separate both entities) ---
+            // Push puck out of mallet entirely
             const overlap = minDist - distance;
             const nx = dx / distance;
             const ny = dy / distance;
 
-            // Assume striker mass >> puck mass => push puck out almost entirely
-            puck.x += nx * overlap * 0.99;
-            puck.y += ny * overlap * 0.99;
-            striker.x -= nx * overlap * 0.01;
-            striker.y -= ny * overlap * 0.01;
+            puck.x += nx * overlap * 1.02;
+            puck.y += ny * overlap * 1.02;
 
-            // --- Physics-based elastic collision with infinite mass striker ---
-            // Relative velocity
+            // Elastic impulse physics
             const vRelX = puck.vx - striker.vx;
             const vRelY = puck.vy - striker.vy;
             const dot = vRelX * nx + vRelY * ny;
 
-            // Only reflect if objects are moving toward each other
+            // If objects are closing in
             if (dot < 0) {
-                // Coefficient of restitution (0.9 for a tiny energy loss)
-                const e = 0.9;
-                // Reflect relative velocity, then add striker velocity back
-                puck.vx = puck.vx - (1 + e) * dot * nx;
-                puck.vy = puck.vy - (1 + e) * dot * ny;
+                const e = 1.08; // Energetic rebound
+                const impulse = -(1 + e) * dot;
+                puck.vx += nx * impulse + striker.vx * 0.45;
+                puck.vy += ny * impulse + striker.vy * 0.45;
 
-                // Clamp to max speed
+                // Ensure snappy minimum strike speed
                 const speed = Math.hypot(puck.vx, puck.vy);
-                if (speed > MAX_PUCK_SPEED) {
+                if (speed < 4) {
+                    puck.vx = (nx || 0) * 6;
+                    puck.vy = (ny || (playerRole === 'p1' ? -1 : 1)) * 6;
+                } else if (speed > MAX_PUCK_SPEED) {
                     puck.vx = (puck.vx / speed) * MAX_PUCK_SPEED;
                     puck.vy = (puck.vy / speed) * MAX_PUCK_SPEED;
                 }
             }
         }
     }
+
 
     handleGoal(scorer) {
         this.state.score[scorer]++;

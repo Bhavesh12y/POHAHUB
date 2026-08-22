@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
-const ACK_TIMEOUT_MS = 5000;
+const ACK_TIMEOUT_MS = 25000;
 
 let socket = null;
 
@@ -10,6 +10,9 @@ export function getSocket() {
     socket = io(SERVER_URL, {
       autoConnect: false,
       transports: ['websocket', 'polling'],
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      timeout: 25000,
     });
   }
   return socket;
@@ -36,7 +39,7 @@ export function emitWithAck(event, payload, timeoutMs = ACK_TIMEOUT_MS) {
       if (err) {
         resolve({
           ok: false,
-          error: 'Connection timed out. Please check your network and try again.',
+          error: 'Server is starting up from sleep (Render free tier). Please wait 10-15 seconds and try again.',
         });
         return;
       }

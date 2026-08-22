@@ -536,11 +536,11 @@ export default function BlockBlaster() {
         ))}
       </div>
 
-      <div className="w-full max-w-[500px] p-2 sm:p-4 relative z-10">
+      <div className="w-full max-w-[500px] md:max-w-[640px] lg:max-w-[720px] p-2 sm:p-4 relative z-10">
         
         {/* Header */}
         <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 sm:pb-4 gap-2">
-          <h1 className="text-3xl sm:text-5xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">
             Block<br/>Blaster
           </h1>
           
@@ -571,7 +571,7 @@ export default function BlockBlaster() {
         </div>
 
         {/* Game Grid Container */}
-        <div className={`bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-1 sm:p-4 relative mx-auto w-fit max-w-full mb-3 sm:mb-6 ${isShaking ? 'animate-shake' : ''}`}>
+        <div className={`bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-2 sm:p-4 md:p-6 relative mx-auto w-fit max-w-full mb-3 sm:mb-6 ${isShaking ? 'animate-shake' : ''}`}>
           
           {gameOver && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border-[4px] border-black m-[-4px]">
@@ -587,7 +587,7 @@ export default function BlockBlaster() {
             </div>
           )}
           
-          <div ref={gridRef} className="grid grid-cols-8 gap-1 sm:gap-1.5 touch-none relative">
+          <div ref={gridRef} className="grid grid-cols-8 gap-1 sm:gap-1.5 md:gap-2 touch-none relative">
             {board.map((row, rIdx) => 
               row.map((cellColor, cIdx) => {
                 let isGhostValid = false;
@@ -613,7 +613,7 @@ export default function BlockBlaster() {
                 return (
                   <div 
                     key={`${rIdx}-${cIdx}`} 
-                    className={`w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 transition-all duration-75 ease-in-out relative
+                    className={`w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 transition-all duration-75 ease-in-out relative
                       ${cellColor 
                         ? `${cellColor} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]` 
                         : isGhostValid
@@ -631,6 +631,7 @@ export default function BlockBlaster() {
             )}
           </div>
         </div>
+
 
         {/* Block Dock */}
         <div className="flex justify-around items-center bg-[#fcf6bd] border-[3px] border-black p-2 sm:p-4 shadow-[4px_4px_0_0_#000] h-[110px] sm:min-h-[140px] mb-8">

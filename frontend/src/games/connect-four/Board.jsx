@@ -108,9 +108,13 @@ export default function ConnectFourBoard() {
   const myColor = gameState?.players?.find((p) => p.id === myPlayerId)?.color;
   const isHost = room?.hostId === myPlayerId;
 
+  const [hoveredCol, setHoveredCol] = useState(null);
+  const canDrop = isPlaying && isMyTurn && pendingColumn === null && gameState?.status === 'playing';
+
   const winningSet = new Set(
     (gameState?.winningCells ?? []).map(([r, c]) => `${r}-${c}`),
   );
+
 
   useEffect(() => {
     const socket = connectSocket();
@@ -417,22 +421,21 @@ export default function ConnectFourBoard() {
 
             {/* The Game Board Area */}
             {gameState && (
-              <div className="mx-auto max-w-[min(90vw,28rem)] bg-white p-4 sm:p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
+              <div className="mx-auto max-w-[min(92vw,30rem)] bg-white p-4 sm:p-6 rounded-lg border-[3px] border-black shadow-[6px_6px_0px_#000] rotate-1">
                 
                 {/* Column Drop Buttons */}
-                <div className="grid grid-cols-7 gap-2 mb-4">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-3">
                   {Array.from({ length: COLS }).map((_, col) => (
                     <button
                       key={col}
                       type="button"
-                      className="aspect-square rounded-full border-[3px] border-black bg-[#facc15] text-black font-bold text-xl shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[3px_3px_0px_#000] disabled:cursor-not-allowed"
+                      className={`aspect-square rounded-full border-[3px] border-black text-black font-black text-xl shadow-[3px_3px_0px_#000] transition-all ${
+                        hoveredCol === col && canDrop ? 'bg-white scale-110 -translate-y-1' : 'bg-[#facc15]'
+                      } hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:translate-x-0 disabled:hover:shadow-[3px_3px_0px_#000] disabled:cursor-not-allowed`}
                       onClick={() => handleDrop(col)}
-                      disabled={
-                        !isPlaying ||
-                        !isMyTurn ||
-                        pendingColumn !== null ||
-                        gameState.status !== 'playing'
-                      }
+                      onMouseEnter={() => setHoveredCol(col)}
+                      onMouseLeave={() => setHoveredCol(null)}
+                      disabled={!canDrop}
                       aria-label={`Drop in column ${col + 1}`}
                     >
                       ↓
@@ -440,25 +443,40 @@ export default function ConnectFourBoard() {
                   ))}
                 </div>
 
-                {/* The Board Grid */}
-                <div className="p-3 rounded-lg bg-[#3b82f6] border-[3px] border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.2)]">
+                {/* The Board Grid - Every column and cell is fully clickable */}
+                <div className="p-2 sm:p-3 rounded-lg bg-[#3b82f6] border-[3px] border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.2)]">
                   {gameState.board ? (
                     <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                      {gameState.board.map((row, rowIndex) =>
-                        row.map((cell, colIndex) => {
-                          const isLastMove =
-                            gameState.lastMove?.row === rowIndex &&
-                            gameState.lastMove?.column === colIndex;
-                          return (
-                            <Disc
-                              key={`${rowIndex}-${colIndex}`}
-                              color={cell}
-                              isWinning={winningSet.has(`${rowIndex}-${colIndex}`)}
-                              animate={isLastMove}
-                            />
-                          );
-                        }),
-                      )}
+                      {Array.from({ length: COLS }).map((_, colIndex) => (
+                        <div
+                          key={`col-${colIndex}`}
+                          onClick={() => canDrop && handleDrop(colIndex)}
+                          onMouseEnter={() => setHoveredCol(colIndex)}
+                          onMouseLeave={() => setHoveredCol(null)}
+                          className={`flex flex-col gap-1 sm:gap-2 p-1 rounded-md transition-all ${
+                            canDrop ? 'cursor-pointer' : ''
+                          } ${
+                            hoveredCol === colIndex && canDrop
+                              ? 'bg-white/25 ring-2 ring-[#facc15] shadow-lg'
+                              : ''
+                          }`}
+                        >
+                          {gameState.board.map((row, rowIndex) => {
+                            const cell = row[colIndex];
+                            const isLastMove =
+                              gameState.lastMove?.row === rowIndex &&
+                              gameState.lastMove?.column === colIndex;
+                            return (
+                              <Disc
+                                key={`${rowIndex}-${colIndex}`}
+                                color={cell}
+                                isWinning={winningSet.has(`${rowIndex}-${colIndex}`)}
+                                animate={isLastMove}
+                              />
+                            );
+                          })}
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="rounded-lg border-[3px] border-dashed border-black bg-white p-12 text-center text-black font-bold">
@@ -473,10 +491,12 @@ export default function ConnectFourBoard() {
                     <span className={myColor === 'red' ? 'text-[#ef4444]' : 'text-[#facc15]'} style={{ WebkitTextStroke: '1px black' }}>
                       {myColor}
                     </span>
+                    {canDrop && <span className="block text-xs text-blue-600 mt-1 font-black animate-pulse">👉 Tap anywhere on a column to drop!</span>}
                   </p>
                 )}
               </div>
             )}
+
           </div>
         </div>
 
