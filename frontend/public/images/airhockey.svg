@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" width="100%" height="100%">
+  <defs>
+    <linearGradient id="tableBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b132b"/>
+      <stop offset="50%" stop-color="#1c2541"/>
+      <stop offset="100%" stop-color="#0b132b"/>
+    </linearGradient>
+    <filter id="puckGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="hardShadow" x="0" y="0" width="120%" height="120%">
+      <feDropShadow dx="4" dy="4" stdDeviation="0" flood-color="#000000" flood-opacity="1"/>
+    </filter>
+  </defs>
+
+  <!-- Table Outer Border & Canvas -->
+  <rect width="600" height="360" fill="#facc15"/>
+  <rect x="15" y="15" width="570" height="330" rx="18" fill="url(#tableBg)" stroke="#000" stroke-width="4" filter="url(#hardShadow)"/>
+
+  <!-- Table Surface Markings -->
+  <!-- Outer Rink Line -->
+  <rect x="35" y="35" width="530" height="290" rx="12" fill="none" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.4"/>
+
+  <!-- Center Court Line -->
+  <line x1="300" y1="35" x2="300" y2="325" stroke="#38bdf8" stroke-width="3" stroke-dasharray="10 8" stroke-opacity="0.8"/>
+
+  <!-- Center Circle -->
+  <circle cx="300" cy="180" r="55" fill="none" stroke="#38bdf8" stroke-width="3" stroke-opacity="0.8"/>
+  <circle cx="300" cy="180" r="6" fill="#38bdf8" filter="url(#puckGlow)"/>
+
+  <!-- Goal Areas (Left & Right) -->
+  <!-- Left Goal (Red Team) -->
+  <path d="M35 110 A70 70 0 0 1 35 250 Z" fill="#ef4444" fill-opacity="0.15" stroke="#ef4444" stroke-width="3"/>
+  <rect x="20" y="125" width="15" height="110" rx="4" fill="#020617" stroke="#ef4444" stroke-width="2"/>
+
+  <!-- Right Goal (Blue Team) -->
+  <path d="M565 110 A70 70 0 0 0 565 250 Z" fill="#3b82f6" fill-opacity="0.15" stroke="#3b82f6" stroke-width="3"/>
+  <rect x="565" y="125" width="15" height="110" rx="4" fill="#020617" stroke="#3b82f6" stroke-width="2"/>
+
+  <!-- Puck Motion Trail -->
+  <path d="M160 195 Q240 170 330 160" stroke="#facc15" stroke-width="8" stroke-linecap="round" stroke-opacity="0.3"/>
+  <path d="M220 180 Q280 165 340 155" stroke="#facc15" stroke-width="12" stroke-linecap="round" stroke-opacity="0.6"/>
+
+  <!-- High-Speed Glowing Puck -->
+  <g transform="translate(360, 150)" filter="url(#puckGlow)">
+    <circle cx="0" cy="0" r="22" fill="#000" stroke="#fef08a" stroke-width="4"/>
+    <circle cx="0" cy="0" r="16" fill="#facc15"/>
+    <circle cx="-4" cy="-4" r="5" fill="#ffffff" fill-opacity="0.7"/>
+  </g>
+
+  <!-- Left Striker (Red Team) -->
+  <g transform="translate(130, 200)" filter="url(#hardShadow)">
+    <circle cx="0" cy="0" r="38" fill="#ef4444" stroke="#000" stroke-width="3"/>
+    <circle cx="0" cy="0" r="26" fill="#dc2626" stroke="#000" stroke-width="2"/>
+    <circle cx="0" cy="0" r="14" fill="#fca5a5" stroke="#000" stroke-width="2"/>
+    <circle cx="-5" cy="-5" r="4" fill="#ffffff" fill-opacity="0.8"/>
+  </g>
+
+  <!-- Right Striker (Blue Team) -->
+  <g transform="translate(470, 140)" filter="url(#hardShadow)">
+    <circle cx="0" cy="0" r="38" fill="#3b82f6" stroke="#000" stroke-width="3"/>
+    <circle cx="0" cy="0" r="26" fill="#2563eb" stroke="#000" stroke-width="2"/>
+    <circle cx="0" cy="0" r="14" fill="#93c5fd" stroke="#000" stroke-width="2"/>
+    <circle cx="-5" cy="-5" r="4" fill="#ffffff" fill-opacity="0.8"/>
+  </g>
+
+  <!-- Scoreboard Header Tag -->
+  <g transform="translate(210, 24)">
+    <rect x="0" y="0" width="180" height="34" rx="8" fill="#fff" stroke="#000" stroke-width="3" filter="url(#hardShadow)"/>
+    <text x="50" y="23" font-family="system-ui, sans-serif" font-weight="900" font-size="18" fill="#ef4444" text-anchor="middle">4</text>
+    <text x="90" y="23" font-family="system-ui, sans-serif" font-weight="900" font-size="14" fill="#000" text-anchor="middle">VS</text>
+    <text x="130" y="23" font-family="system-ui, sans-serif" font-weight="900" font-size="18" fill="#3b82f6" text-anchor="middle">3</text>
+  </g>
+
+  <!-- Bottom Title Tag -->
+  <g transform="translate(190, 298)">
+    <rect x="0" y="0" width="220" height="32" rx="16" fill="#facc15" stroke="#000" stroke-width="2.5" filter="url(#hardShadow)"/>
+    <text x="110" y="21" font-family="system-ui, sans-serif" font-weight="900" font-size="13" fill="#000" text-anchor="middle" letter-spacing="1">1V1 AIR HOCKEY ARENA</text>
+  </g>
+</svg>

@@ -93,36 +93,27 @@ const GAMES = [
     id: 'air-hockey',
     title: 'Air Hockey',
     description: 'Slide, strike, and score in fast-paced 1v1 Air Hockey!',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/test.png',
+    image: '/images/airhockey.svg',
     path: '/air-hockey',
     available: true, 
-    headerColor: 'bg-[#facc15]',
-    buttonColor: 'bg-[#e5e7eb]',
+    headerColor: 'bg-[#7dd3fc]',
+    buttonColor: 'bg-[#facc15]',
     tilt: 'rotate-1',
   },
   {
     id: 'raja-mantri',
     title: 'Raja Mantri Chor Sipahi',
     description: 'The 4-player royal chit game! Guess the thief across 5 rounds.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/test.png',
+    image: '/images/rajamantri.svg',
     path: '/games/raja-mantri',
     available: true,
-    headerColor: 'bg-[#facc15]',
+    headerColor: 'bg-[#fef08a]',
     buttonColor: 'bg-[#38bdf8]',
     tilt: '-rotate-1',
   },
-  {
-    id: 'imposter',
-    title: 'Word Imposter',
-    description: 'Everyone knows the word except the Imposter. Give clues & unmask them!',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/test.png',
-    path: '/games/imposter',
-    available: true,
-    headerColor: 'bg-[#f87171]',
-    buttonColor: 'bg-[#4ade80]',
-    tilt: 'rotate-1',
-  },
 ];
+
+
 
 
 
