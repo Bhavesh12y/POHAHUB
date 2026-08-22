@@ -240,3 +240,46 @@ export function applyImposterAction(gameState, playerId, action, payload = {}, p
 
   return { ok: false, error: 'Unknown action' };
 }
+
+const BOT_SAMPLE_CLUES = {
+  'Food & Drinks': ['Tasty', 'Warm', 'Crunchy', 'Spicy', 'Sweet', 'Juicy', 'Fresh', 'Delicious', 'Classic'],
+  'Animals': ['Wild', 'Fast', 'Strong', 'Furry', 'Cute', 'Roar', 'Striped', 'Forest', 'Jungle'],
+  'Places': ['Crowded', 'Huge', 'Building', 'Travel', 'Modern', 'Public', 'Loud', 'Busy', 'Famous'],
+  'Objects': ['Useful', 'Metal', 'Handy', 'Shiny', 'Daily', 'Small', 'Pocket', 'Gadget', 'Device'],
+  'Sports & Games': ['Fast', 'Score', 'Team', 'Field', 'Ball', 'Play', 'Win', 'Energy', 'Match'],
+  'Professions': ['Hero', 'Hardworking', 'Smart', 'Duty', 'Expert', 'Service', 'Uniform', 'Rescue']
+};
+
+export function checkAndExecuteImposterBotTurn(gameState, players = []) {
+  if (gameState.status !== 'playing') return null;
+
+  // 1. Clue Phase: If active turn player is a Bot
+  if (gameState.roundPhase === 'clue_phase') {
+    const activePlayerId = gameState.clueOrder[gameState.currentClueIndex];
+    const activePlayer = players.find(p => p.id === activePlayerId);
+
+    if (activePlayer?.isBot) {
+      const cluePool = BOT_SAMPLE_CLUES[gameState.category] || ['Cool', 'Good', 'Famous', 'Popular'];
+      const chosenClue = cluePool[Math.floor(Math.random() * cluePool.length)];
+      applyImposterAction(gameState, activePlayerId, 'submit_clue', { clue: chosenClue }, players);
+      return { changed: true };
+    }
+  }
+
+  // 2. Voting Phase: If any Bot hasn't voted
+  if (gameState.roundPhase === 'voting') {
+    const unvotedBot = players.find(p => p.isBot && !gameState.votes[p.id]);
+    if (unvotedBot) {
+      // Pick a random player other than itself
+      const validTargets = players.filter(p => p.id !== unvotedBot.id);
+      if (validTargets.length > 0) {
+        const target = validTargets[Math.floor(Math.random() * validTargets.length)];
+        applyImposterAction(gameState, unvotedBot.id, 'cast_vote', { targetPlayerId: target.id }, players);
+        return { changed: true };
+      }
+    }
+  }
+
+  return null;
+}
+

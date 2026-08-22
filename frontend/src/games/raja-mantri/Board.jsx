@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby.jsx';
@@ -13,9 +13,11 @@ export default function RajaMantriBoard() {
 
   const [room, setRoom] = useState(null);
   const [selectedSuspect, setSelectedSuspect] = useState(null);
+  const [isUnfolded, setIsUnfolded] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
-
+  const [showChatDrawer, setShowChatDrawer] = useState(false);
 
   useEffect(() => {
     const socket = connectSocket();
@@ -53,13 +55,27 @@ export default function RajaMantriBoard() {
   const isHost = room?.hostId === myPlayerId;
   const myRole = gameState?.roundRoles?.[myPlayerId];
 
-  // Trigger confetti on final winner or perfect Mantri guess
+  // Shuffling animation trigger on new round
+  const currentRoundNum = gameState?.currentRound;
+  useEffect(() => {
+    if (gameState?.roundPhase === 'revealing') {
+      setIsShuffling(true);
+      setIsUnfolded(false);
+      setSelectedSuspect(null);
+      const timer = setTimeout(() => {
+        setIsShuffling(false);
+      }, 1400);
+      return () => clearTimeout(timer);
+    }
+  }, [currentRoundNum, gameState?.roundPhase]);
+
+  // Trigger celebratory confetti on correct guess or overall tournament finish
   useEffect(() => {
     if (gameState?.roundPhase === 'round_result' && gameState?.isGuessCorrect) {
-      confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
+      confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
     }
     if (gameState?.status === 'finished') {
-      confetti({ particleCount: 100, spread: 90, origin: { y: 0.5 } });
+      confetti({ particleCount: 120, spread: 100, origin: { y: 0.5 } });
     }
   }, [gameState?.roundPhase, gameState?.status, gameState?.isGuessCorrect]);
 
@@ -80,42 +96,202 @@ export default function RajaMantriBoard() {
 
   const handleChat = (message) => emitWithAck('chat:message', { message });
 
+  // -------------------------------------------------------------
+  // RELATIVE 4-SIDE SEATING POSITIONING
+  // Maps players so current user is ALWAYS at the BOTTOM seat!
+  // -------------------------------------------------------------
+  const { bottomPlayer, leftPlayer, topPlayer, rightPlayer } = useMemo(() => {
+    if (!room?.players || room.players.length === 0) {
+      return { bottomPlayer: null, leftPlayer: null, topPlayer: null, rightPlayer: null };
+    }
+    const myIndex = Math.max(0, room.players.findIndex(p => p.id === myPlayerId));
+    return {
+      bottomPlayer: room.players[myIndex] || null,
+      leftPlayer: room.players[(myIndex + 1) % room.players.length] || null,
+      topPlayer: room.players[(myIndex + 2) % room.players.length] || null,
+      rightPlayer: room.players[(myIndex + 3) % room.players.length] || null,
+    };
+  }, [room?.players, myPlayerId]);
+
   if (!room) {
     return (
       <div className="text-center py-24 text-black font-black uppercase tracking-widest text-xl animate-pulse">
-        Connecting to Palace...
+        Connecting to Royal Court...
       </div>
     );
   }
 
-  return (
-    <div className="w-full max-w-[1500px] mx-auto px-3 sm:px-6 py-4 font-sans">
-      {/* HEADER BAR */}
-      <div className="bg-[#fef08a] border-[4px] border-black rounded-xl p-4 sm:p-5 shadow-[6px_6px_0px_#000] mb-6 flex flex-wrap items-center justify-between gap-4 -rotate-0.5">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl sm:text-4xl">👑</span>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-black">
-              Raja Mantri Chor Sipahi
-            </h1>
-            <p className="text-xs font-black uppercase text-gray-700">
-              Room: <span className="text-black bg-white px-2 py-0.5 border border-black rounded">{room.code}</span>
-            </p>
-          </div>
+  // Helper to render a player seat
+  const renderPlayerSeat = (player, position) => {
+    if (!player) return null;
+    const isMe = player.id === myPlayerId;
+    const roleKey = gameState?.roundRoles?.[player.id];
+    
+    // Visibility rules:
+    // Raja is revealed after calling. Mantri is revealed after identification.
+    // In round_result or game_over, everyone's role is revealed.
+    const isRolePubliclyRevealed = 
+      gameState?.roundPhase === 'round_result' || 
+      gameState?.status === 'finished' ||
+      (roleKey === 'RAJA' && gameState?.roundPhase !== 'revealing') ||
+      (roleKey === 'MANTRI' && (gameState?.roundPhase === 'mantri_guess' || gameState?.roundPhase === 'round_result'));
+
+    const isSuspectCandidate = 
+      gameState?.roundPhase === 'mantri_guess' && 
+      myRole === 'MANTRI' && 
+      !isMe && 
+      player.id !== gameState.rajaId && 
+      player.id !== gameState.mantriId;
+
+    const isSelectedSuspect = selectedSuspect === player.id;
+    const roundPoints = gameState?.roundPoints?.[player.id];
+    const totalScore = gameState?.scores?.[player.id] || 0;
+
+    return (
+      <div
+        onClick={() => {
+          if (isSuspectCandidate) setSelectedSuspect(player.id);
+        }}
+        className={`flex flex-col items-center transition-all duration-300 ${
+          isSuspectCandidate ? 'cursor-pointer hover:scale-105' : ''
+        }`}
+      >
+        {/* PLAYER AVATAR & NAME BADGE */}
+        <div
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full border-[3px] border-black shadow-[3px_3px_0px_#000] mb-2 ${
+            isSelectedSuspect
+              ? 'bg-red-500 text-white ring-4 ring-red-400 animate-bounce'
+              : isSuspectCandidate
+              ? 'bg-amber-300 text-black ring-2 ring-amber-500'
+              : isMe
+              ? 'bg-yellow-300 text-black'
+              : 'bg-white text-black'
+          }`}
+        >
+          <span className="text-base sm:text-lg">
+            {player.isBot ? '🤖' : isMe ? '⭐' : '👤'}
+          </span>
+          <span className="text-xs sm:text-sm font-black uppercase max-w-[90px] sm:max-w-[120px] truncate">
+            {player.name} {isMe && '(You)'}
+          </span>
+          <span className="text-[10px] sm:text-xs font-black bg-black text-white px-1.5 py-0.5 rounded-full">
+            {totalScore}
+          </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <VoiceChat roomCode={room.code} />
-          {gameState && (
-            <div className="bg-white border-[3px] border-black px-4 py-1.5 rounded-lg shadow-[3px_3px_0px_#000] text-center font-black">
-              <span className="text-xs text-gray-500 uppercase block">Round</span>
-              <span className="text-lg text-black">{gameState.currentRound} / {gameState.totalRounds}</span>
+        {/* CHIT / ROLE BADGE DISPLAY */}
+        <div className="relative">
+          {isMe ? (
+            /* CURRENT USER'S INTERACTIVE CHIT AT BOTTOM */
+            <div
+              onClick={() => setIsUnfolded(!isUnfolded)}
+              className="cursor-pointer select-none transition-transform hover:scale-105 active:scale-95"
+            >
+              {isUnfolded && roleKey ? (
+                <div className="w-40 sm:w-48 h-48 sm:h-56 animate-fadeIn">
+                  <RoleCard roleKey={roleKey} isRevealed={true} />
+                </div>
+              ) : (
+                <div className="w-36 sm:w-44 h-28 sm:h-32 bg-amber-50 border-[3px] border-black rounded-xl p-3 shadow-[4px_4px_0px_#000] flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                  <div className="w-10 h-10 rounded-full bg-amber-200 border-2 border-black flex items-center justify-center mb-1 group-hover:rotate-12 transition-transform">
+                    <span className="text-xl">📜</span>
+                  </div>
+                  <span className="text-xs font-black uppercase text-amber-950">
+                    Your Royal Chit
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded mt-1 border border-amber-400">
+                    Tap to Peek Role 👁️
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* OTHER 3 OPPONENTS' CHITS (TOP, LEFT, RIGHT) */
+            <div className="w-24 sm:w-32 h-32 sm:h-40">
+              {isRolePubliclyRevealed && roleKey ? (
+                <RoleCard roleKey={roleKey} isRevealed={true} />
+              ) : (
+                <div
+                  className={`w-full h-full bg-[#fed7aa] border-[3px] border-black rounded-xl p-2 shadow-[3px_3px_0px_#000] flex flex-col items-center justify-center text-center ${
+                    isSelectedSuspect ? 'ring-4 ring-red-500 bg-red-100' : ''
+                  }`}
+                >
+                  <span className="text-2xl sm:text-3xl mb-1">📜</span>
+                  <span className="text-[10px] sm:text-xs font-black uppercase text-amber-950">
+                    Secret Chit
+                  </span>
+                  {isSuspectCandidate && (
+                    <span className="text-[9px] sm:text-[10px] font-black uppercase bg-red-500 text-white px-1.5 py-0.5 rounded mt-1 animate-pulse">
+                      Suspect
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ROUND POINTS DELTA PILL */}
+          {roundPoints !== undefined && (
+            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap z-10">
+              <span
+                className={`text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full border border-black shadow-sm ${
+                  roundPoints > 0 ? 'bg-green-300 text-black' : 'bg-red-300 text-black'
+                }`}
+              >
+                +{roundPoints} pts
+              </span>
             </div>
           )}
         </div>
       </div>
+    );
+  };
 
-      {/* LOBBY OR ACTIVE GAME */}
+  return (
+    <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-4 py-3 font-sans select-none">
+      <style>{`
+        @keyframes chitSpin {
+          0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+          50% { transform: scale(1.1) rotate(180deg); opacity: 1; }
+          100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        }
+        .animate-chit-spin {
+          animation: chitSpin 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+      `}</style>
+
+      {/* TOP STATUS BAR */}
+      <div className="bg-[#fef08a] border-[3px] sm:border-[4px] border-black rounded-xl p-3 sm:p-4 shadow-[4px_4px_0px_#000] mb-3 sm:mb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl sm:text-3xl">👑</span>
+          <div>
+            <h1 className="text-sm sm:text-lg font-black uppercase tracking-wider text-black leading-tight">
+              Raja Mantri Chor Sipahi
+            </h1>
+            <p className="text-[10px] sm:text-xs font-black text-gray-700 uppercase">
+              Room: <span className="bg-white px-1.5 py-0.5 border border-black rounded text-black">{room.code}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <VoiceChat roomCode={room.code} />
+          {gameState && (
+            <div className="bg-white border-[2px] sm:border-[3px] border-black px-2.5 sm:px-3.5 py-1 rounded-lg shadow-[2px_2px_0px_#000] text-center font-black">
+              <span className="text-[9px] sm:text-[10px] text-gray-500 uppercase block">Round</span>
+              <span className="text-xs sm:text-sm text-black">{gameState.currentRound} / {gameState.totalRounds}</span>
+            </div>
+          )}
+          <button
+            onClick={() => setShowChatDrawer(!showChatDrawer)}
+            className="lg:hidden bg-white border-[2px] border-black px-2.5 py-1 rounded text-xs font-black uppercase"
+          >
+            💬
+          </button>
+        </div>
+      </div>
+
+      {/* LOBBY OR 4-PLAYER ROYAL COURT */}
       {room.status === 'waiting' ? (
         <WaitingLobby
           roomCode={room.code}
@@ -126,203 +302,198 @@ export default function RajaMantriBoard() {
           gamePath="raja-mantri/room"
         />
       ) : (
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
-          {/* MAIN GAME AREA */}
-          <div className="flex-1 w-full flex flex-col gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
+          {/* MAIN ROYAL MAT / COURT ARENA */}
+          <div className="flex-1 w-full bg-[#fefce8] border-[4px] border-black rounded-2xl p-3 sm:p-6 shadow-[8px_8px_0px_#000] relative overflow-hidden flex flex-col justify-between min-h-[580px] sm:min-h-[640px]">
             
-            {/* ROUND STATUS BANNER */}
-            <div className="bg-white border-[4px] border-black rounded-xl p-4 sm:p-6 shadow-[6px_6px_0px_#000] text-center rotate-0.5">
-              {gameState.roundPhase === 'revealing' && (
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-black uppercase text-black mb-1">
-                    📜 Secret Chits Distributed!
-                  </h2>
-                  <p className="text-sm font-bold text-gray-700">
-                    {myRole === 'RAJA' ? "👑 You are the King! Call for your Minister below." : "Tap your chit below to privately see your role."}
-                  </p>
-                  {myRole === 'RAJA' && (
-                    <button
-                      onClick={() => handleAction('raja_call')}
-                      disabled={actionLoading}
-                      className="mt-4 px-6 py-3 bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase text-base border-[3px] border-black rounded-lg shadow-[4px_4px_0px_#000] transition-all hover:translate-x-0.5 hover:translate-y-0.5"
-                    >
-                      👑 Mera Mantri Kaun? (Call Minister)
-                    </button>
-                  )}
-                </div>
-              )}
+            {/* Background Royal Pattern */}
+            <div className="absolute inset-0 bg-[radial-gradient(#ca8a04_1px,transparent_1px)] [background-size:16px_16px] opacity-15 pointer-events-none" />
 
-              {gameState.roundPhase === 'mantri_call' && (
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-black uppercase text-black mb-1">
-                    👑 The Raja Asks: "Mera Mantri Kaun?"
-                  </h2>
-                  <p className="text-sm font-bold text-gray-700">
-                    {myRole === 'MANTRI' ? "📜 Step forward and claim your post, Minister!" : "Waiting for the Minister to identify themselves..."}
-                  </p>
-                  {myRole === 'MANTRI' && (
-                    <button
-                      onClick={() => handleAction('mantri_reveal')}
-                      disabled={actionLoading}
-                      className="mt-4 px-6 py-3 bg-[#38bdf8] hover:bg-sky-300 text-black font-black uppercase text-base border-[3px] border-black rounded-lg shadow-[4px_4px_0px_#000] transition-all hover:translate-x-0.5 hover:translate-y-0.5"
-                    >
-                      📜 Main Hoon Mantri! (Identify Yourself)
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {gameState.roundPhase === 'mantri_guess' && (
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-black uppercase text-black mb-1">
-                    🔍 Mantri Interrogation Phase!
-                  </h2>
-                  <p className="text-sm font-bold text-gray-700">
-                    {myRole === 'MANTRI' ? "Select who you suspect is the CHOR (Thief) from the suspects below!" : "The Minister is inspecting the suspects. Stay calm!"}
-                  </p>
-                </div>
-              )}
-
-              {gameState.roundPhase === 'round_result' && (
-                <div>
-                  <div className="text-4xl mb-2">
-                    {gameState.isGuessCorrect ? "🎉🎯" : "😱🦹"}
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-black mb-2">
-                    {gameState.isGuessCorrect ? "Sahi Pakde Hain! Mantri Caught the Chor!" : "Chor Bhaag Gaya! The Thief Escaped!"}
-                  </h2>
-                  <p className="text-sm font-bold text-gray-700 mb-4">
-                    {gameState.isGuessCorrect 
-                      ? "The Minister correctly identified the Thief and secured 800 points!" 
-                      : "The Minister accused the loyal Soldier! The Thief stole the Minister's 800 points!"}
-                  </p>
-
-                  {gameState.status === 'playing' && (
-                    <button
-                      onClick={() => handleAction('next_round')}
-                      disabled={actionLoading}
-                      className="px-8 py-3.5 bg-[#4ade80] hover:bg-green-300 text-black font-black uppercase text-base border-[3px] border-black rounded-xl shadow-[4px_4px_0px_#000] transition-all hover:translate-x-0.5 hover:translate-y-0.5"
-                    >
-                      Next Round ({gameState.currentRound + 1}/{gameState.totalRounds}) ➡️
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {gameState.status === 'finished' && (
-                <div className="py-4">
-                  <span className="text-5xl block mb-2">🏆👑</span>
-                  <h2 className="text-3xl font-black uppercase text-black mb-2">Game Over!</h2>
-                  <p className="text-lg font-black text-green-700 mb-4">
-                    Winner: {room.players.find(p => p.id === gameState.winner)?.name || 'Champion'}!
-                  </p>
-                  {isHost && (
-                    <button
-                      onClick={handleStart}
-                      className="px-8 py-3.5 bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase text-base border-[3px] border-black rounded-xl shadow-[4px_4px_0px_#000] transition-all"
-                    >
-                      🔄 Play Rematch (5 Rounds)
-                    </button>
-                  )}
-                </div>
-              )}
+            {/* 1. TOP SEAT: OPPOSITE PLAYER */}
+            <div className="w-full flex justify-center z-10">
+              {renderPlayerSeat(topPlayer, 'top')}
             </div>
 
-            {/* 4 PLAYERS' CHITS & SUSPECT CARDS GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {room.players.map((player) => {
-                const isMe = player.id === myPlayerId;
-                const roleKey = gameState.roundRoles?.[player.id];
-                const isRoleRevealed = Boolean(roleKey);
-                const isMantriGuessing = gameState.roundPhase === 'mantri_guess' && myRole === 'MANTRI' && player.id !== myPlayerId && player.id !== gameState.rajaId;
-                const isSelected = selectedSuspect === player.id;
-                const pointsThisRound = gameState.roundPoints?.[player.id];
+            {/* 2. MIDDLE ROW: LEFT PLAYER | CENTER COURT ROYAL ARENA | RIGHT PLAYER */}
+            <div className="w-full flex items-center justify-between gap-2 sm:gap-4 my-auto z-10">
+              
+              {/* LEFT SEAT */}
+              <div className="w-28 sm:w-36 flex justify-start">
+                {renderPlayerSeat(leftPlayer, 'left')}
+              </div>
 
-                return (
-                  <div
-                    key={player.id}
-                    onClick={() => {
-                      if (isMantriGuessing) setSelectedSuspect(player.id);
-                    }}
-                    className={`relative border-[4px] border-black rounded-xl p-4 transition-all duration-200 shadow-[6px_6px_0px_#000] ${
-                      isSelected ? 'ring-4 ring-red-500 scale-105 bg-red-50' : 'bg-white'
-                    } ${isMantriGuessing ? 'cursor-pointer hover:border-red-600 hover:-translate-y-1' : ''}`}
-                  >
-                    {/* Player Badge */}
-                    <div className="flex justify-between items-center mb-3 border-b-2 border-black/20 pb-2">
-                      <span className="font-black text-sm uppercase truncate text-black flex items-center gap-1.5">
-                        {player.name} {isMe && '(You)'}
-                      </span>
-                      <span className="bg-black text-white text-xs font-black px-2 py-0.5 rounded">
-                        {gameState.scores?.[player.id] || 0} pts
-                      </span>
+              {/* CENTER COURT ARENA & PROMPTS */}
+              <div className="flex-1 max-w-sm sm:max-w-md mx-auto bg-white/95 border-[3px] sm:border-[4px] border-black rounded-2xl p-3 sm:p-5 text-center shadow-[6px_6px_0px_#000] relative z-20">
+                
+                {/* SHUFFLING ANIMATION OVERLAY */}
+                {isShuffling ? (
+                  <div className="py-6 flex flex-col items-center justify-center animate-chit-spin">
+                    <div className="relative w-20 h-20 mb-2">
+                      <span className="text-3xl absolute top-0 left-0 animate-bounce">📜</span>
+                      <span className="text-3xl absolute top-0 right-0 animate-pulse">👑</span>
+                      <span className="text-3xl absolute bottom-0 left-0 animate-pulse">⚔️</span>
+                      <span className="text-3xl absolute bottom-0 right-0 animate-bounce">🦹</span>
                     </div>
+                    <span className="text-sm font-black uppercase tracking-wider text-amber-900 bg-yellow-200 px-3 py-1 rounded-full border border-black">
+                      Shuffling Royal Chits...
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    {/* PHASE 1: RAJA CALL */}
+                    {gameState.roundPhase === 'revealing' && (
+                      <div>
+                        <span className="text-3xl sm:text-4xl block mb-1">👑🏰</span>
+                        <h2 className="text-base sm:text-lg font-black uppercase text-black mb-1">
+                          Royal Chits Dealt!
+                        </h2>
+                        <p className="text-xs font-bold text-gray-700 mb-3">
+                          Tap your chit below to privately see your role!
+                        </p>
 
-                    {/* Chit / Role Card */}
-                    <div className="h-[180px]">
-                      <RoleCard roleKey={roleKey} isRevealed={isRoleRevealed} />
-                    </div>
+                        {myRole === 'RAJA' ? (
+                          <button
+                            onClick={() => handleAction('raja_call')}
+                            disabled={actionLoading}
+                            className="w-full py-2.5 sm:py-3 bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase text-xs sm:text-sm border-[3px] border-black rounded-xl shadow-[3px_3px_0px_#000] transition-all animate-pulse"
+                          >
+                            👑 Proclaim: "Mera Mantri Kaun?"
+                          </button>
+                        ) : (
+                          <div className="text-xs font-black uppercase text-amber-800 bg-amber-100 p-2 rounded border border-amber-300 animate-pulse">
+                            Waiting for Raja to summon the Mantri...
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                    {pointsThisRound !== undefined && (
-                      <div className="mt-2 text-center">
-                        <span className={`text-xs font-black px-2.5 py-1 rounded-full border border-black inline-block ${pointsThisRound > 0 ? 'bg-green-300 text-black' : 'bg-red-300 text-black'}`}>
-                          Round: +{pointsThisRound} pts
+                    {/* PHASE 2: MANTRI IDENTIFICATION */}
+                    {gameState.roundPhase === 'mantri_call' && (
+                      <div>
+                        <span className="text-3xl sm:text-4xl block mb-1">📜📢</span>
+                        <h2 className="text-base sm:text-lg font-black uppercase text-black mb-1">
+                          "Mera Mantri Kaun?"
+                        </h2>
+                        <p className="text-xs font-bold text-gray-700 mb-3">
+                          The King has summoned the royal court!
+                        </p>
+
+                        {myRole === 'MANTRI' ? (
+                          <button
+                            onClick={() => handleAction('mantri_reveal')}
+                            disabled={actionLoading}
+                            className="w-full py-2.5 sm:py-3 bg-[#38bdf8] hover:bg-sky-300 text-black font-black uppercase text-xs sm:text-sm border-[3px] border-black rounded-xl shadow-[3px_3px_0px_#000] transition-all animate-pulse"
+                          >
+                            📜 Declare: "Main Hoon Sarkar!"
+                          </button>
+                        ) : (
+                          <div className="text-xs font-black uppercase text-sky-800 bg-sky-100 p-2 rounded border border-sky-300 animate-pulse">
+                            Waiting for the Mantri to step forward...
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* PHASE 3: MANTRI GUESS */}
+                    {gameState.roundPhase === 'mantri_guess' && (
+                      <div>
+                        <span className="text-3xl sm:text-4xl block mb-1">🔎⚖️</span>
+                        <h2 className="text-base sm:text-lg font-black uppercase text-red-600 mb-1">
+                          Catch The Chor!
+                        </h2>
+
+                        {myRole === 'MANTRI' ? (
+                          <div>
+                            <p className="text-xs font-bold text-gray-700 mb-2">
+                              Tap the suspected player on the table to accuse them!
+                            </p>
+                            {selectedSuspect ? (
+                              <button
+                                onClick={() => handleAction('mantri_guess', { suspectId: selectedSuspect })}
+                                disabled={actionLoading}
+                                className="w-full py-2.5 sm:py-3 bg-red-500 hover:bg-red-600 text-white font-black uppercase text-xs sm:text-sm border-[3px] border-black rounded-xl shadow-[3px_3px_0px_#000] transition-all animate-bounce"
+                              >
+                                🎯 Accuse: {room.players.find(p => p.id === selectedSuspect)?.name}!
+                              </button>
+                            ) : (
+                              <div className="text-xs font-black uppercase text-red-700 bg-red-100 p-2 rounded border border-red-300">
+                                👈 Tap a suspect chit on the court!
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs font-black uppercase text-gray-800 bg-amber-100 p-2 rounded border border-amber-300 animate-pulse">
+                            Mantri ({room.players.find(p => p.id === gameState.mantriId)?.name}) is interrogating the suspects...
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* PHASE 4: ROUND RESULT */}
+                    {gameState.roundPhase === 'round_result' && (
+                      <div>
+                        <span className="text-3xl sm:text-4xl block mb-1">
+                          {gameState.isGuessCorrect ? "🎉🎯" : "😱🦹"}
                         </span>
+                        <h2 className="text-base sm:text-xl font-black uppercase tracking-wider text-black mb-1">
+                          {gameState.isGuessCorrect ? "Mantri Caught The Chor!" : "The Chor Escaped!"}
+                        </h2>
+                        <p className="text-xs font-bold text-gray-700 mb-3">
+                          {gameState.isGuessCorrect 
+                            ? "Correct accusation! Mantri keeps +800 pts, Chor gets 0 pts!" 
+                            : "Wrong accusation! Chor stole Mantri's 800 pts (+800 to Chor, 0 to Mantri)!"}
+                        </p>
+
+                        {gameState.status === 'playing' && (
+                          <button
+                            onClick={() => handleAction('next_round')}
+                            disabled={actionLoading}
+                            className="w-full py-2.5 sm:py-3 bg-[#4ade80] hover:bg-green-300 text-black font-black uppercase text-xs sm:text-sm border-[3px] border-black rounded-xl shadow-[3px_3px_0px_#000] transition-all hover:translate-x-0.5 hover:translate-y-0.5"
+                          >
+                            Next Round ({gameState.currentRound + 1}/{gameState.totalRounds}) ➡️
+                          </button>
+                        )}
                       </div>
                     )}
 
-                    {/* Suspect Selector Pill */}
-                    {isMantriGuessing && (
-                      <div className="mt-3 text-center">
-                        <button
-                          type="button"
-                          className={`w-full py-1.5 text-xs font-black uppercase rounded border-[2px] border-black transition-all ${
-                            isSelected ? 'bg-red-500 text-white' : 'bg-yellow-300 text-black'
-                          }`}
-                        >
-                          {isSelected ? '🎯 Selected Suspect' : '👉 Suspect as Chor'}
-                        </button>
+                    {/* PHASE 5: GAME OVER */}
+                    {gameState.status === 'finished' && (
+                      <div className="py-2">
+                        <span className="text-4xl block mb-1">🏆👑</span>
+                        <h2 className="text-xl font-black uppercase text-black mb-1">Palace Champion!</h2>
+                        <p className="text-sm font-black text-green-700 mb-3">
+                          Winner: {room.players.find(p => p.id === gameState.winner)?.name || 'Champion'}!
+                        </p>
+                        {isHost && (
+                          <button
+                            onClick={handleStart}
+                            className="w-full py-2.5 sm:py-3 bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase text-xs sm:text-sm border-[3px] border-black rounded-xl shadow-[3px_3px_0px_#000] transition-all"
+                          >
+                            🔄 Play Rematch (5 Rounds)
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
-                );
-              })}
+                )}
+              </div>
+
+              {/* RIGHT SEAT */}
+              <div className="w-28 sm:w-36 flex justify-end">
+                {renderPlayerSeat(rightPlayer, 'right')}
+              </div>
+
             </div>
 
-
-            {/* MANTRI VERDICT LOCK BUTTON */}
-            {gameState.roundPhase === 'mantri_guess' && myRole === 'MANTRI' && (
-              <div className="bg-red-100 border-[4px] border-black rounded-xl p-4 text-center shadow-[6px_6px_0px_#000]">
-                <h3 className="text-lg font-black uppercase text-black mb-2">Lock In Your Verdict</h3>
-                <button
-                  onClick={() => selectedSuspect && handleAction('mantri_guess', { suspectId: selectedSuspect })}
-                  disabled={!selectedSuspect || actionLoading}
-                  className="px-8 py-3 bg-red-500 disabled:bg-gray-400 text-white font-black uppercase tracking-wider rounded-xl border-[3px] border-black shadow-[4px_4px_0px_#000] text-base transition-all hover:translate-x-0.5 hover:translate-y-0.5"
-                >
-                  🔒 Lock Accusation: {room.players.find(p => p.id === selectedSuspect)?.name || 'Select a Suspect'} is Chor!
-                </button>
-              </div>
-            )}
-
-            {/* LIVE SCOREBOARD */}
-            <div className="bg-white border-[4px] border-black rounded-xl p-4 sm:p-5 shadow-[6px_6px_0px_#000]">
-              <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-black mb-3 border-b-2 border-black pb-2 flex items-center gap-2">
-                <span>🏆 Cumulative Leaderboard (5 Rounds)</span>
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {room.players.map((p, idx) => (
-                  <div key={p.id} className="bg-gray-50 border-[2px] border-black rounded-lg p-3 text-center">
-                    <span className="text-xs font-bold text-gray-600 block truncate">{p.name}</span>
-                    <span className="text-xl font-black text-black">{gameState.scores?.[p.id] || 0} pts</span>
-                  </div>
-                ))}
-              </div>
+            {/* 3. BOTTOM SEAT: CURRENT USER (YOU) */}
+            <div className="w-full flex justify-center z-10 pt-2">
+              {renderPlayerSeat(bottomPlayer, 'bottom')}
             </div>
 
           </div>
 
-          {/* RIGHT/BOTTOM: LIVE CHAT */}
-          <div className="w-full lg:w-80 shrink-0">
+          {/* SIDEBAR: LIVE CHAT */}
+          <div className={`w-full lg:w-80 shrink-0 ${showChatDrawer ? 'block' : 'hidden lg:block'}`}>
             <ChatPanel messages={room.chat ?? []} onSend={handleChat} disabled={false} />
           </div>
         </div>

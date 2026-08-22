@@ -5,7 +5,9 @@ import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } fro
 import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } from '../games/tambola.js';
 import { createStonePaperScissorState, playSpsMove, nextSpsRound, serializeSpsState } from '../games/stonePaperScissor.js';
 import { createRajaMantriState, startNewRound, applyRajaMantriAction, checkAndExecuteRajaMantriBotTurn } from '../games/rajaMantri.js';
-import { createImposterState, applyImposterAction } from '../games/imposter.js';
+import { createImposterState, applyImposterAction, checkAndExecuteImposterBotTurn } from '../games/imposter.js';
+
+
 
 
 
@@ -352,8 +354,16 @@ class RoomManager {
     }
     if (room.gameType === 'imposter') {
       const result = applyImposterAction(room.gameState, playerId, payload.action, payload, room.players);
-      return result.ok ? { ok: true, room } : { ok: false, error: result.error };
+      if (result.ok) {
+        let iterations = 0;
+        while (checkAndExecuteImposterBotTurn(room.gameState, room.players) && iterations < 10) {
+          iterations++;
+        }
+        return { ok: true, room };
+      }
+      return { ok: false, error: result.error };
     }
+
 
     return { ok: false, error: 'Unsupported game type' };
   }
@@ -399,16 +409,17 @@ class RoomManager {
       // Imposter privacy masking
       const state = { ...room.gameState };
       const isImposter = viewerId === state.imposterId;
-      const isRoundOver = state.roundPhase === 'round_result' || state.roundPhase === 'imposter_guess';
+      const isRoundOver = state.roundPhase === 'game_over' || state.roundPhase === 'round_result' || state.status === 'finished';
 
       if (isImposter && !isRoundOver) {
-        state.secretWord = '???'; // Hidden from imposter
+        state.secretWord = '???'; // Hidden from imposter during active game
       }
       if (!isRoundOver) {
-        state.imposterId = null; // Hide imposter identity during clue & voting
+        state.imposterId = null; // Hide imposter identity during clue & voting phases
       }
       payload.gameState = state;
     }
+
     else if (room.gameState && room.gameType === 'air-hockey') payload.gameState = room.gameState;
     else if (room.gameState && room.gameType === 'table-tennis') payload.gameState = room.gameState;
     return payload;
