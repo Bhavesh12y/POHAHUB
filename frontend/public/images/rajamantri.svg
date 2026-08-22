@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#fffbeb"/>
+      <stop offset="100%" stop-color="#fef08a"/>
+    </radialGradient>
+    <filter id="hardShadow" x="0" y="0" width="120%" height="120%">
+      <feDropShadow dx="4" dy="4" stdDeviation="0" flood-color="#000000" flood-opacity="1"/>
+    </filter>
+  </defs>
+
+  <!-- Background Mat -->
+  <rect width="600" height="360" fill="url(#bgGlow)"/>
+  <rect x="15" y="15" width="570" height="330" rx="16" fill="#fffdf5" stroke="#000" stroke-width="4" filter="url(#hardShadow)"/>
+  
+  <!-- Royal Banner Header -->
+  <g transform="translate(160, 26)">
+    <rect x="0" y="0" width="280" height="38" rx="8" fill="#facc15" stroke="#000" stroke-width="3" filter="url(#hardShadow)" transform="rotate(-1 140 19)"/>
+    <text x="140" y="25" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#000" text-anchor="middle" letter-spacing="2">RAJA MANTRI CHOR SIPAHI</text>
+  </g>
+
+  <!-- 4 Royal Role Cards Grid -->
+  <!-- 1. RAJA CARD -->
+  <g transform="translate(45, 80)">
+    <rect x="0" y="0" width="115" height="180" rx="12" fill="#fef08a" stroke="#000" stroke-width="3" filter="url(#hardShadow)" transform="rotate(-2 57 90)"/>
+    <!-- Crown Illustration -->
+    <path d="M35 55 L45 32 L58 45 L70 32 L80 55 L75 60 L40 60 Z" fill="#fbbf24" stroke="#000" stroke-width="2.5"/>
+    <circle cx="45" cy="30" r="3" fill="#ef4444" stroke="#000" stroke-width="1"/>
+    <circle cx="58" cy="43" r="3" fill="#3b82f6" stroke="#000" stroke-width="1"/>
+    <circle cx="70" cy="30" r="3" fill="#ef4444" stroke="#000" stroke-width="1"/>
+    <!-- Face -->
+    <circle cx="58" cy="75" r="18" fill="#fed7aa" stroke="#000" stroke-width="2.5"/>
+    <!-- Mustache -->
+    <path d="M48 77 Q58 83 58 79 Q58 83 68 77 Q58 80 48 77" fill="#18181b" stroke="#000" stroke-width="1.5"/>
+    <circle cx="51" cy="71" r="2" fill="#000"/>
+    <circle cx="65" cy="71" r="2" fill="#000"/>
+    <!-- Robe -->
+    <path d="M36 94 Q58 88 80 94 L88 120 L28 120 Z" fill="#9333ea" stroke="#000" stroke-width="2.5"/>
+    <!-- Title & Points -->
+    <text x="58" y="145" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#000" text-anchor="middle">RAJA</text>
+    <rect x="22" y="153" width="72" height="18" rx="9" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    <text x="58" y="166" font-family="system-ui, sans-serif" font-weight="900" font-size="11" fill="#000" text-anchor="middle">+1000 pts</text>
+  </g>
+
+  <!-- 2. MANTRI CARD -->
+  <g transform="translate(180, 80)">
+    <rect x="0" y="0" width="115" height="180" rx="12" fill="#bae6fd" stroke="#000" stroke-width="3" filter="url(#hardShadow)" transform="rotate(1 57 90)"/>
+    <!-- Turban -->
+    <ellipse cx="58" cy="46" rx="22" ry="14" fill="#0284c7" stroke="#000" stroke-width="2.5"/>
+    <circle cx="58" cy="38" r="4" fill="#f59e0b" stroke="#000" stroke-width="1"/>
+    <path d="M58 34 Q62 26 60 20" stroke="#ef4444" stroke-width="2.5" fill="none"/>
+    <!-- Face -->
+    <circle cx="58" cy="68" r="17" fill="#fed7aa" stroke="#000" stroke-width="2.5"/>
+    <!-- Spectacles -->
+    <circle cx="51" cy="65" r="3.5" fill="none" stroke="#000" stroke-width="1.5"/>
+    <circle cx="65" cy="65" r="3.5" fill="none" stroke="#000" stroke-width="1.5"/>
+    <line x1="54.5" y1="65" x2="61.5" y2="65" stroke="#000" stroke-width="1.5"/>
+    <!-- Robe -->
+    <path d="M38 88 Q58 82 78 88 L86 120 L30 120 Z" fill="#f8fafc" stroke="#000" stroke-width="2.5"/>
+    <!-- Title & Points -->
+    <text x="58" y="145" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#000" text-anchor="middle">MANTRI</text>
+    <rect x="22" y="153" width="72" height="18" rx="9" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    <text x="58" y="166" font-family="system-ui, sans-serif" font-weight="900" font-size="11" fill="#000" text-anchor="middle">+800 pts</text>
+  </g>
+
+  <!-- 3. SIPAHI CARD -->
+  <g transform="translate(315, 80)">
+    <rect x="0" y="0" width="115" height="180" rx="12" fill="#bbf7d0" stroke="#000" stroke-width="3" filter="url(#hardShadow)" transform="rotate(-1 57 90)"/>
+    <!-- Helmet -->
+    <path d="M38 48 Q58 24 78 48 L80 53 L36 53 Z" fill="#64748b" stroke="#000" stroke-width="2.5"/>
+    <line x1="58" y1="26" x2="58" y2="38" stroke="#dc2626" stroke-width="3"/>
+    <!-- Face -->
+    <circle cx="58" cy="72" r="17" fill="#fed7aa" stroke="#000" stroke-width="2.5"/>
+    <circle cx="51" cy="69" r="2" fill="#000"/>
+    <circle cx="65" cy="69" r="2" fill="#000"/>
+    <!-- Armor -->
+    <path d="M38 90 Q58 84 78 90 L86 120 L30 120 Z" fill="#475569" stroke="#000" stroke-width="2.5"/>
+    <!-- Shield -->
+    <path d="M72 82 Q84 82 84 94 Q84 104 72 108 Q60 104 60 94 Q60 82 72 82 Z" fill="#eab308" stroke="#000" stroke-width="2"/>
+    <!-- Title & Points -->
+    <text x="58" y="145" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#000" text-anchor="middle">SIPAHI</text>
+    <rect x="22" y="153" width="72" height="18" rx="9" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    <text x="58" y="166" font-family="system-ui, sans-serif" font-weight="900" font-size="11" fill="#000" text-anchor="middle">+500 pts</text>
+  </g>
+
+  <!-- 4. CHOR CARD -->
+  <g transform="translate(445, 80)">
+    <rect x="0" y="0" width="115" height="180" rx="12" fill="#fca5a5" stroke="#000" stroke-width="3" filter="url(#hardShadow)" transform="rotate(2 57 90)"/>
+    <!-- Beanie -->
+    <path d="M40 48 Q58 28 76 48 Z" fill="#18181b" stroke="#000" stroke-width="2.5"/>
+    <!-- Face -->
+    <circle cx="58" cy="70" r="17" fill="#fed7aa" stroke="#000" stroke-width="2.5"/>
+    <!-- Mask -->
+    <path d="M42 64 Q58 68 74 64 L74 70 Q58 74 42 70 Z" fill="#18181b" stroke="#000" stroke-width="1.5"/>
+    <circle cx="51" cy="67" r="1.5" fill="#fff"/>
+    <circle cx="65" cy="67" r="1.5" fill="#fff"/>
+    <!-- Robe / Prisoner Striped -->
+    <path d="M36 90 Q58 84 80 90 L86 120 L30 120 Z" fill="#ffffff" stroke="#000" stroke-width="2.5"/>
+    <line x1="33" y1="96" x2="83" y2="96" stroke="#000" stroke-width="3"/>
+    <line x1="31" y1="104" x2="85" y2="104" stroke="#000" stroke-width="3"/>
+    <!-- Title & Points -->
+    <text x="58" y="145" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#000" text-anchor="middle">CHOR</text>
+    <rect x="22" y="153" width="72" height="18" rx="9" fill="#fff" stroke="#000" stroke-width="1.5"/>
+    <text x="58" y="166" font-family="system-ui, sans-serif" font-weight="900" font-size="11" fill="#dc2626" text-anchor="middle">0 / 800 pts</text>
+  </g>
+
+  <!-- Bottom Tagline -->
+  <g transform="translate(180, 290)">
+    <rect x="0" y="0" width="240" height="32" rx="16" fill="#fff" stroke="#000" stroke-width="2.5" filter="url(#hardShadow)"/>
+    <text x="120" y="21" font-family="system-ui, sans-serif" font-weight="900" font-size="12" fill="#000" text-anchor="middle" letter-spacing="1">5 ROUNDS OF ROYAL DEDUCTION</text>
+  </g>
+</svg>
