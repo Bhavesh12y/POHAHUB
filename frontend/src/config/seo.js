@@ -152,6 +152,39 @@ export const SEO_CONFIG = {
       keywords:
         'helix jump online, play helix jump free, helix jump browser game, bouncing ball game, arcade game online, single player browser game',
     },
+    'raja-mantri': {
+      name: 'Raja Mantri Chor Sipahi',
+      route: '/raja-mantri',
+      playPath: '/games/raja-mantri',
+      playMode: 'MultiPlayer',
+      title: 'Play Raja Mantri Chor Sipahi Online Free | Doozles',
+      description:
+        'Play Raja Mantri Chor Sipahi online with friends for free. The legendary 4-player royal chit game with secret identities, deduction, and live scoreboard across 5 rounds.',
+      keywords:
+        'raja mantri chor sipahi online, play raja mantri with friends, royal chit game online, indian party games online, deduction browser game, play free multiplayer games online',
+    },
+    imposter: {
+      name: 'Word Imposter',
+      route: '/imposter',
+      playPath: '/games/imposter',
+      playMode: 'MultiPlayer',
+      title: 'Play Word Imposter Online With Friends | Doozles',
+      description:
+        'Play Word Imposter online with friends for free on Doozles. Give 1-word clues across 2 rounds, discuss, vote, or steal the win in this social deduction party game.',
+      keywords:
+        'word imposter online, play imposter game online, word mafia game, chameleon game online, social deduction browser game, play free multiplayer games online',
+    },
+    'traffic-run': {
+      name: 'Traffic Run',
+      route: '/traffic-run',
+      playPath: '/games/traffic-run',
+      playMode: 'SinglePlayer',
+      title: 'Play Traffic Run Online Free | Doozles',
+      description:
+        'Play Traffic Run online free on Doozles. Dodge high-speed traffic across 3 lanes with swiping and tap controls, level up speeds, and beat top global scores.',
+      keywords:
+        'traffic run online, traffic racer browser game, dodge traffic game free, single player browser games, highway runner game online',
+    },
   },
 };
 
@@ -159,7 +192,10 @@ export const GAME_SEO_ALIASES = {
   'connect-4': 'connect-four',
   'tic-tac-toe': 'tictactoe',
   'rock-paper-scissor': 'stone-paper-scissor',
+  'raja-mantri-chor-sipahi': 'raja-mantri',
+  'word-imposter': 'imposter',
 };
+
 
 export function normalizeGameId(gameId = '') {
   return GAME_SEO_ALIASES[gameId] || gameId;
@@ -660,7 +696,106 @@ const guideDetails = {
       },
     ],
   },
+  'raja-mantri': {
+    related: ['ludo', 'tambola', 'imposter'],
+    intro:
+      'Raja Mantri Chor Sipahi is the classic 4-player Indian social deduction game where players receive secret roles and test their intuition over 5 rounds.',
+    rules: [
+      'Four players secretly receive one role each: Raja (King), Mantri (Minister), Sipahi (Soldier), or Chor (Thief).',
+      'The Raja proclaims "Mera Mantri Kaun?" and the Mantri identifies themselves.',
+      'The Mantri must interrogate and guess which of the other two players is the Chor.',
+      'If the Mantri guesses correctly: Raja gets 1000 pts, Mantri gets 800 pts, Sipahi gets 500 pts, and Chor gets 0 pts.',
+      'If the Mantri is wrong: The Chor steals the Mantri points (Chor gets 800 pts, Mantri gets 0 pts).',
+      'Cumulative scores over 5 rounds determine the ultimate winner.',
+    ],
+    howToPlay: [
+      'Create a 4-player room on Doozles or join with a room code.',
+      'Privately unfold your digital chit to see your secret role.',
+      'Follow royal prompts as the King or Minister during the investigation.',
+      'Lock in your verdict and watch the dramatic score reveal.',
+    ],
+    strategies: [
+      'Watch the suspects body language and hesitation in chat or voice.',
+      'As the Chor, mimic the calm confidence of the innocent Soldier.',
+      'Keep track of overall leaderboard points to anticipate opponent risk tolerance.',
+    ],
+    faq: [
+      {
+        question: 'How many players are needed for Raja Mantri Chor Sipahi?',
+        answer: 'Exactly 4 players. If playing with fewer friends, Doozles provides AI companion bots.',
+      },
+      {
+        question: 'How many points is each role worth?',
+        answer: 'Raja: 1000 pts, Mantri: 800 pts, Sipahi: 500 pts, Chor: 0 pts (or 800 if unmasked wrongly).',
+      },
+    ],
+  },
+  imposter: {
+    related: ['raja-mantri', 'scribble', 'tictactoe'],
+    intro:
+      'Word Imposter is a social deduction party game where everyone knows the secret word except for one sneaky Imposter.',
+    rules: [
+      'Everyone receives the Secret Word and Category, while the Imposter receives ONLY the Category.',
+      'Players take turns giving exactly 1-word clues across 2 complete clue rounds.',
+      'After 2 rounds, all players discuss and vote for the suspected Imposter.',
+      'If the majority catches the Imposter, the Imposter loses.',
+      'The Imposter has 3 live guess attempts anytime during the match to guess the secret word and win instantly!',
+    ],
+    howToPlay: [
+      'Create a room for 3 to 8 players on Doozles.',
+      'Read your secret card carefully.',
+      'Submit subtle 1-word clues when it is your turn.',
+      'Discuss, vote, or trigger the instant word guess steal.',
+    ],
+    strategies: [
+      'Give clues that connect to the word in two distinct ways to confuse the Imposter.',
+      'As the Imposter, use flexible adjectives like "Classic" or "Popular".',
+      'Use guess attempts when detectives clues give away the exact word.',
+    ],
+    faq: [
+      {
+        question: 'Can the Imposter guess the secret word anytime?',
+        answer: 'Yes! The Imposter has 3 attempts to guess the secret word anytime during the game for an instant win.',
+      },
+      {
+        question: 'How many players can play Word Imposter?',
+        answer: 'Word Imposter supports 3 to 8 players online on any device.',
+      },
+    ],
+  },
+  'traffic-run': {
+    related: ['dino', 'flappy-bird', 'helix-jump'],
+    intro:
+      'Traffic Run is an endless 3-lane highway arcade runner where you dodge high-speed traffic with swiping and tap-on-lane controls.',
+    rules: [
+      'Navigate your car across 3 lanes of moving traffic.',
+      'Avoid colliding with cars, trucks, and road hazards.',
+      'Speed levels increase as your score climbs.',
+      'A single collision ends the run.',
+    ],
+    howToPlay: [
+      'Tap on the left, middle, or right lane directly to switch lanes.',
+      'Alternatively, swipe horizontally or use arrow keys / A & D.',
+      'Dodge incoming vehicles and survive as long as possible.',
+    ],
+    strategies: [
+      'Look two steps ahead to anticipate lane openings.',
+      'Stay in the center lane when in doubt for equal escape options.',
+      'Use tap-to-lane for ultra-fast reaction times at higher speed levels.',
+    ],
+    faq: [
+      {
+        question: 'Does Traffic Run support tap controls?',
+        answer: 'Yes! You can tap directly on any of the 3 lanes or swipe horizontally to change lanes.',
+      },
+      {
+        question: 'Is Traffic Run free to play?',
+        answer: 'Yes, Traffic Run is free to play directly in your web browser.',
+      },
+    ],
+  },
 };
+
 
 function buildGameSeo(id) {
   const seo = SEO_CONFIG.games[id];

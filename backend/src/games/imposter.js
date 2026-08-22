@@ -1,14 +1,13 @@
 const WORD_PACKS = [
-  { category: 'Food & Drinks', words: ['Pizza', 'Burger', 'Biryani', 'Samosa', 'Ice Cream', 'Coffee', 'Chocolate', 'Pasta', 'Pancake', 'Taco'] },
-  { category: 'Animals', words: ['Lion', 'Elephant', 'Penguin', 'Monkey', 'Giraffe', 'Kangaroo', 'Dolphin', 'Tiger', 'Panda', 'Zebra'] },
-  { category: 'Places', words: ['Airport', 'Hospital', 'Cinema', 'School', 'Beach', 'Museum', 'Library', 'Amusement Park', 'Hotel', 'Stadium'] },
-  { category: 'Objects', words: ['Guitar', 'Smartphone', 'Umbrella', 'Bicycle', 'Headphones', 'Camera', 'Telescope', 'Backpack', 'Wristwatch', 'Mirror'] },
-  { category: 'Sports & Games', words: ['Cricket', 'Football', 'Chess', 'Basketball', 'Tennis', 'Badminton', 'Swimming', 'Bowling', 'Archery', 'Boxing'] },
-  { category: 'Professions', words: ['Doctor', 'Pilot', 'Chef', 'Astronaut', 'Detective', 'Firefighter', 'Magician', 'Artist', 'Teacher', 'Scientist'] }
+  { category: 'Food & Drinks', words: ['Pizza', 'Burger', 'Biryani', 'Samosa', 'Ice Cream', 'Coffee', 'Chocolate', 'Pasta', 'Pancake', 'Taco', 'Noodles', 'Dosa'] },
+  { category: 'Animals', words: ['Lion', 'Elephant', 'Penguin', 'Monkey', 'Giraffe', 'Kangaroo', 'Dolphin', 'Tiger', 'Panda', 'Zebra', 'Cheetah', 'Octopus'] },
+  { category: 'Places', words: ['Airport', 'Hospital', 'Cinema', 'School', 'Beach', 'Museum', 'Library', 'Amusement Park', 'Hotel', 'Stadium', 'Zoo', 'Castle'] },
+  { category: 'Objects', words: ['Guitar', 'Smartphone', 'Umbrella', 'Bicycle', 'Headphones', 'Camera', 'Telescope', 'Backpack', 'Wristwatch', 'Mirror', 'Flashlight'] },
+  { category: 'Sports & Games', words: ['Cricket', 'Football', 'Chess', 'Basketball', 'Tennis', 'Badminton', 'Swimming', 'Bowling', 'Archery', 'Boxing', 'Hockey'] },
+  { category: 'Professions', words: ['Doctor', 'Pilot', 'Chef', 'Astronaut', 'Detective', 'Firefighter', 'Magician', 'Artist', 'Teacher', 'Scientist', 'Soldier'] }
 ];
 
-const TOTAL_ROUNDS = 3;
-const CLUE_TIMER_SEC = 20;
+const MAX_IMPOSTER_ATTEMPTS = 3;
 
 export function createImposterState(players, previousStartingIndex = null) {
   const scores = {};
@@ -19,23 +18,25 @@ export function createImposterState(players, previousStartingIndex = null) {
   const state = {
     gameType: 'imposter',
     status: 'playing', // 'playing' or 'finished'
-    currentRound: 1,
-    totalRounds: TOTAL_ROUNDS,
-    roundPhase: 'word_reveal', // 'word_reveal', 'clue_phase', 'discussion', 'voting', 'imposter_guess', 'round_result'
+    clueRound: 1, // 1 or 2 (exactly 2 rounds of clues before voting)
+    totalClueRounds: 2,
+    roundPhase: 'word_reveal', // 'word_reveal', 'clue_phase', 'voting', 'game_over'
     category: '',
     secretWord: '',
     imposterId: null,
     clueOrder: [],
     currentClueIndex: 0,
-    clues: [], // { playerId, playerName, clue, timestamp }
-    clueTimer: CLUE_TIMER_SEC,
+    round1Clues: [], // { playerId, playerName, clue }
+    round2Clues: [], // { playerId, playerName, clue }
+    imposterAttemptsLeft: MAX_IMPOSTER_ATTEMPTS,
+    imposterGuesses: [], // history of guesses tried
+    imposterInstantWin: false,
+    imposterFailedAllAttempts: false,
     votes: {}, // voterId -> targetPlayerId
     voteResults: {},
     caughtImposter: false,
-    imposterStealGuess: '',
-    imposterStealSuccess: false,
-    scores,
-    winner: null
+    winnerTeam: null, // 'detectives' or 'imposter'
+    scores
   };
 
   return startNewImposterRound(state, players);
@@ -58,13 +59,18 @@ export function startNewImposterRound(gameState, players) {
   gameState.imposterId = imposterId;
   gameState.clueOrder = clueOrder;
   gameState.currentClueIndex = 0;
-  gameState.clues = [];
-  gameState.clueTimer = CLUE_TIMER_SEC;
+  gameState.clueRound = 1;
+  gameState.totalClueRounds = 2;
+  gameState.round1Clues = [];
+  gameState.round2Clues = [];
+  gameState.imposterAttemptsLeft = MAX_IMPOSTER_ATTEMPTS;
+  gameState.imposterGuesses = [];
+  gameState.imposterInstantWin = false;
+  gameState.imposterFailedAllAttempts = false;
   gameState.votes = {};
   gameState.voteResults = {};
   gameState.caughtImposter = false;
-  gameState.imposterStealGuess = '';
-  gameState.imposterStealSuccess = false;
+  gameState.winnerTeam = null;
   gameState.roundPhase = 'word_reveal';
 
   return gameState;
@@ -75,11 +81,56 @@ export function applyImposterAction(gameState, playerId, action, payload = {}, p
     return { ok: false, error: 'Game is not in active play' };
   }
 
-  // 1. Ready from Word Reveal -> Clue Phase
+  // A. PARALLEL ANYTIME IMPOSTER GUESS (3 ATTEMPTS)
+  if (action === 'imposter_guess_word') {
+    if (playerId !== gameState.imposterId) {
+      return { ok: false, error: 'Only the Imposter can attempt to guess the secret word' };
+    }
+    if (gameState.imposterAttemptsLeft <= 0) {
+      return { ok: false, error: 'No guess attempts remaining' };
+    }
+
+    const rawGuess = (payload.guess || '').trim();
+    if (!rawGuess) return { ok: false, error: 'Guess cannot be empty' };
+
+    const guess = rawGuess.toLowerCase();
+    const target = gameState.secretWord.toLowerCase();
+    const isMatch = guess === target || (guess.length >= 3 && target.includes(guess));
+
+    gameState.imposterGuesses.push(rawGuess);
+
+    if (isMatch) {
+      // Imposter wins instantly!
+      gameState.imposterInstantWin = true;
+      gameState.winnerTeam = 'imposter';
+      gameState.scores[gameState.imposterId] = (gameState.scores[gameState.imposterId] || 0) + 500;
+      gameState.roundPhase = 'game_over';
+      gameState.status = 'finished';
+      return { ok: true, state: gameState };
+    } else {
+      // Deduct 1 attempt
+      gameState.imposterAttemptsLeft -= 1;
+      if (gameState.imposterAttemptsLeft <= 0) {
+        // Imposter lost all attempts -> Detectives win instantly!
+        gameState.imposterFailedAllAttempts = true;
+        gameState.winnerTeam = 'detectives';
+        players.forEach(p => {
+          if (p.id !== gameState.imposterId) {
+            gameState.scores[p.id] = (gameState.scores[p.id] || 0) + 300;
+          }
+        });
+        gameState.roundPhase = 'game_over';
+        gameState.status = 'finished';
+      }
+      return { ok: true, state: gameState };
+    }
+  }
+
+  // 1. Ready from Word Reveal -> Clue Phase (Round 1)
   if (action === 'start_clues') {
     gameState.roundPhase = 'clue_phase';
+    gameState.clueRound = 1;
     gameState.currentClueIndex = 0;
-    gameState.clueTimer = CLUE_TIMER_SEC;
     return { ok: true, state: gameState };
   }
 
@@ -93,38 +144,42 @@ export function applyImposterAction(gameState, playerId, action, payload = {}, p
       return { ok: false, error: 'Not your turn to give a clue' };
     }
 
-    const clueText = (payload.clue || '').trim();
-    if (!clueText) {
-      return { ok: false, error: 'Clue cannot be empty' };
-    }
+    const clueText = (payload.clue || '').trim().split(' ')[0];
+    if (!clueText) return { ok: false, error: 'Clue cannot be empty' };
 
     const playerObj = players.find(p => p.id === playerId);
-    gameState.clues.push({
+    const clueObj = {
       playerId,
       playerName: playerObj?.name || 'Player',
       clue: clueText,
       timestamp: Date.now()
-    });
+    };
+
+    if (gameState.clueRound === 1) {
+      gameState.round1Clues.push(clueObj);
+    } else {
+      gameState.round2Clues.push(clueObj);
+    }
 
     gameState.currentClueIndex += 1;
-    gameState.clueTimer = CLUE_TIMER_SEC;
 
-    // Check if all players gave clues
+    // Check if current clue round is complete
     if (gameState.currentClueIndex >= gameState.clueOrder.length) {
-      gameState.roundPhase = 'discussion';
+      if (gameState.clueRound === 1) {
+        // Move to Round 2 of clues
+        gameState.clueRound = 2;
+        gameState.currentClueIndex = 0;
+      } else {
+        // Both 2 rounds of clues finished -> Open Voting Phase!
+        gameState.roundPhase = 'voting';
+        gameState.votes = {};
+      }
     }
 
     return { ok: true, state: gameState };
   }
 
-  // 3. Move from Discussion to Voting
-  if (action === 'start_voting') {
-    gameState.roundPhase = 'voting';
-    gameState.votes = {};
-    return { ok: true, state: gameState };
-  }
-
-  // 4. Cast Vote
+  // 3. Cast Vote
   if (action === 'cast_vote') {
     if (gameState.roundPhase !== 'voting') {
       return { ok: false, error: 'Not in voting phase' };
@@ -163,75 +218,25 @@ export function applyImposterAction(gameState, playerId, action, payload = {}, p
       gameState.caughtImposter = isImposterCaught;
 
       if (isImposterCaught) {
-        // Imposter gets one final chance to guess the secret word and steal the victory
-        gameState.roundPhase = 'imposter_guess';
+        // Majority voted for Imposter -> Imposter loses, Detectives win!
+        gameState.winnerTeam = 'detectives';
+        players.forEach(p => {
+          if (p.id !== gameState.imposterId) {
+            gameState.scores[p.id] = (gameState.scores[p.id] || 0) + 300;
+          }
+        });
       } else {
-        // Imposter got away!
+        // Majority failed to identify Imposter -> Imposter wins!
+        gameState.winnerTeam = 'imposter';
         gameState.scores[gameState.imposterId] = (gameState.scores[gameState.imposterId] || 0) + 400;
-        gameState.roundPhase = 'round_result';
-        checkGameEnd(gameState);
       }
-    }
 
-    return { ok: true, state: gameState };
-  }
-
-  // 5. Imposter Word Steal Guess
-  if (action === 'imposter_steal_guess') {
-    if (playerId !== gameState.imposterId || gameState.roundPhase !== 'imposter_guess') {
-      return { ok: false, error: 'Only the Imposter can attempt word steal' };
-    }
-
-    const guess = (payload.guess || '').trim().toLowerCase();
-    const target = gameState.secretWord.toLowerCase();
-    gameState.imposterStealGuess = payload.guess;
-
-    const isSuccess = guess.includes(target) || target.includes(guess);
-    gameState.imposterStealSuccess = isSuccess;
-
-    if (isSuccess) {
-      // Imposter successfully stole the win!
-      gameState.scores[gameState.imposterId] = (gameState.scores[gameState.imposterId] || 0) + 500;
-    } else {
-      // Detectives win! All non-imposters get points
-      players.forEach(p => {
-        if (p.id !== gameState.imposterId) {
-          gameState.scores[p.id] = (gameState.scores[p.id] || 0) + 300;
-        }
-      });
-    }
-
-    gameState.roundPhase = 'round_result';
-    checkGameEnd(gameState);
-    return { ok: true, state: gameState };
-  }
-
-  // 6. Next Round
-  if (action === 'next_round') {
-    if (gameState.currentRound < gameState.totalRounds) {
-      gameState.currentRound += 1;
-      startNewImposterRound(gameState, players);
-      return { ok: true, state: gameState };
-    } else {
+      gameState.roundPhase = 'game_over';
       gameState.status = 'finished';
-      return { ok: true, state: gameState };
     }
+
+    return { ok: true, state: gameState };
   }
 
   return { ok: false, error: 'Unknown action' };
-}
-
-function checkGameEnd(gameState) {
-  if (gameState.currentRound >= gameState.totalRounds) {
-    gameState.status = 'finished';
-    let maxScore = -1;
-    let winnerId = null;
-    Object.entries(gameState.scores).forEach(([pId, score]) => {
-      if (score > maxScore) {
-        maxScore = score;
-        winnerId = pId;
-      }
-    });
-    gameState.winner = winnerId;
-  }
 }

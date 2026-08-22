@@ -92,44 +92,55 @@ const pages = {
       },
     ],
   },
-  contact: {
-    title: 'Contact Doozles',
-    heading: 'Contact',
+  about: {
+    title: 'About Us & Editorial Mission | Doozles',
+    heading: 'About Doozles',
     description:
-      'Contact Doozles for feedback, bug reports, privacy questions, and partnership requests.',
+      'Doozles is an open web gaming platform committed to accessible, zero-install, privacy-conscious multiplayer experiences and comprehensive casual gaming guides.',
     sections: [
+
       {
-        title: 'Support',
+        title: 'Our Mission',
         body:
-          'For bugs, feedback, or account-free gameplay questions, please email us directly at support@doozles.xyz. We aim to respond within 48 hours.',
+          'Doozles was founded with a singular objective: to eliminate the friction from casual gaming. We believe that playing games with friends and family should not require app store installations, device permissions, or intrusive tracking. With modern web technologies, any mobile or desktop browser can host rich, responsive multiplayer sessions in seconds.',
       },
       {
-        title: 'Creator Contact',
+        title: 'Platform Catalog',
         body:
-          'Doozles is actively developed by Bhavesh Gupta. For direct queries, partnership requests, or technical discussions, you can reach out via Instagram: https://www.instagram.com/bhavesh12z',
+          'Our diverse catalog spans traditional heritage games (Ludo, Raja Mantri Chor Sipahi, Tambola/Housie), modern social deduction experiences (Word Imposter), fast-paced arcade challenges (Air Hockey, Traffic Run, Dino Dash, Flappy Bird, Helix Jump), and cognitive brain-teasers (2048, Block Blaster, Connect Four, Tic Tac Toe).',
+      },
+      {
+        title: 'Editorial Standards & Educational Content',
+        body:
+          'Our articles, strategy guides, and game histories are written and reviewed by experienced game developers and enthusiasts. We prioritize historical accuracy, game-theoretic analysis, and clear rules to help players of all skill levels improve their strategy and appreciate the cultural roots of world games.',
+      },
+      {
+        title: 'Technology & Open Web Philosophy',
+        body:
+          'Built with lightweight HTML5 Canvas, React, Vite, and high-performance WebSockets, Doozles operates smoothly across modern browsers with low data usage and zero account barriers.',
       },
     ],
   },
-  about: {
-    title: 'About Doozles',
-    heading: 'About Doozles',
+  contact: {
+    title: 'Contact Us & Support | Doozles',
+    heading: 'Contact Us',
     description:
-      'Doozles is a browser-based multiplayer gaming hub for quick private matches with friends.',
+      'Get in touch with the Doozles team for feedback, bug reports, feature requests, press, or business inquiries.',
     sections: [
       {
-        title: 'What Doozles Is',
+        title: 'General Inquiries & Feedback',
         body:
-          'Doozles is a lightweight multiplayer arcade where players can create private rooms and play quick games with friends from a browser, entirely free of app installations.',
+          'We welcome feedback from our global player community. If you encounter a bug, have a suggestion for a new game, or want to report an issue, please email our support team at support@doozles.xyz.',
       },
       {
-        title: 'Current Games',
+        title: 'Editorial & Content Feedback',
         body:
-          'The platform currently includes games such as Tic Tac Toe, Connect 4, Ludo, Scribble, Tambola, Snake and Ladder, Rock Paper Scissor, Block Blaster, and 2048.',
+          'For questions or corrections regarding our game guides, historical analyses, or blog articles, reach out to our editorial desk at editorial@doozles.xyz.',
       },
       {
-        title: 'Product Direction',
+        title: 'Business & Advertising Partnerships',
         body:
-          'The goal is to keep room creation instant while continually expanding our catalog of notebook-style arcade games.',
+          'For advertising, sponsorships, or platform partnerships, contact partnerships@doozles.xyz.',
       },
     ],
   },

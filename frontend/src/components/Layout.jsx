@@ -126,16 +126,25 @@ export default function Layout() {
             </div>
           </Link>
 
-          {/* DYNAMIC BACK BUTTON */}
-          {!isHome && (
+          {/* HEADER NAV / DYNAMIC BACK BUTTON */}
+          <div className="flex items-center gap-3">
             <Link
-              to={backTarget}
-              onClick={(e) => handleNavigation(e, backTarget)}
-              className="bg-[#7dd3fc] text-black font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] px-4 py-2 text-xs sm:text-sm transition-all rounded-sm rotate-1"
+              to="/blog"
+              className="bg-[#fef08a] text-black font-black tracking-wider uppercase border-[3px] border-black shadow-[3px_3px_0px_#000] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-[1px_1px_0px_#000] px-3.5 py-1.5 text-xs sm:text-sm transition-all rounded-sm -rotate-1"
             >
-              {backText}
+              📖 Blog
             </Link>
-          )}
+
+            {!isHome && (
+              <Link
+                to={backTarget}
+                onClick={(e) => handleNavigation(e, backTarget)}
+                className="bg-[#7dd3fc] text-black font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] px-4 py-2 text-xs sm:text-sm transition-all rounded-sm rotate-1"
+              >
+                {backText}
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
@@ -152,6 +161,7 @@ export default function Layout() {
           <div className="max-w-7xl mx-auto flex items-center justify-between text-[11px] font-black uppercase text-gray-700 tracking-wider">
             <span>(c) {new Date().getFullYear()} Doozles Arcade</span>
             <div className="flex gap-4">
+              <Link to="/blog" className="hover:underline">Blog</Link>
               <Link to="/about" className="hover:underline">About</Link>
               <Link to="/privacy-policy" className="hover:underline">Privacy</Link>
               <Link to="/terms" className="hover:underline">Terms</Link>
@@ -164,6 +174,9 @@ export default function Layout() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p>(c) {new Date().getFullYear()} Doozles</p>
               <nav aria-label="Legal pages" className="flex flex-wrap gap-4 sm:gap-6">
+                <Link to="/blog" className="hover:underline decoration-[3px] underline-offset-4">
+                  Blog
+                </Link>
                 <Link to="/about" className="hover:underline decoration-[3px] underline-offset-4">
                   About
                 </Link>
@@ -178,6 +191,7 @@ export default function Layout() {
                 </Link>
               </nav>
             </div>
+
 
             <nav aria-label="Game guides" className="flex flex-wrap gap-4 sm:gap-6 text-xs">
               <Link to="/ludo" className="hover:underline decoration-[3px] underline-offset-4">

@@ -159,3 +159,35 @@ export function applyRajaMantriAction(gameState, playerId, action, payload = {},
 
   return { ok: false, error: 'Unknown action' };
 }
+
+export function checkAndExecuteRajaMantriBotTurn(gameState, players = []) {
+  if (gameState.status !== 'playing') return null;
+
+  // 1. If Raja is a bot and in 'revealing' phase
+  const rajaPlayer = players.find(p => p.id === gameState.rajaId);
+  if (rajaPlayer?.isBot && gameState.roundPhase === 'revealing') {
+    gameState.roundPhase = 'mantri_call';
+    return { changed: true };
+  }
+
+  // 2. If Mantri is a bot and in 'mantri_call' phase
+  const mantriPlayer = players.find(p => p.id === gameState.mantriId);
+  if (mantriPlayer?.isBot && gameState.roundPhase === 'mantri_call') {
+    gameState.roundPhase = 'mantri_guess';
+    return { changed: true };
+  }
+
+  // 3. If Mantri is a bot and in 'mantri_guess' phase
+  if (mantriPlayer?.isBot && gameState.roundPhase === 'mantri_guess') {
+    // Suspect candidates: Chor and Sipahi
+    const candidates = [gameState.chorId, gameState.sipahiId].filter(Boolean);
+    const chosenSuspect = candidates[Math.floor(Math.random() * candidates.length)];
+    if (chosenSuspect) {
+      applyRajaMantriAction(gameState, gameState.mantriId, 'mantri_guess', { suspectId: chosenSuspect }, players);
+      return { changed: true };
+    }
+  }
+
+  return null;
+}
+

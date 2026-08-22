@@ -173,14 +173,15 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
 
         {/* Host Controls */}
         {isHost ? (
-          <button className="sketch-button bg-yellow-300 w-full sm:w-auto px-10 py-3 uppercase" onClick={onStart} disabled={playerCount < 2}>
-            START GAME
+          <button className="sketch-button bg-yellow-300 w-full sm:w-auto px-10 py-3 uppercase hover:scale-105 transition-all shadow-[4px_4px_0px_#000]" onClick={onStart}>
+            START GAME 🚀
           </button>
         ) : (
           <p className="text-gray-800 uppercase tracking-wide text-sm sm:text-base font-black">
             WAITING FOR HOST TO START...
           </p>
         )}
+
 
       </div>
     </div>

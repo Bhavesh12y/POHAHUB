@@ -4,14 +4,8 @@ import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby.jsx';
 import VoiceChat from '../../components/VoiceChat.jsx';
 import ChatPanel from '../../components/ChatPanel.jsx';
+import RoleCard, { ROLES_DATA } from './RoleCard.jsx';
 import confetti from 'canvas-confetti';
-
-const ROLE_INFO = {
-  RAJA: { name: 'Raja (King)', points: 1000, emoji: '👑', color: 'bg-[#facc15]', textColor: 'text-black', border: 'border-yellow-500' },
-  MANTRI: { name: 'Mantri (Minister)', points: 800, emoji: '📜', color: 'bg-[#38bdf8]', textColor: 'text-black', border: 'border-sky-500' },
-  SIPAHI: { name: 'Sipahi (Soldier)', points: 500, emoji: '⚔️', color: 'bg-[#4ade80]', textColor: 'text-black', border: 'border-green-500' },
-  CHOR: { name: 'Chor (Thief)', points: 0, emoji: '🦹', color: 'bg-[#f87171]', textColor: 'text-white', border: 'border-red-500' }
-};
 
 export default function RajaMantriBoard() {
   const { roomCode } = useParams();
@@ -19,9 +13,9 @@ export default function RajaMantriBoard() {
 
   const [room, setRoom] = useState(null);
   const [selectedSuspect, setSelectedSuspect] = useState(null);
-  const [revealedChit, setRevealedChit] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
+
 
   useEffect(() => {
     const socket = connectSocket();
@@ -240,7 +234,6 @@ export default function RajaMantriBoard() {
                 const isMe = player.id === myPlayerId;
                 const roleKey = gameState.roundRoles?.[player.id];
                 const isRoleRevealed = Boolean(roleKey);
-                const roleData = roleKey ? ROLE_INFO[roleKey] : null;
                 const isMantriGuessing = gameState.roundPhase === 'mantri_guess' && myRole === 'MANTRI' && player.id !== myPlayerId && player.id !== gameState.rajaId;
                 const isSelected = selectedSuspect === player.id;
                 const pointsThisRound = gameState.roundPoints?.[player.id];
@@ -257,7 +250,7 @@ export default function RajaMantriBoard() {
                   >
                     {/* Player Badge */}
                     <div className="flex justify-between items-center mb-3 border-b-2 border-black/20 pb-2">
-                      <span className="font-black text-sm uppercase truncate text-black">
+                      <span className="font-black text-sm uppercase truncate text-black flex items-center gap-1.5">
                         {player.name} {isMe && '(You)'}
                       </span>
                       <span className="bg-black text-white text-xs font-black px-2 py-0.5 rounded">
@@ -266,31 +259,17 @@ export default function RajaMantriBoard() {
                     </div>
 
                     {/* Chit / Role Card */}
-                    <div className="min-h-[140px] flex flex-col items-center justify-center p-3 rounded-lg border-[3px] border-black text-center bg-gray-50">
-                      {isRoleRevealed && roleData ? (
-                        <div className="animate-fadeIn w-full flex flex-col items-center">
-                          <span className="text-4xl sm:text-5xl block mb-1">{roleData.emoji}</span>
-                          <span className={`text-base sm:text-lg font-black uppercase px-2 py-0.5 rounded ${roleData.color} ${roleData.textColor} border border-black`}>
-                            {roleData.name}
-                          </span>
-                          <span className="text-xs font-bold text-gray-600 mt-1">
-                            +{roleData.points} pts base
-                          </span>
-                          {pointsThisRound !== undefined && (
-                            <span className={`text-sm font-black mt-2 px-2 py-0.5 rounded border border-black ${pointsThisRound > 0 ? 'bg-green-300 text-black' : 'bg-red-300 text-black'}`}>
-                              Round: +{pointsThisRound} pts
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center">
-                          <span className="text-4xl mb-2">📜</span>
-                          <span className="text-xs font-black uppercase text-gray-500 bg-gray-200 px-2 py-1 rounded border border-gray-400">
-                            Secret Chit Locked
-                          </span>
-                        </div>
-                      )}
+                    <div className="h-[180px]">
+                      <RoleCard roleKey={roleKey} isRevealed={isRoleRevealed} />
                     </div>
+
+                    {pointsThisRound !== undefined && (
+                      <div className="mt-2 text-center">
+                        <span className={`text-xs font-black px-2.5 py-1 rounded-full border border-black inline-block ${pointsThisRound > 0 ? 'bg-green-300 text-black' : 'bg-red-300 text-black'}`}>
+                          Round: +{pointsThisRound} pts
+                        </span>
+                      </div>
+                    )}
 
                     {/* Suspect Selector Pill */}
                     {isMantriGuessing && (
@@ -309,6 +288,7 @@ export default function RajaMantriBoard() {
                 );
               })}
             </div>
+
 
             {/* MANTRI VERDICT LOCK BUTTON */}
             {gameState.roundPhase === 'mantri_guess' && myRole === 'MANTRI' && (
