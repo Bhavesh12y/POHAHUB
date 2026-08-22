@@ -388,12 +388,72 @@ export default function TambolaBoard() {
           </div>
         </div>
 
-        <div className="w-full lg:w-2/4 flex flex-col gap-6 order-2">
-          <div className="bg-[#3b82f6] border-[4px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full text-white">
+        <div className="w-full lg:w-2/4 flex flex-col gap-4 sm:gap-6 order-2">
+          
+          {/* DEDICATED CALLED NUMBER DISPLAY DIRECTLY ABOVE TICKET */}
+          <div className="bg-[#1e293b] border-[3px] border-black rounded-xl p-3 sm:p-4 shadow-[6px_6px_0px_#000] text-white flex flex-wrap items-center justify-between gap-3 -rotate-0.5">
+            <div className="flex items-center gap-3">
+              <div>
+                <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-400 block tracking-widest">
+                  Current Number
+                </span>
+                <span className="text-2xl sm:text-4xl font-black text-[#facc15] px-3 py-1 bg-black border-[2px] border-[#facc15] rounded-lg inline-block shadow-[2px_2px_0px_#000] min-w-[55px] text-center">
+                  {lastDrawn}
+                </span>
+              </div>
+
+              {gameState?.drawnNumbers?.length > 1 && (
+                <div>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-400 block tracking-widest mb-1">
+                    Previous
+                  </span>
+                  <div className="flex gap-1.5">
+                    {gameState.drawnNumbers.slice(-4, -1).reverse().map((num, index) => (
+                      <span key={index} className="bg-gray-200 border-[2px] border-black rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-xs font-black text-black shadow-[1px_1px_0px_#000]">
+                        {num}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsSoundEnabled(!isSoundEnabled)}
+                className={`w-9 h-9 border-[2px] border-black rounded-lg flex items-center justify-center shadow-[2px_2px_0px_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] ${isSoundEnabled ? 'bg-[#facc15] text-black' : 'bg-gray-600 text-gray-300'}`}
+                title="Toggle Voice Announcer"
+              >
+                {isSoundEnabled ? '🔊' : '🔇'}
+              </button>
+
+              {isHost && gameState?.status === 'playing' && (
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setIsAutoDrawing(!isAutoDrawing)}
+                    className={`px-2.5 py-1.5 text-xs font-black uppercase rounded border-[2px] border-black transition-all shadow-[2px_2px_0px_#000] text-black ${
+                      isAutoDrawing ? 'bg-[#ef4444] text-white' : 'bg-[#10b981]'
+                    }`}
+                  >
+                    {isAutoDrawing ? '⏸' : '▶️ Auto'}
+                  </button>
+                  <button 
+                    onClick={handleDraw} 
+                    disabled={isAutoDrawing}
+                    className="px-3 py-1.5 bg-[#3b82f6] disabled:bg-gray-400 text-white text-xs font-black uppercase rounded border-[2px] border-black transition-all shadow-[2px_2px_0px_#000]"
+                  >
+                    +1 Draw
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-[#3b82f6] border-[4px] border-black rounded-xl p-3 sm:p-6 shadow-[8px_8px_0px_#000] w-full text-white">
             
             {/* INJECTED VOICE CONTROLS HERE */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-white" style={{ WebkitTextStroke: '1px black' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
+              <h2 className="text-xl sm:text-3xl font-black uppercase tracking-wider text-white" style={{ WebkitTextStroke: '1px black' }}>
                 Your Ticket
               </h2>
               <VoiceChat roomCode={room.code} />
@@ -401,7 +461,7 @@ export default function TambolaBoard() {
             
             {me?.ticket ? (
               <div className="w-full pb-2">
-                <div className="flex flex-col gap-2 w-full bg-white p-2 border-[4px] border-black rounded-lg shadow-[inset_4px_4px_0px_rgba(0,0,0,0.15)]">
+                <div className="flex flex-col gap-1.5 sm:gap-2 w-full bg-white p-2 border-[4px] border-black rounded-lg shadow-[inset_4px_4px_0px_rgba(0,0,0,0.15)]">
                   {me.ticket.map((row, rIdx) => (
                     <div key={rIdx} className="grid grid-cols-9 gap-1 sm:gap-2 w-full">
                       {row?.map((num, cIdx) => {
@@ -420,7 +480,7 @@ export default function TambolaBoard() {
                           <div
                             key={cIdx}
                             onClick={() => num !== null && toggleMark(num)}
-                            className={`relative h-8 sm:h-10 lg:h-14 flex items-center justify-center text-xs sm:text-sm lg:text-xl font-black rounded transition-all select-none ${cellStyle}`}
+                            className={`relative h-9 sm:h-10 lg:h-14 flex items-center justify-center text-xs sm:text-sm lg:text-xl font-black rounded transition-all select-none ${cellStyle}`}
                           >
                             {num !== null ? num : ''}
                             {isMarked && (
@@ -442,6 +502,7 @@ export default function TambolaBoard() {
               </div>
             )}
           </div>
+
 
           <div className="bg-white border-[3px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full rotate-1">
             <div className="flex justify-between items-center mb-4 border-b-[3px] border-black pb-3">

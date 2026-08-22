@@ -528,16 +528,15 @@ export default function AirHockeyBoard() {
 
     const raw = getCanvasPoint(e, canvas);
     const target = toServerSpace(raw, role);
-    const current = myStrikerRef.current || state.strikers[role];
-
-    const distance = Math.hypot(target.x - current.x, target.y - current.y);
-    if (distance > GRAB_RADIUS) return;
+    const next = clampStriker(target, role);
 
     isDraggingRef.current = true;
     dragPointerIdRef.current = e.pointerId;
-    dragOriginRef.current = raw;
-    strikerOriginRef.current = { ...current };
+    myStrikerRef.current = next;
     canvas.setPointerCapture?.(e.pointerId);
+
+    const socket = connectSocket();
+    socket.emit('airHockeyMove', { roomId: roomCode, position: next });
   };
 
   const handlePointerMove = (e) => {
@@ -555,27 +554,19 @@ export default function AirHockeyBoard() {
     if (!canvas || !role) return;
 
     const raw = getCanvasPoint(e, canvas);
-    let dx = raw.x - dragOriginRef.current.x;
-    let dy = raw.y - dragOriginRef.current.y;
-    if (role === 'p2') {
-      dx = -dx;
-      dy = -dy;
-    }
-
-    const next = clampStriker(
-      { x: strikerOriginRef.current.x + dx, y: strikerOriginRef.current.y + dy },
-      role
-    );
+    const target = toServerSpace(raw, role);
+    const next = clampStriker(target, role);
 
     myStrikerRef.current = next;
 
     const now = Date.now();
-    if (now - lastMoveEmit.current < 16) return;
+    if (now - lastMoveEmit.current < 12) return; // 80Hz max emit
     lastMoveEmit.current = now;
 
     const socket = connectSocket();
     socket.emit('airHockeyMove', { roomId: roomCode, position: next });
   };
+
 
   const endDrag = (e) => {
     if (e.pointerId !== dragPointerIdRef.current) return;

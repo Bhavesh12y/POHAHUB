@@ -136,11 +136,12 @@ export default function SnakeAndLadderBoard() {
   // Socket Connection
   useEffect(() => {
     const socket = connectSocket();
-    const username = sessionStorage.getItem('pohahub_username');
+    const username = localStorage.getItem('pohahub_username') || sessionStorage.getItem('pohahub_username');
     if (!username) {
       navigate(`/games/snake-and-ladder?join=${roomCode}`);
       return;
     }
+
 
     const syncRoom = async () => {
       const res = await emitWithAck('room:join', { roomCode: roomCode.toUpperCase(), playerName: username });

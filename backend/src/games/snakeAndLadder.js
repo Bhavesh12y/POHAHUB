@@ -3,15 +3,18 @@ const SNAKES = { 16: 6, 47: 26, 56: 53, 62: 19, 87: 24, 98: 78 };
 const LADDERS = { 1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91 };
 const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308']; // Red, Blue, Green, Yellow
 
-export const createSnakeAndLadderState = (players) => {
-  const startIndex = Math.floor(Math.random() * players.length);
+export const createSnakeAndLadderState = (players, previousStartingIndex = null) => {
+  const startIndex = previousStartingIndex !== null
+    ? (previousStartingIndex + 1) % players.length
+    : Math.floor(Math.random() * players.length);
   return {
     players: players.map((p, i) => ({ 
       ...p, 
       position: 0, // 0 means they haven't started (off the board)
       color: PLAYER_COLORS[i % PLAYER_COLORS.length] 
     })),
-    currentPlayerIndex: 0,
+    startingIndex: startIndex,
+    currentPlayerIndex: startIndex,
     status: 'playing',
     winner: null,
     lastRoll: null, // Stores { playerId, roll, message }
@@ -19,6 +22,7 @@ export const createSnakeAndLadderState = (players) => {
     ladders: LADDERS
   };
 };
+
 
 export const rollDice = (state, playerId) => {
   if (state.status !== 'playing') return { ok: false, error: 'Game over' };

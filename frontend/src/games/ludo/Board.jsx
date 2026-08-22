@@ -117,11 +117,12 @@ export default function LudoBoard() {
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username');
+    const username = localStorage.getItem('pohahub_username') || sessionStorage.getItem('pohahub_username');
     if (!username) {
       navigate(`/games/ludo?join=${roomCode}`);
       return;
     }
+
 
     const syncRoom = async () => {
       const res = await emitWithAck('room:join', { roomCode: roomCode.toUpperCase(), playerName: username });
@@ -498,26 +499,64 @@ export default function LudoBoard() {
                                           gameState?.legalMoves?.includes(t.tokenId) && t.position === t.realPosition;
 
                       return (
-                        <circle
+                        <g 
                           key={`${t.pIdx}-${t.tokenId}`}
-                          cx={cx} cy={cy} r={4 * scale}
-                          fill={t.color}
-                          stroke="black" 
-                          strokeWidth={isClickable ? "1" : "0.6"}
-                          style={{
-                            cursor: isClickable ? 'pointer' : 'default',
-                            transition: 'cx 0.15s linear, cy 0.15s linear' // Smooth snapping for visual steps
-                          }}
                           onClick={() => {
                             if (isClickable) handleMoveToken(t.tokenId);
                           }}
+                          className={isClickable ? 'cursor-pointer' : ''}
                         >
-                          {isClickable && <animate attributeName="r" values={`${4*scale};${5*scale};${4*scale}`} dur="1s" repeatCount="indefinite" />}
-                        </circle>
+                          {/* Pulsing selection ring for legal moves */}
+                          {isClickable && (
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r={6 * scale}
+                              fill="none"
+                              stroke="#facc15"
+                              strokeWidth="1.2"
+                              strokeDasharray="2 1"
+                            >
+                              <animate attributeName="r" values={`${5.5 * scale};${7.5 * scale};${5.5 * scale}`} dur="0.8s" repeatCount="indefinite" />
+                            </circle>
+                          )}
+
+                          {/* Main Token Circle */}
+                          <circle
+                            cx={cx} 
+                            cy={cy} 
+                            r={4 * scale}
+                            fill={t.color}
+                            stroke="black" 
+                            strokeWidth={isClickable ? "1" : "0.6"}
+                            style={{
+                              transition: 'cx 0.15s linear, cy 0.15s linear'
+                            }}
+                          />
+
+                          {/* Inner Shine Detail */}
+                          <circle
+                            cx={cx - 1.2 * scale}
+                            cy={cy - 1.2 * scale}
+                            r={1.2 * scale}
+                            fill="white"
+                            opacity="0.6"
+                          />
+
+                          {/* Invisible Large Touch Target */}
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={7.5 * scale}
+                            fill="transparent"
+                            style={{ cursor: isClickable ? 'pointer' : 'default' }}
+                          />
+                        </g>
                       );
                     });
                   })}
                 </svg>
+
               </div>
             </div>
           )}
