@@ -8,6 +8,9 @@ const MainLanding = lazy(() => import('./components/MainLanding.jsx'));
 const ComingSoon = lazy(() => import('./components/ComingSoon.jsx'));
 const GameSeoPage = lazy(() => import('./pages/GameSeoPage.jsx'));
 const TrustPage = lazy(() => import('./pages/TrustPage.jsx'));
+const BlogIndexPage = lazy(() => import('./pages/BlogIndexPage.jsx'));
+const BlogPostPage = lazy(() => import('./pages/BlogPostPage.jsx'));
+
 
 
 const ConnectFourLanding = lazy(() => import('./games/connect-four/Landing.jsx'));
@@ -81,6 +84,10 @@ export default function App() {
           <Route path="terms" element={<TrustPage page="terms" />} />
           <Route path="contact" element={<TrustPage page="contact" />} />
           <Route path="about" element={<TrustPage page="about" />} />
+
+          <Route path="blog" element={<BlogIndexPage />} />
+          <Route path="blog/:slug" element={<BlogPostPage />} />
+
 
           <Route path=":gameId" element={<GameSeoPage />} />
 

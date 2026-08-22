@@ -12,7 +12,7 @@ export default function ImposterBoard() {
 
   const [room, setRoom] = useState(null);
   const [clueInput, setClueInput] = useState('');
-  const [stealGuessInput, setStealGuessInput] = useState('');
+  const [imposterGuessInput, setImposterGuessInput] = useState('');
   const [selectedVoteTarget, setSelectedVoteTarget] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
@@ -55,16 +55,12 @@ export default function ImposterBoard() {
   const isImposter = gameState?.secretWord === '???';
 
   useEffect(() => {
-    if (gameState?.roundPhase === 'round_result') {
-      confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+    if (gameState?.roundPhase === 'game_over') {
+      confetti({ particleCount: 60, spread: 80, origin: { y: 0.6 } });
     }
   }, [gameState?.roundPhase]);
 
   const handleStart = async () => {
-    if (room.players.length < 3) {
-      setError('At least 3 players required to start Word Imposter!');
-      return;
-    }
     setActionLoading(true);
     const res = await emitWithAck('room:start', {});
     setActionLoading(false);
@@ -79,7 +75,7 @@ export default function ImposterBoard() {
     else {
       setError('');
       if (action === 'submit_clue') setClueInput('');
-      if (action === 'imposter_steal_guess') setStealGuessInput('');
+      if (action === 'imposter_guess_word') setImposterGuessInput('');
     }
   };
 
@@ -113,8 +109,10 @@ export default function ImposterBoard() {
           <VoiceChat roomCode={room.code} />
           {gameState && (
             <div className="bg-white border-[3px] border-black px-4 py-1.5 rounded-lg shadow-[3px_3px_0px_#000] text-center font-black">
-              <span className="text-xs text-gray-500 uppercase block">Round</span>
-              <span className="text-lg text-black">{gameState.currentRound} / {gameState.totalRounds}</span>
+              <span className="text-[10px] text-gray-500 uppercase block">Clue Round</span>
+              <span className="text-lg text-black">
+                {gameState.roundPhase === 'voting' ? '🗳️ Voting' : `${gameState.clueRound} / ${gameState.totalClueRounds}`}
+              </span>
             </div>
           )}
         </div>
@@ -135,101 +133,148 @@ export default function ImposterBoard() {
           {/* MAIN GAME AREA */}
           <div className="flex-1 w-full flex flex-col gap-6">
 
-            {/* SECRET WORD & CATEGORY HERO CARD */}
+            {/* 1. HERO IDENTITY CARD */}
             <div className="bg-white border-[4px] border-black rounded-xl p-5 sm:p-6 shadow-[6px_6px_0px_#000] text-center rotate-0.5">
-              <span className="text-xs font-black uppercase text-gray-500 bg-gray-100 px-3 py-1 rounded border border-gray-300 inline-block mb-3">
+              <span className="text-xs font-black uppercase text-gray-700 bg-yellow-200 px-3 py-1 rounded-full border border-black inline-block mb-3">
                 Category: {gameState.category}
               </span>
 
               {isImposter ? (
                 <div className="bg-red-50 border-[3px] border-red-500 p-4 rounded-xl">
-                  <span className="text-3xl sm:text-4xl block mb-1">🎭🤫</span>
-                  <h2 className="text-xl sm:text-2xl font-black text-red-600 uppercase tracking-wider mb-1">
+                  <span className="text-4xl block mb-1">🎭🤫</span>
+                  <h2 className="text-2xl font-black text-red-600 uppercase tracking-wider mb-1">
                     YOU ARE THE IMPOSTER!
                   </h2>
                   <p className="text-sm font-bold text-gray-700">
-                    You only know the category: <strong className="text-black">{gameState.category}</strong>. Blend in with convincing 1-word clues!
+                    You only know the category: <strong className="text-black">{gameState.category}</strong>. You have 3 attempts to guess the secret word anytime!
                   </p>
                 </div>
               ) : (
                 <div className="bg-emerald-50 border-[3px] border-emerald-500 p-4 rounded-xl">
-                  <span className="text-3xl sm:text-4xl block mb-1">🔎🎯</span>
+                  <span className="text-4xl block mb-1">🔎🎯</span>
                   <p className="text-xs font-black uppercase text-gray-500">Secret Word</p>
-                  <h2 className="text-2xl sm:text-4xl font-black text-emerald-700 uppercase tracking-wider my-1">
+                  <h2 className="text-3xl sm:text-4xl font-black text-emerald-700 uppercase tracking-wider my-1">
                     {gameState.secretWord}
                   </h2>
                   <p className="text-xs sm:text-sm font-bold text-gray-600">
-                    Give clever 1-word clues without giving the secret word away completely!
+                    Give 2 rounds of smart 1-word clues without making it too obvious!
                   </p>
                 </div>
               )}
 
-              {/* ACTION CALLOUT PER PHASE */}
+              {/* ACTION CALLOUT FOR WORD REVEAL */}
               {gameState.roundPhase === 'word_reveal' && (
                 <div className="mt-4">
                   <button
                     onClick={() => handleAction('start_clues')}
                     disabled={actionLoading}
-                    className="px-8 py-3 bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase text-base border-[3px] border-black rounded-xl shadow-[4px_4px_0px_#000] transition-all hover:translate-x-0.5 hover:translate-y-0.5"
+                    className="px-8 py-3.5 bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase text-base border-[3px] border-black rounded-xl shadow-[4px_4px_0px_#000] transition-all hover:translate-x-0.5 hover:translate-y-0.5"
                   >
-                    🚀 Start 1-Word Clue Round!
+                    🚀 Start 2 Rounds of 1-Word Clues!
                   </button>
                 </div>
               )}
             </div>
 
-            {/* PHASE 2: 1-WORD CLUE TIMELINE */}
+            {/* 2. PARALLEL IMPOSTER ANYTIME 3-GUESS PANEL */}
+            {gameState.roundPhase !== 'game_over' && (
+              <div className="bg-amber-50 border-[4px] border-black rounded-xl p-4 sm:p-5 shadow-[6px_6px_0px_#000]">
+                <div className="flex items-center justify-between border-b-2 border-black/20 pb-2 mb-3">
+                  <span className="font-black text-sm uppercase text-amber-900 flex items-center gap-1.5">
+                    <span>⚡ Imposter Secret Word Steal:</span>
+                    <span className="bg-amber-200 border border-black px-2 py-0.5 rounded text-xs">
+                      {gameState.imposterAttemptsLeft} / 3 Attempts Left
+                    </span>
+                  </span>
+                  {gameState.imposterGuesses?.length > 0 && (
+                    <span className="text-xs text-red-600 font-bold">
+                      Failed guesses: {gameState.imposterGuesses.join(', ')}
+                    </span>
+                  )}
+                </div>
+
+                {isImposter ? (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="Type your guess anytime..."
+                      value={imposterGuessInput}
+                      onChange={(e) => setImposterGuessInput(e.target.value)}
+                      maxLength={30}
+                      className="input-field flex-1 font-black uppercase text-sm"
+                    />
+                    <button
+                      onClick={() => imposterGuessInput.trim() && handleAction('imposter_guess_word', { guess: imposterGuessInput.trim() })}
+                      disabled={!imposterGuessInput.trim() || actionLoading || gameState.imposterAttemptsLeft <= 0}
+                      className="sketch-button bg-red-400 hover:bg-red-500 text-white font-black uppercase px-6 py-2 text-sm shrink-0"
+                    >
+                      🎯 Guess Word to Win!
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs font-bold text-gray-600">
+                    The Imposter can guess the secret word at any second. If they guess right, they win immediately!
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 3. 2 ROUNDS OF 1-WORD CLUES */}
             {gameState.roundPhase === 'clue_phase' && (
               <div className="bg-white border-[4px] border-black rounded-xl p-5 shadow-[6px_6px_0px_#000]">
                 <div className="flex items-center justify-between mb-4 border-b-2 border-black pb-2">
                   <h3 className="text-base sm:text-lg font-black uppercase text-black">
-                    💬 1-Word Clues Timeline
+                    💬 Clues - Round {gameState.clueRound} of 2
                   </h3>
-                  <span className="text-xs font-black uppercase bg-blue-100 text-blue-800 px-3 py-1 rounded border border-blue-300">
+                  <span className="text-xs font-black uppercase bg-blue-100 text-blue-800 px-3 py-1 rounded border border-blue-300 animate-pulse">
                     Turn: {room.players.find(p => p.id === gameState.clueOrder[gameState.currentClueIndex])?.name || 'Player'}
                   </span>
                 </div>
 
-                {/* Submitted Clues Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
-                  {room.players.map((p) => {
-                    const submitted = gameState.clues.find(c => c.playerId === p.id);
-                    const isCurrent = gameState.clueOrder[gameState.currentClueIndex] === p.id;
-
-                    return (
-                      <div
-                        key={p.id}
-                        className={`border-[3px] border-black rounded-lg p-3 text-center transition-all ${
-                          isCurrent ? 'bg-yellow-100 ring-4 ring-yellow-400 scale-105 shadow-[4px_4px_0px_#000]' : 'bg-gray-50'
-                        }`}
-                      >
-                        <span className="text-xs font-black uppercase text-gray-700 block truncate mb-1">
-                          {p.name} {p.id === myPlayerId && '(You)'}
-                        </span>
-                        {submitted ? (
-                          <span className="text-base font-black text-black bg-white px-2 py-1 border border-black rounded inline-block">
-                            "{submitted.clue}"
-                          </span>
-                        ) : (
-                          <span className="text-xs font-bold text-gray-400 italic">
-                            {isCurrent ? 'Thinking...' : 'Waiting...'}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                {/* Round 1 Clues */}
+                <div className="mb-4">
+                  <h4 className="text-xs font-black uppercase text-gray-500 mb-2">Round 1 Clues:</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                    {room.players.map((p) => {
+                      const c = gameState.round1Clues?.find(x => x.playerId === p.id);
+                      return (
+                        <div key={p.id} className="bg-gray-50 border-[2px] border-black rounded-lg p-2 text-center">
+                          <span className="text-xs font-bold text-gray-600 block truncate">{p.name}</span>
+                          <span className="text-sm font-black text-black">{c ? `"${c.clue}"` : '⏳ Waiting...'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+
+                {/* Round 2 Clues */}
+                {gameState.clueRound === 2 && (
+                  <div className="mb-4 pt-2 border-t border-black/10">
+                    <h4 className="text-xs font-black uppercase text-gray-500 mb-2">Round 2 Clues:</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                      {room.players.map((p) => {
+                        const c = gameState.round2Clues?.find(x => x.playerId === p.id);
+                        return (
+                          <div key={p.id} className="bg-gray-50 border-[2px] border-black rounded-lg p-2 text-center">
+                            <span className="text-xs font-bold text-gray-600 block truncate">{p.name}</span>
+                            <span className="text-sm font-black text-black">{c ? `"${c.clue}"` : '⏳ Waiting...'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Active Player Input */}
                 {isMyClueTurn && (
-                  <div className="bg-yellow-50 border-[3px] border-black p-4 rounded-xl">
+                  <div className="bg-yellow-50 border-[3px] border-black p-4 rounded-xl mt-4">
                     <label className="block text-sm font-black uppercase text-black mb-2">
-                      💡 Enter Your Exactly 1-Word Clue:
+                      💡 Your Turn: Enter 1-Word Clue (Round {gameState.clueRound}):
                     </label>
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="e.g. Delicious, Crunchy, Yellow..."
+                        placeholder="e.g. Yellow, Crunchy, Hot..."
                         value={clueInput}
                         onChange={(e) => setClueInput(e.target.value.split(' ')[0])}
                         maxLength={25}
@@ -248,43 +293,14 @@ export default function ImposterBoard() {
               </div>
             )}
 
-            {/* PHASE 3: DISCUSSION & PROCEED TO VOTE */}
-            {gameState.roundPhase === 'discussion' && (
-              <div className="bg-white border-[4px] border-black rounded-xl p-5 shadow-[6px_6px_0px_#000] text-center">
-                <span className="text-4xl block mb-2">🗣️💬</span>
-                <h3 className="text-xl font-black uppercase text-black mb-2">Discussion Phase</h3>
-                <p className="text-sm font-bold text-gray-700 mb-4">
-                  Discuss the clues in the chat or voice! Who gave a strange, vague, or suspicious clue?
-                </p>
-
-                {/* Clues Summary */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 text-left">
-                  {gameState.clues.map((c, idx) => (
-                    <div key={idx} className="bg-gray-100 border-[2px] border-black rounded-lg p-2.5">
-                      <span className="text-xs font-black text-gray-600 block truncate">{c.playerName}</span>
-                      <span className="text-base font-black text-black">"{c.clue}"</span>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => handleAction('start_voting')}
-                  disabled={actionLoading}
-                  className="px-8 py-3 bg-red-400 hover:bg-red-500 text-white font-black uppercase text-base border-[3px] border-black rounded-xl shadow-[4px_4px_0px_#000] transition-all hover:translate-x-0.5 hover:translate-y-0.5"
-                >
-                  🗳️ Proceed to Voting!
-                </button>
-              </div>
-            )}
-
-            {/* PHASE 4: VOTING */}
+            {/* 4. VOTING PHASE */}
             {gameState.roundPhase === 'voting' && (
               <div className="bg-white border-[4px] border-black rounded-xl p-5 shadow-[6px_6px_0px_#000]">
                 <h3 className="text-xl font-black uppercase text-black mb-2 text-center">
                   🗳️ Vote for the Imposter!
                 </h3>
                 <p className="text-xs font-bold text-gray-600 mb-4 text-center">
-                  Tap the player you believe is pretending. You cannot vote for yourself.
+                  Both clue rounds are complete! Tap who you suspect. If majority votes for the Imposter, they lose!
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
@@ -322,101 +338,40 @@ export default function ImposterBoard() {
                   </div>
                 ) : (
                   <div className="text-center py-2 text-sm font-black text-green-700 bg-green-100 border-[2px] border-green-500 rounded-lg">
-                    ✅ Your vote is locked! Waiting for other players... ({Object.keys(gameState.votes).length}/{room.players.length})
+                    ✅ Your vote is locked! Waiting for other players... ({Object.keys(gameState.votes || {}).length}/{room.players.length})
                   </div>
                 )}
               </div>
             )}
 
-            {/* PHASE 5: IMPOSTER GUESS STEAL */}
-            {gameState.roundPhase === 'imposter_guess' && (
-              <div className="bg-red-50 border-[4px] border-black rounded-xl p-5 shadow-[6px_6px_0px_#000] text-center">
-                <span className="text-4xl block mb-2">🎯🚨</span>
-                <h3 className="text-2xl font-black uppercase text-black mb-2">
-                  Imposter Caught! Final Steal Chance!
-                </h3>
-                <p className="text-sm font-bold text-gray-700 mb-4">
-                  The Imposter has been unmasked! However, if the Imposter can guess the Secret Word right now, they STEAL the win!
-                </p>
-
-                {isImposter ? (
-                  <div className="max-w-md mx-auto bg-white border-[3px] border-black p-4 rounded-xl">
-                    <label className="block text-sm font-black uppercase text-black mb-2">
-                      Enter Secret Word Guess (Category: {gameState.category}):
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Guess the secret word..."
-                        value={stealGuessInput}
-                        onChange={(e) => setStealGuessInput(e.target.value)}
-                        className="input-field flex-1 uppercase font-black"
-                      />
-                      <button
-                        onClick={() => stealGuessInput.trim() && handleAction('imposter_steal_guess', { guess: stealGuessInput.trim() })}
-                        disabled={!stealGuessInput.trim() || actionLoading}
-                        className="sketch-button bg-yellow-400 px-6 py-2 font-black uppercase"
-                      >
-                        Steal Win!
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm font-black text-gray-600 animate-pulse">
-                    Waiting for the Imposter to attempt their final word steal guess...
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* PHASE 6: ROUND RESULT */}
-            {gameState.roundPhase === 'round_result' && (
+            {/* 5. GAME OVER RESULT */}
+            {gameState.roundPhase === 'game_over' && (
               <div className="bg-white border-[4px] border-black rounded-xl p-6 shadow-[6px_6px_0px_#000] text-center rotate-0.5">
                 <span className="text-5xl block mb-2">
-                  {gameState.imposterStealSuccess ? "😱👑" : gameState.caughtImposter ? "🎉🕵️‍♂️" : "🎭🏃"}
+                  {gameState.winnerTeam === 'detectives' ? "🎉🕵️‍♂️" : "😱🎭"}
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-black mb-2">
-                  {gameState.imposterStealSuccess 
-                    ? "IMPOSTER STOLE THE VICTORY!" 
-                    : gameState.caughtImposter 
-                      ? "DETECTIVES WIN! IMPOSTER CAUGHT!" 
-                      : "IMPOSTER ESCAPED UNNOTICED!"}
+                <h2 className="text-3xl font-black uppercase tracking-wider text-black mb-2">
+                  {gameState.winnerTeam === 'detectives' ? "DETECTIVES WIN!" : "IMPOSTER WINS!"}
                 </h2>
                 <p className="text-sm font-bold text-gray-700 mb-4">
                   The Secret Word was: <strong className="text-emerald-700 uppercase text-lg">{gameState.secretWord}</strong> | Imposter was: <strong className="text-red-600 uppercase text-lg">{room.players.find(p => p.id === gameState.imposterId)?.name}</strong>
                 </p>
 
-                {gameState.status === 'playing' ? (
+                {isHost && (
                   <button
-                    onClick={() => handleAction('next_round')}
-                    disabled={actionLoading}
-                    className="px-8 py-3.5 bg-[#4ade80] hover:bg-green-300 text-black font-black uppercase text-base border-[3px] border-black rounded-xl shadow-[4px_4px_0px_#000]"
+                    onClick={handleStart}
+                    className="px-8 py-3.5 bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase text-base border-[3px] border-black rounded-xl shadow-[4px_4px_0px_#000] transition-all"
                   >
-                    Next Round ({gameState.currentRound + 1}/{gameState.totalRounds}) ➡️
+                    🔄 Play Another Game
                   </button>
-                ) : (
-                  <div className="mt-4">
-                    <h3 className="text-2xl font-black uppercase text-black mb-2">🏆 Game Completed!</h3>
-                    <p className="text-base font-black text-green-700 mb-4">
-                      Champion: {room.players.find(p => p.id === gameState.winner)?.name || 'Detective'}!
-                    </p>
-                    {isHost && (
-                      <button
-                        onClick={handleStart}
-                        className="px-8 py-3 bg-[#facc15] text-black font-black uppercase rounded-xl border-[3px] border-black shadow-[4px_4px_0px_#000]"
-                      >
-                        🔄 Play Rematch (3 Rounds)
-                      </button>
-                    )}
-                  </div>
                 )}
               </div>
             )}
 
             {/* LIVE SCOREBOARD */}
             <div className="bg-white border-[4px] border-black rounded-xl p-4 sm:p-5 shadow-[6px_6px_0px_#000]">
-              <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-black mb-3 border-b-2 border-black pb-2 flex items-center gap-2">
-                <span>🏆 Cumulative Standings</span>
+              <h3 className="text-base font-black uppercase tracking-wider text-black mb-3 border-b-2 border-black pb-2 flex items-center gap-2">
+                <span>🏆 Cumulative Leaderboard</span>
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {room.players.map((p) => (

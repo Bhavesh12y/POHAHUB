@@ -4,9 +4,9 @@ import { createScribbleState, serializeScribbleState } from '../games/scribble.j
 import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } from '../games/snakeAndLadder.js';
 import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } from '../games/tambola.js';
 import { createStonePaperScissorState, playSpsMove, nextSpsRound, serializeSpsState } from '../games/stonePaperScissor.js';
-import { createLudoState, rollLudoDice, moveLudoToken, serializeLudoState } from '../games/ludo.js';
-import { createRajaMantriState, startNewRound, applyRajaMantriAction } from '../games/rajaMantri.js';
+import { createRajaMantriState, startNewRound, applyRajaMantriAction, checkAndExecuteRajaMantriBotTurn } from '../games/rajaMantri.js';
 import { createImposterState, applyImposterAction } from '../games/imposter.js';
+
 
 
 const PLAYER_COLORS = ['red', 'yellow'];
@@ -274,15 +274,37 @@ class RoomManager {
     } else if (room.gameType === 'ludo') {
       room.gameState = createLudoState(room.players.map((p) => ({ id: p.id, name: p.name })));
     } else if (room.gameType === 'raja-mantri') {
-      if (room.players.length < 4) return { ok: false, error: 'Exactly 4 players required for Raja Mantri Chor Sipahi' };
+      const BOT_NAMES = ['Birbal 🤖', 'Tenali 🤖', 'Chanakya 🤖'];
+      let bIdx = 0;
+      while (room.players.length < 4) {
+        room.players.push({
+          id: `bot-${Date.now()}-${bIdx}`,
+          name: BOT_NAMES[bIdx % BOT_NAMES.length],
+          socketId: null,
+          isBot: true
+        });
+        bIdx++;
+      }
       const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
-      room.gameState = createRajaMantriState(room.players.map((p) => ({ id: p.id, name: p.name })), previousStartingIndex);
+      room.gameState = createRajaMantriState(room.players.map((p) => ({ id: p.id, name: p.name, isBot: Boolean(p.isBot) })), previousStartingIndex);
       startNewRound(room.gameState, room.players);
+      checkAndExecuteRajaMantriBotTurn(room.gameState, room.players);
     } else if (room.gameType === 'imposter') {
-      if (room.players.length < 3) return { ok: false, error: 'At least 3 players required for Word Imposter' };
+      const BOT_NAMES = ['Sherlock 🤖', 'Watson 🤖', 'Poirot 🤖'];
+      let bIdx = 0;
+      while (room.players.length < 3) {
+        room.players.push({
+          id: `bot-imp-${Date.now()}-${bIdx}`,
+          name: BOT_NAMES[bIdx % BOT_NAMES.length],
+          socketId: null,
+          isBot: true
+        });
+        bIdx++;
+      }
       const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
-      room.gameState = createImposterState(room.players.map((p) => ({ id: p.id, name: p.name })), previousStartingIndex);
+      room.gameState = createImposterState(room.players.map((p) => ({ id: p.id, name: p.name, isBot: Boolean(p.isBot) })), previousStartingIndex);
     } else if (room.gameType === 'air-hockey') {
+
       room.gameState = { status: 'starting' }; 
     }
     else if (room.gameType === 'table-tennis') {
@@ -322,12 +344,17 @@ class RoomManager {
     }
     if (room.gameType === 'raja-mantri') {
       const result = applyRajaMantriAction(room.gameState, playerId, payload.action, payload, room.players);
-      return result.ok ? { ok: true, room } : { ok: false, error: result.error };
+      if (result.ok) {
+        checkAndExecuteRajaMantriBotTurn(room.gameState, room.players);
+        return { ok: true, room };
+      }
+      return { ok: false, error: result.error };
     }
     if (room.gameType === 'imposter') {
       const result = applyImposterAction(room.gameState, playerId, payload.action, payload, room.players);
       return result.ok ? { ok: true, room } : { ok: false, error: result.error };
     }
+
     return { ok: false, error: 'Unsupported game type' };
   }
 

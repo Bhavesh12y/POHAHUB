@@ -246,54 +246,134 @@ export default function DinoDash() {
             </div>
           )}
 
-          {/* Background Elements */}
-          <div className={`absolute top-6 w-16 h-6 bg-[#a9def9] rounded-full opacity-40 transition-all duration-1000 ${renderState.isPlaying ? 'animate-[slide_10s_linear_infinite]' : 'left-10'}`} style={{ animationDuration: '8s' }}></div>
-          <div className={`absolute top-12 w-24 h-8 bg-[#a9def9] rounded-full opacity-40 transition-all duration-1000 ${renderState.isPlaying ? 'animate-[slide_12s_linear_infinite_reverse]' : 'right-10'}`} style={{ animationDuration: '12s' }}></div>
+          {/* Scenery Style */}
+          <style>{`
+            @keyframes dinoGroundScroll {
+              from { background-position-x: 0px; }
+              to { background-position-x: 40px; }
+            }
+            @keyframes dinoCloudScroll {
+              from { transform: translateX(0); }
+              to { transform: translateX(-50%); }
+            }
+            .dino-ground-track {
+              animation: dinoGroundScroll 0.25s linear infinite;
+              background-image: repeating-linear-gradient(90deg, #18181b 0 16px, #27272a 16px 20px, #18181b 20px 36px, #71717a 36px 40px);
+            }
+            .dino-clouds {
+              animation: dinoCloudScroll 20s linear infinite;
+              background-image: radial-gradient(circle 12px at 15px 15px, rgba(255,255,255,0.9) 98%, transparent), radial-gradient(circle 18px at 35px 12px, rgba(255,255,255,0.9) 98%, transparent), radial-gradient(circle 14px at 55px 16px, rgba(255,255,255,0.9) 98%, transparent);
+            }
+            .dino-paused {
+              animation-play-state: paused !important;
+            }
+          `}</style>
 
-          <div className="absolute bottom-0 w-full h-3 border-t-[4px] border-black bg-black"></div>
+          {/* Desert Sunset Sky */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#fef08a] via-[#fed7aa] to-[#fbcfe8] pointer-events-none" />
 
-          {/* THE DINO */}
-          <div 
-            className="absolute left-[40px] w-[40px] h-[40px] bg-[#ef476f] border-[3px] border-black z-20 transition-transform duration-75"
-            style={{ bottom: `${renderState.dinoY + 12}px`, boxShadow: renderState.dinoY > 0 ? '6px 6px 0 0 rgba(0,0,0,0.2)' : '0px 0px 0 0 rgba(0,0,0,0)' }}
-          >
-            <div className="absolute top-1 right-2 w-[10px] h-[10px] bg-white border-[2px] border-black flex items-center justify-center">
-               {renderState.isGameOver ? <span className="text-[8px] font-black leading-none pb-[1px]">x</span> : <div className="w-[4px] h-[4px] bg-black"></div>}
-            </div>
-            <div className="absolute top-4 right-[-3px] w-[6px] h-[3px] bg-black"></div>
-            <div className="absolute top-[22px] right-[4px] w-[10px] h-[6px] border-[3px] border-l-0 border-t-0 border-black rounded-br-sm"></div>
-            <div className="absolute top-0 left-[-6px] w-[8px] h-[8px] bg-[#ef476f] border-[3px] border-r-0 border-b-0 border-black transform -rotate-45"></div>
-            <div className="absolute top-[12px] left-[-6px] w-[8px] h-[8px] bg-[#ef476f] border-[3px] border-r-0 border-b-0 border-black transform -rotate-45"></div>
-            <div className="absolute top-[24px] left-[-6px] w-[8px] h-[8px] bg-[#ef476f] border-[3px] border-r-0 border-b-0 border-black transform -rotate-45"></div>
-            <div className={`absolute -bottom-[12px] left-[6px] w-[6px] h-[10px] bg-[#ef476f] border-[3px] border-t-0 border-black ${!showLeftLeg && renderState.isPlaying ? 'h-[4px] -bottom-[6px]' : ''}`}></div>
-            <div className={`absolute -bottom-[12px] right-[10px] w-[6px] h-[10px] bg-[#ef476f] border-[3px] border-t-0 border-black ${!showRightLeg && renderState.isPlaying ? 'h-[4px] -bottom-[6px]' : ''}`}></div>
+          {/* Retro Sun */}
+          <div className="absolute top-4 right-12 w-14 h-14 bg-amber-400 rounded-full border-[3px] border-black shadow-[0_0_20px_rgba(251,191,36,0.5)] pointer-events-none opacity-80 flex items-center justify-center">
+            <div className="w-8 h-8 bg-yellow-200 rounded-full border border-black/30" />
           </div>
 
-          {/* OBSTACLES */}
+          {/* Distant Desert Dunes Silhouette */}
+          <div className="absolute bottom-3 left-0 right-0 h-16 pointer-events-none opacity-35 flex items-end">
+            <div className="w-36 h-12 bg-[#fb7185] rounded-t-full border-t-2 border-black -ml-4" />
+            <div className="w-48 h-16 bg-[#f43f5e] rounded-t-full border-t-2 border-black -ml-10" />
+            <div className="w-40 h-10 bg-[#fb7185] rounded-t-full border-t-2 border-black -ml-8" />
+            <div className="w-56 h-14 bg-[#f43f5e] rounded-t-full border-t-2 border-black -ml-12" />
+          </div>
+
+          {/* Moving Clouds */}
+          <div className={`dino-clouds absolute top-2 left-0 w-[200%] h-8 pointer-events-none opacity-80 ${renderState.isPlaying && !renderState.isGameOver ? '' : 'dino-paused'}`} />
+
+          {/* Textured Ground */}
+          <div className={`dino-ground-track absolute bottom-0 left-0 right-0 h-3 border-t-[3px] border-black z-20 ${renderState.isPlaying && !renderState.isGameOver ? '' : 'dino-paused'}`} />
+
+          {/* THE ENHANCED DINO T-REX */}
+          <div 
+            className="absolute left-[40px] z-20 transition-transform duration-75 select-none"
+            style={{ 
+              bottom: `${renderState.dinoY + 12}px`,
+              transform: renderState.dinoY > 0 ? 'rotate(-6deg)' : 'rotate(0deg)'
+            }}
+          >
+            {/* T-Rex Body SVG */}
+            <div className="relative w-12 h-12">
+              {/* Back Spines */}
+              <div className="absolute top-2 left-0 w-2 h-2 bg-[#15803d] border border-black -rotate-45" />
+              <div className="absolute top-4 left-0 w-2 h-2 bg-[#15803d] border border-black -rotate-45" />
+              <div className="absolute top-6 left-1 w-2 h-2 bg-[#15803d] border border-black -rotate-45" />
+
+              {/* Main Body */}
+              <div className="absolute top-2 left-2 w-7 h-8 bg-[#22c55e] border-[3px] border-black rounded-lg shadow-[2px_2px_0px_#000]" />
+
+              {/* Head & Snout */}
+              <div className="absolute top-0 left-4 w-7 h-5 bg-[#22c55e] border-[3px] border-black rounded-r-md">
+                {/* Eye */}
+                <div className="absolute top-1 left-1.5 w-2 h-2 bg-white border border-black rounded-full flex items-center justify-center">
+                  {renderState.isGameOver ? (
+                    <span className="text-[7px] font-black leading-none text-black">x</span>
+                  ) : (
+                    <div className="w-1 h-1 bg-black rounded-full" />
+                  )}
+                </div>
+                {/* Teeth */}
+                <div className="absolute bottom-[-1px] right-0 flex">
+                  <div className="w-1 h-1 bg-white border-r border-black" />
+                  <div className="w-1 h-1 bg-white border-r border-black" />
+                </div>
+              </div>
+
+              {/* Little Arm */}
+              <div className="absolute top-5 right-2 w-2.5 h-1.5 bg-[#15803d] border-[2px] border-black rounded-r-full" />
+
+              {/* Tail */}
+              <div className="absolute top-5 -left-2 w-3.5 h-3.5 bg-[#22c55e] border-[2px] border-r-0 border-b-0 border-black -rotate-45 rounded-tl-sm" />
+
+              {/* Left Leg */}
+              <div 
+                className={`absolute bottom-[-6px] left-3 w-2 bg-[#15803d] border-[2px] border-t-0 border-black transition-all ${
+                  !showLeftLeg && renderState.isPlaying ? 'h-1 bottom-[-2px]' : 'h-3'
+                }`}
+              />
+
+              {/* Right Leg */}
+              <div 
+                className={`absolute bottom-[-6px] left-6 w-2 bg-[#15803d] border-[2px] border-t-0 border-black transition-all ${
+                  !showRightLeg && renderState.isPlaying ? 'h-1 bottom-[-2px]' : 'h-3'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* OBSTACLES (CACTI) */}
           {renderState.obstacles.map(obs => (
             <div key={obs.id} className="absolute flex items-end justify-center z-10" style={{ left: `${obs.x}px`, bottom: '12px', width: `${obs.width}px`, height: `${obs.height}px` }}>
               {obs.type === 'small' && (
-                <div className="w-full h-full bg-[#06d6a0] border-[3px] border-black rounded-t-md relative">
-                   <div className="absolute top-2 -left-[6px] w-[10px] h-[14px] border-[3px] border-r-0 border-black rounded-l-sm"></div>
+                <div className="w-full h-full bg-[#10b981] border-[3px] border-black rounded-t-md relative shadow-[2px_2px_0px_#000]">
+                   <div className="absolute top-2 -left-[6px] w-[10px] h-[12px] bg-[#10b981] border-[3px] border-r-0 border-black rounded-l-sm"></div>
                 </div>
               )}
               {obs.type === 'large' && (
-                <div className="w-full h-full bg-[#06d6a0] border-[3px] border-black rounded-t-md relative shadow-[4px_0_0_0_rgba(0,0,0,0.1)_inset]">
-                   <div className="absolute top-4 -left-[8px] w-[12px] h-[20px] border-[3px] border-r-0 border-b-0 border-black rounded-tl-sm"></div>
-                   <div className="absolute top-8 -right-[8px] w-[12px] h-[16px] border-[3px] border-l-0 border-t-0 border-black rounded-br-sm"></div>
+                <div className="w-full h-full bg-[#10b981] border-[3px] border-black rounded-t-md relative shadow-[3px_3px_0px_#000]">
+                   <div className="absolute top-3 -left-[8px] w-[12px] h-[16px] bg-[#10b981] border-[3px] border-r-0 border-b-0 border-black rounded-tl-sm"></div>
+                   <div className="absolute top-7 -right-[8px] w-[12px] h-[14px] bg-[#10b981] border-[3px] border-l-0 border-t-0 border-black rounded-br-sm"></div>
                 </div>
               )}
               {obs.type === 'double' && (
                 <div className="w-full h-full flex justify-between items-end">
-                   <div className="w-[18px] h-[35px] bg-[#06d6a0] border-[3px] border-black rounded-t-md relative"></div>
-                   <div className="w-[22px] h-full bg-[#06d6a0] border-[3px] border-black rounded-t-md relative">
-                     <div className="absolute top-3 -right-[6px] w-[10px] h-[12px] border-[3px] border-l-0 border-t-0 border-black rounded-br-sm"></div>
+                   <div className="w-[18px] h-[35px] bg-[#10b981] border-[3px] border-black rounded-t-md relative shadow-[2px_2px_0px_#000]"></div>
+                   <div className="w-[22px] h-full bg-[#10b981] border-[3px] border-black rounded-t-md relative shadow-[2px_2px_0px_#000]">
+                     <div className="absolute top-3 -right-[6px] w-[10px] h-[12px] bg-[#10b981] border-[3px] border-l-0 border-t-0 border-black rounded-br-sm"></div>
                    </div>
                 </div>
               )}
             </div>
           ))}
         </div>
+
 
         {/* Jump Button */}
         <button onPointerDown={(e) => { e.preventDefault(); jump(); }} className="w-full mt-2 bg-[#ff99c8] border-[4px] border-black shadow-[6px_6px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[6px] active:translate-x-[6px] transition-all text-black font-black py-3 sm:py-6 text-2xl sm:text-4xl uppercase tracking-widest cursor-pointer touch-manipulation block">

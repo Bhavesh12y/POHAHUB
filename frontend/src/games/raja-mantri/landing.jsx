@@ -88,7 +88,7 @@ export default function RajaMantriLanding() {
     <div className="max-w-xl mx-auto px-5 py-12 sm:py-16">
       <div className="text-center mb-10">
         <div className="inline-block -rotate-2 mb-4">
-          <span className="text-6xl">👑📜⚔️🦹</span>
+          <span className="text-6xl"></span>
         </div>
         <div className="inline-block rotate-[-1deg]">
           <div className="bg-[#facc15] border-[3px] border-black px-6 py-3 shadow-[6px_6px_0px_#000]">
