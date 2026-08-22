@@ -3,15 +3,18 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import QrScannerModal from '../../components/QrScannerModal.jsx';
 
-export default function ConnectFourLanding() {
+export default function ImposterLanding() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
   const [username, setUsername] = useState('');
-  const [roomCode, setRoomCode] = useState(searchParams.get('join')?.toUpperCase() || '');
+  const [roomCode, setRoomCode] = useState(
+    searchParams.get('join')?.toUpperCase() || ''
+  );
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
-
 
   useEffect(() => {
     const savedUsername = localStorage.getItem('pohahub_username');
@@ -31,7 +34,7 @@ export default function ConnectFourLanding() {
     connectSocket();
 
     const result = await emitWithAck('room:create', {
-      gameType: 'connect-four',
+      gameType: 'imposter',
       playerName: username.trim(),
     });
 
@@ -43,7 +46,9 @@ export default function ConnectFourLanding() {
     }
 
     localStorage.setItem('pohahub_username', username.trim());
-    navigate(`/games/connect-four/room/${result.room.code}`, { state: { room: result.room } });
+    navigate(`/games/imposter/room/${result.room.code}`, {
+      state: { room: result.room },
+    });
   };
 
   const handleJoin = async () => {
@@ -51,6 +56,7 @@ export default function ConnectFourLanding() {
       setError('Enter a username');
       return;
     }
+
     if (!roomCode.trim()) {
       setError('Enter a room code');
       return;
@@ -73,33 +79,35 @@ export default function ConnectFourLanding() {
     }
 
     localStorage.setItem('pohahub_username', username.trim());
-    navigate(`/games/connect-four/room/${result.room.code}`, { state: { room: result.room } });
+    navigate(`/games/imposter/room/${result.room.code}`, {
+      state: { room: result.room },
+    });
   };
 
   return (
     <div className="max-w-xl mx-auto px-5 py-12 sm:py-16">
       <div className="text-center mb-10">
-        <div className="sketch-border inline-flex items-center justify-center w-[clamp(4rem,10vw,6rem)] aspect-square bg-violet-300 mb-6 overflow-hidden -rotate-2">
-          <img
-            src="https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png"
-            alt="Connect 4 Preview"
-            className="w-full h-full object-cover"
-          />
+        <div className="inline-block -rotate-2 mb-4">
+          <span className="text-6xl">🕵️‍♂️🤫🔎🎭</span>
+        </div>
+        <div className="inline-block rotate-[-1deg]">
+          <div className="bg-[#f87171] border-[3px] border-black px-6 py-3 shadow-[6px_6px_0px_#000]">
+            <h2 className="text-[clamp(1.2rem,3vw,2rem)] font-black uppercase tracking-wide text-white">
+              Word Imposter
+            </h2>
+          </div>
         </div>
 
-        <h2 className="text-[clamp(1.75rem,5vw,3rem)] font-black uppercase mb-3 text-ink"><div className="inline-block rotate-[-1deg]">
-  <div className="bg-pink-300 border-[3px] border-black px-6 py-3 shadow-[6px_6px_0px_#000]">
-    <h2 className="text-[clamp(1.2rem,3vw,2rem)] font-black uppercase tracking-wide text-black">
-      Connect 4
-    </h2>
-  </div>
-</div></h2>
-        <p className="text-[clamp(1rem,2vw,1.25rem)] text-gray-800 font-bold">Create a room or join with a friend's code.</p>
+        <p className="text-[clamp(1rem,2vw,1.25rem)] text-gray-800 font-bold mt-4">
+          Everyone knows the secret word except ONE Imposter! Give 1-word clues, discuss, and unmask the liar.
+        </p>
       </div>
 
       <div className="paper-panel bg-white p-6 sm:p-8 space-y-6">
         <div>
-          <label className="block text-sm font-black uppercase text-gray-800 mb-2">Username</label>
+          <label className="block text-sm font-black uppercase text-gray-800 mb-2">
+            Username
+          </label>
           <input
             type="text"
             className="input-field"
@@ -118,21 +126,25 @@ export default function ConnectFourLanding() {
 
         <button
           type="button"
-          className="sketch-button bg-yellow-300 w-full px-6 py-3"
+          className="sketch-button bg-[#f87171] text-white w-full px-6 py-3"
           onClick={handleCreate}
           disabled={loading}
         >
-          {loading ? 'Connecting...' : 'Create Room'}
+          {loading ? 'Connecting...' : 'Create Imposter Room (3-8 Players)'}
         </button>
 
         <div className="flex items-center gap-4 py-1">
           <div className="h-[3px] flex-1 bg-black" />
-          <span className="text-sm font-black uppercase text-gray-800">or join existing</span>
+          <span className="text-sm font-black uppercase text-gray-800">
+            or join existing
+          </span>
           <div className="h-[3px] flex-1 bg-black" />
         </div>
 
         <div>
-          <label className="block text-sm font-black uppercase text-gray-800 mb-2">Room Code</label>
+          <label className="block text-sm font-black uppercase text-gray-800 mb-2">
+            Room Code
+          </label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -156,11 +168,11 @@ export default function ConnectFourLanding() {
 
         <button
           type="button"
-          className="sketch-button bg-pink-300 w-full px-6 py-3"
+          className="sketch-button bg-emerald-300 w-full px-6 py-3"
           onClick={handleJoin}
           disabled={loading}
         >
-          Join Room
+          {loading ? 'Connecting...' : 'Join Room'}
         </button>
 
         <QrScannerModal
@@ -174,4 +186,3 @@ export default function ConnectFourLanding() {
     </div>
   );
 }
-

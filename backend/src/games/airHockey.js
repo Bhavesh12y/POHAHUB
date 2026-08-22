@@ -6,9 +6,10 @@ const GOAL_WIDTH = 140;
 const MAX_SCORE = 5;
 
 // --- Simulation Constants ---
-const FRICTION = 0.988;             // per tick at 60 Hz
-const MAX_PUCK_SPEED = 24;          // max puck velocity in pixels per tick
+const FRICTION = 0.991;             // smooth air table glide
+const MAX_PUCK_SPEED = 14;          // balanced, controllable puck speed in pixels per tick
 const SUB_STEPS = 4;                // 4 physics sub-steps per frame for continuous collision
+
 
 export default class AirHockeyGame {
     constructor(roomId, io) {
@@ -188,44 +189,64 @@ export default class AirHockeyGame {
         const striker = this.state.strikers[playerRole];
         const puck = this.state.puck;
 
-        const dx = puck.x - striker.x;
-        const dy = puck.y - striker.y;
-        const distance = Math.hypot(dx, dy) || 0.001;
+        let dx = puck.x - striker.x;
+        let dy = puck.y - striker.y;
+        let distance = Math.hypot(dx, dy) || 0.001;
         const minDist = PUCK_RADIUS + STRIKER_RADIUS;
 
         if (distance < minDist) {
-            // Push puck out of mallet entirely
+            // Push puck out of mallet along normal
             const overlap = minDist - distance;
-            const nx = dx / distance;
-            const ny = dy / distance;
+            let nx = dx / distance;
+            let ny = dy / distance;
 
-            puck.x += nx * overlap * 1.02;
-            puck.y += ny * overlap * 1.02;
+            // Defensive safety: If P1 hits puck, guarantee normal points upward away from P1 goal
+            if (playerRole === 'p1' && ny > -0.2) {
+                ny = -Math.abs(ny || 0.5);
+                const len = Math.hypot(nx, ny) || 1;
+                nx /= len;
+                ny /= len;
+            } else if (playerRole === 'p2' && ny < 0.2) {
+                ny = Math.abs(ny || 0.5);
+                const len = Math.hypot(nx, ny) || 1;
+                nx /= len;
+                ny /= len;
+            }
 
-            // Elastic impulse physics
-            const vRelX = puck.vx - striker.vx;
-            const vRelY = puck.vy - striker.vy;
+            puck.x += nx * overlap * 1.05;
+            puck.y += ny * overlap * 1.05;
+
+            // Clamped striker velocity contribution (cannot push into own goal during defensive swipe)
+            const safeStrikerVx = striker.vx * 0.22;
+            const safeStrikerVy = playerRole === 'p1' 
+                ? Math.min(0, striker.vy * 0.22) 
+                : Math.max(0, striker.vy * 0.22);
+
+            const vRelX = puck.vx - safeStrikerVx;
+            const vRelY = puck.vy - safeStrikerVy;
             const dot = vRelX * nx + vRelY * ny;
 
-            // If objects are closing in
+            // If closing in
             if (dot < 0) {
-                const e = 1.08; // Energetic rebound
+                const e = 0.95; // Crisp, balanced elastic rebound
                 const impulse = -(1 + e) * dot;
-                puck.vx += nx * impulse + striker.vx * 0.45;
-                puck.vy += ny * impulse + striker.vy * 0.45;
+                puck.vx += nx * impulse + safeStrikerVx;
+                puck.vy += ny * impulse + safeStrikerVy;
 
-                // Ensure snappy minimum strike speed
+                // Ensure clean direction away from own goal
+                if (playerRole === 'p1' && puck.vy > -1.5) puck.vy = -Math.abs(puck.vy || 3) - 1.5;
+                if (playerRole === 'p2' && puck.vy < 1.5) puck.vy = Math.abs(puck.vy || 3) + 1.5;
+
+                // Clamp to balanced max speed
                 const speed = Math.hypot(puck.vx, puck.vy);
-                if (speed < 4) {
-                    puck.vx = (nx || 0) * 6;
-                    puck.vy = (ny || (playerRole === 'p1' ? -1 : 1)) * 6;
-                } else if (speed > MAX_PUCK_SPEED) {
+                if (speed > MAX_PUCK_SPEED) {
                     puck.vx = (puck.vx / speed) * MAX_PUCK_SPEED;
                     puck.vy = (puck.vy / speed) * MAX_PUCK_SPEED;
                 }
             }
         }
     }
+
 
 
     handleGoal(scorer) {

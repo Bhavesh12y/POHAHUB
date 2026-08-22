@@ -326,6 +326,16 @@ export default function Game2048() {
         </div>
 
         {/* Game Grid Container */}
+        <style>{`
+          @keyframes tilePop {
+            0% { transform: scale(0.4); opacity: 0; }
+            70% { transform: scale(1.12); }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          .animate-tile-pop {
+            animation: tilePop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          }
+        `}</style>
         <div 
           className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-2 sm:p-4 md:p-6 touch-none select-none relative cursor-grab active:cursor-grabbing mx-auto w-fit max-w-full"
           onPointerDown={handlePointerDown}
@@ -351,7 +361,7 @@ export default function Game2048() {
               row.map((cell, cIdx) => (
                 <div 
                   key={`${rIdx}-${cIdx}`} 
-                  className={`w-[20vw] h-[20vw] max-w-[90px] max-h-[90px] sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 text-2xl sm:text-4xl md:text-5xl ${getTileStyle(cell)}`}
+                  className={`w-[20vw] h-[20vw] max-w-[90px] max-h-[90px] sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 text-2xl sm:text-4xl md:text-5xl transition-all duration-100 ease-out select-none ${getTileStyle(cell)} ${cell !== 0 ? 'animate-tile-pop' : ''}`}
                 >
                   {cell !== 0 ? cell : ''}
                 </div>
@@ -359,6 +369,7 @@ export default function Game2048() {
             )}
           </div>
         </div>
+
 
 
         {/* Footer text */}

@@ -170,82 +170,86 @@ export default function SnakeAndLadderBoard() {
   const myPlayerId = room?.viewerId;
   const isHost = room?.hostId === myPlayerId;
   const isMyTurn = gameState?.players[gameState?.currentPlayerIndex]?.id === myPlayerId;
+  const processedRollKeyRef = useRef(null);
 
   // --- LOGIC: UNIFIED SLOW DICE ANIMATION ---
   useEffect(() => {
-    // Only trigger if a new roll has happened on the server
-    if (gameState?.lastRoll && gameState.lastRoll.roll !== prevRollRef.current) {
-      prevRollRef.current = gameState.lastRoll.roll;
-      
-      setIsRolling(true);
-      setDiceHighlighted(false); // Reset highlight during roll
-      
-      let counter = 0;
-      const visualRoll = setInterval(() => {
-          setDiceDisplay(DICE_FACES[Math.floor(Math.random() * 6) + 1]);
-          counter++;
-          if (counter > 5) { // 5 ticks * 250ms = 1.25s of rolling
-              clearInterval(visualRoll);
-              setDiceDisplay(DICE_FACES[gameState.lastRoll.roll]); 
-              setDiceHighlighted(true); // Make it bright and glowing!
-              
-              // Give players 400ms to admire the bright number before tokens start sliding
-              setTimeout(() => {
-                  setIsRolling(false);
-              }, 400);
-          }
-      }, 250); // Slower, chunkier roll feel
+    if (!gameState?.lastRoll) return;
 
-      return () => clearInterval(visualRoll);
-    }
+    const rollKey = `${gameState.lastRoll.playerId}-${gameState.lastRoll.roll}-${gameState.players?.map(p => p.position).join('-')}`;
+    if (rollKey === prevRollRef.current) return;
+    prevRollRef.current = rollKey;
+
+    setIsRolling(true);
+    setDiceHighlighted(false);
+
+    let counter = 0;
+    const visualRoll = setInterval(() => {
+      setDiceDisplay(DICE_FACES[Math.floor(Math.random() * 6) + 1]);
+      counter++;
+      if (counter > 5) {
+        clearInterval(visualRoll);
+        setDiceDisplay(DICE_FACES[gameState.lastRoll.roll]);
+        setDiceHighlighted(true);
+
+        setTimeout(() => {
+          setIsRolling(false);
+        }, 350);
+      }
+    }, 200);
+
+    return () => clearInterval(visualRoll);
   }, [gameState?.lastRoll]);
 
   // --- LOGIC: QUEUE ANIMATION STEPS ---
   useEffect(() => {
-    // DO NOT queue token movements while the dice is visually rolling!
-    if (!gameState?.players || isRolling) return;
+    if (!gameState?.players) return;
 
-    let needsInit = false;
-    const initialPositions = { ...visualPositions };
+    // Initial load: sync positions immediately if not set
+    if (Object.keys(visualPositions).length === 0) {
+      const initialPositions = {};
+      gameState.players.forEach(p => {
+        initialPositions[p.id] = p.position;
+      });
+      setVisualPositions(initialPositions);
+      return;
+    }
+
+    // Do not queue while dice is rolling
+    if (isRolling) return;
+
+    // Only process each unique roll once
+    const rollKey = gameState.lastRoll ? `${gameState.lastRoll.playerId}-${gameState.lastRoll.roll}-${gameState.players?.map(p => p.position).join('-')}` : 'init';
+    if (processedRollKeyRef.current === rollKey) return;
+    processedRollKeyRef.current = rollKey;
 
     gameState.players.forEach(p => {
-      const currentVisual = visualPositions[p.id];
-      
-      if (currentVisual === undefined) {
-        initialPositions[p.id] = p.position;
-        needsInit = true;
-      } 
-      else if (currentVisual !== p.position) {
-        const startPos = currentVisual;
-        const targetPos = p.position;
+      const currentVisual = visualPositions[p.id] ?? p.position;
+      const targetPos = p.position;
+
+      if (currentVisual !== targetPos) {
         const roll = gameState.lastRoll?.playerId === p.id ? gameState.lastRoll.roll : 0;
-        
         const steps = [];
-        let temp = startPos;
-        const intermediatePos = startPos + roll;
-        
+        let temp = currentVisual;
+        const intermediatePos = currentVisual + roll;
+
         if (roll > 0 && intermediatePos <= 100) {
-           for (let i = 1; i <= roll; i++) {
-               temp++;
-               steps.push(temp);
-           }
-           if (temp !== targetPos) steps.push(targetPos);
+          for (let i = 1; i <= roll; i++) {
+            temp++;
+            steps.push(temp);
+          }
+          if (temp !== targetPos) steps.push(targetPos);
         } else {
-           steps.push(targetPos);
+          steps.push(targetPos);
         }
 
         if (steps.length > 0) {
-           animationQueue.current[p.id] = (animationQueue.current[p.id] || []).concat(steps);
-           setIsAnimating(true); // Lock the board!
-           needsInit = true;
+          animationQueue.current[p.id] = steps;
+          setIsAnimating(true);
         }
       }
     });
-
-    if (needsInit && Object.keys(visualPositions).length === 0) {
-        setVisualPositions(initialPositions);
-    }
-  }, [gameState, isRolling]); // Triggers when isRolling becomes false
+  }, [gameState, isRolling]);
 
   // --- LOGIC: EXECUTE ANIMATION QUEUE ---
   useEffect(() => {
@@ -383,9 +387,11 @@ export default function SnakeAndLadderBoard() {
                  roomCode={room.code} 
                  isHost={isHost} 
                  playerCount={room.players.length} 
+                 players={room.players}
                  onStart={handleStart} 
                  gamePath="snake-and-ladder/room" 
              />
+
           ) : (
             <div className="relative w-full max-w-[min(95vw,580px)] mx-auto aspect-square bg-white border-[4px] border-black rounded-lg p-2 sm:p-3 shadow-[8px_8px_0px_#000] rotate-1">
               

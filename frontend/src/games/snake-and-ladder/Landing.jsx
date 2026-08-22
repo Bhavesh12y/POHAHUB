@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
+import QrScannerModal from '../../components/QrScannerModal.jsx';
 
 export default function SnakeAndLadderLanding() {
   const [searchParams] = useSearchParams();
@@ -8,6 +9,7 @@ export default function SnakeAndLadderLanding() {
   const [roomCode, setRoomCode] = useState(searchParams.get('join')?.toUpperCase() || '');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const navigate = useNavigate();
 
   const handleCreate = async (e) => {
@@ -104,15 +106,26 @@ export default function SnakeAndLadderLanding() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="ROOM CODE"
-            className="input-field uppercase text-center text-xl sm:w-2/3"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            disabled={isLoading}
-            maxLength={6}
-          />
+          <div className="flex gap-2 sm:w-2/3">
+            <input
+              type="text"
+              placeholder="ROOM CODE"
+              className="input-field uppercase text-center text-xl flex-1"
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+              disabled={isLoading}
+              maxLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              className="sketch-button bg-purple-300 px-3.5 py-2 text-xs font-black uppercase flex items-center gap-1.5 shrink-0"
+              title="Scan Room QR Code"
+            >
+              <span>📷</span>
+              <span>Scan QR</span>
+            </button>
+          </div>
           <button
             onClick={handleJoin}
             disabled={isLoading || !roomCode}
@@ -121,7 +134,16 @@ export default function SnakeAndLadderLanding() {
             Join
           </button>
         </div>
+
+        <QrScannerModal
+          isOpen={showScanner}
+          onClose={() => setShowScanner(false)}
+          onScan={(scannedCode) => {
+            setRoomCode(scannedCode);
+          }}
+        />
       </div>
     </div>
   );
 }
+

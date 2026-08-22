@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
+import QrScannerModal from '../../components/QrScannerModal.jsx';
 
 export default function ScribbleLanding() {
   const navigate = useNavigate();
@@ -9,6 +10,8 @@ export default function ScribbleLanding() {
   const [roomCode, setRoomCode] = useState(searchParams.get('join')?.toUpperCase() || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+
 
   const handleCreate = async () => {
     if (!username.trim()) return setError('Enter a username');
@@ -93,14 +96,25 @@ export default function ScribbleLanding() {
 
         <div>
           <label className="block text-sm font-black uppercase text-gray-800 mb-2">Room Code</label>
-          <input
-            type="text"
-            className="input-field uppercase tracking-widest text-center text-xl"
-            placeholder="ABC123"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            maxLength={6}
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className="input-field uppercase tracking-widest text-center text-xl flex-1"
+              placeholder="ABC123"
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+              maxLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              className="sketch-button bg-purple-300 px-3.5 py-2 text-xs font-black uppercase flex items-center gap-1.5 shrink-0"
+              title="Scan Room QR Code"
+            >
+              <span>📷</span>
+              <span>Scan QR</span>
+            </button>
+          </div>
         </div>
 
         <button
@@ -111,7 +125,16 @@ export default function ScribbleLanding() {
         >
           Join Room
         </button>
+
+        <QrScannerModal
+          isOpen={showScanner}
+          onClose={() => setShowScanner(false)}
+          onScan={(scannedCode) => {
+            setRoomCode(scannedCode);
+          }}
+        />
       </div>
     </div>
   );
 }
+

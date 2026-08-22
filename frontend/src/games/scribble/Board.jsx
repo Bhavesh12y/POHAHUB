@@ -359,10 +359,12 @@ export default function ScribbleBoard() {
           roomCode={room.code} 
           isHost={isHost} 
           playerCount={room.players.length} 
+          players={room.players}
           onStart={handleStart} 
           gamePath="scribble/room" 
         />
       ) : (
+
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-stretch">
           
           {/* LEFT/TOP: CANVAS & TOOLS & SCORES */}

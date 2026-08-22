@@ -340,17 +340,32 @@ export default function TrafficRun() {
 
   const handlePointerDown = (e) => {
     e.target.setPointerCapture(e.pointerId);
-    setDragStart({ x: e.clientX, y: e.clientY });
+    setDragStart({ x: e.clientX, y: e.clientY, time: Date.now() });
   };
 
   const handlePointerUp = (e) => {
     e.target.releasePointerCapture(e.pointerId);
     if (!dragStart) return;
+
     const distanceX = dragStart.x - e.clientX;
+    const distanceY = dragStart.y - e.clientY;
+    const isSwipe = Math.abs(distanceX) > minSwipeDistance;
+    const totalDist = Math.hypot(distanceX, distanceY);
+
+    if (isSwipe) {
+      if (distanceX > minSwipeDistance) moveLeft();
+      if (distanceX < -minSwipeDistance) moveRight();
+    } else if (totalDist < 15) {
+      // Tap on specific lane (0: left, 1: center, 2: right)
+      const rect = e.currentTarget.getBoundingClientRect();
+      const tapX = e.clientX - rect.left;
+      const targetLane = Math.max(0, Math.min(2, Math.floor((tapX / rect.width) * 3)));
+      setPlayerLane(targetLane);
+    }
+
     setDragStart(null);
-    if (distanceX > minSwipeDistance) moveLeft();
-    if (distanceX < -minSwipeDistance) moveRight();
   };
+
 
   const startNewGame = () => {
     setObstacles([]);

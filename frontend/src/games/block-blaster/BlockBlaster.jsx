@@ -487,14 +487,24 @@ export default function BlockBlaster() {
           100% { box-shadow: inset 0 0 25px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8); filter: brightness(1.6) contrast(1.1); border-color: white; transform: scale(1.05); }
         }
         
+        @keyframes shard1 { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(-25px,-25px) rotate(-120deg) scale(0); opacity: 0; } }
+        @keyframes shard2 { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(25px,-20px) rotate(120deg) scale(0); opacity: 0; } }
+        @keyframes shard3 { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(-20px,25px) rotate(180deg) scale(0); opacity: 0; } }
+        @keyframes shard4 { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(22px,22px) rotate(-180deg) scale(0); opacity: 0; } }
+        
         .animate-float { animation: floatUp 1s ease-out forwards; }
         .animate-shake { animation: boardShake 0.2s ease-in-out; }
-        .animate-clear-pop { animation: blockPopClear 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .animate-clear-pop { animation: blockPopClear 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        .shard-1 { animation: shard1 0.4s ease-out forwards; }
+        .shard-2 { animation: shard2 0.4s ease-out forwards; }
+        .shard-3 { animation: shard3 0.4s ease-out forwards; }
+        .shard-4 { animation: shard4 0.4s ease-out forwards; }
         .predictive-highlight { 
           animation: smoothGlow 0.35s ease-in-out infinite alternate !important; 
           z-index: 10; 
         }
       `}</style>
+
 
       {dragRender.isDragging && availableShapes[dragRender.shapeIdx] && (
         <div 
@@ -613,7 +623,7 @@ export default function BlockBlaster() {
                 return (
                   <div 
                     key={`${rIdx}-${cIdx}`} 
-                    className={`w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 transition-all duration-75 ease-in-out relative
+                    className={`w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 transition-all duration-75 ease-in-out relative overflow-visible
                       ${cellColor 
                         ? `${cellColor} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]` 
                         : isGhostValid
@@ -622,10 +632,20 @@ export default function BlockBlaster() {
                           ? 'bg-red-500 opacity-30 border-[2px] sm:border-[3px] border-red-900 border-dashed'
                           : 'bg-transparent border-[2px] border-dashed border-black/10'
                       }
-                      ${isClearing ? 'animate-clear-pop origin-center' : 'scale-100 opacity-100'}
+                      ${isClearing ? 'animate-clear-pop origin-center z-30' : 'scale-100 opacity-100'}
                       ${isPredictedToClear && !isClearing ? 'predictive-highlight' : ''}
                     `}
-                  />
+                  >
+                    {isClearing && (
+                      <div className="absolute inset-0 pointer-events-none">
+                        <div className={`shard-1 absolute top-0 left-0 w-2 h-2 ${cellColor || 'bg-yellow-400'} border border-black rounded-sm shadow-sm`} />
+                        <div className={`shard-2 absolute top-0 right-0 w-2 h-2 ${cellColor || 'bg-yellow-400'} border border-black rounded-sm shadow-sm`} />
+                        <div className={`shard-3 absolute bottom-0 left-0 w-2 h-2 ${cellColor || 'bg-yellow-400'} border border-black rounded-sm shadow-sm`} />
+                        <div className={`shard-4 absolute bottom-0 right-0 w-2 h-2 ${cellColor || 'bg-yellow-400'} border border-black rounded-sm shadow-sm`} />
+                      </div>
+                    )}
+                  </div>
+
                 )
               })
             )}

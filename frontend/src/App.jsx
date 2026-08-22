@@ -29,7 +29,6 @@ const BlockBlaster = lazy(() => import('./games/block-blaster/BlockBlaster.jsx')
 const Dino = lazy(() => import('./games/dino/DinoDash.jsx'));
 
 const AirHockeyLanding = lazy(() => import('./games/air-hockey/Landing.jsx'));
-
 const AirHockeyRoom = lazy(() => import("./games/air-hockey/AirHockeyBoard.jsx"));
 const FlappyBirdL = lazy(() => import('./games/flappy-bird/FlappyBird.jsx'));
 const HelixJump = lazy(() => import('./games/helix-jump/HelixJump.jsx'));
@@ -37,6 +36,11 @@ const TableTennisLanding = lazy(() => import('./games/table-tennis/landing.jsx')
 const TableTennisRoom = lazy(() => import('./games/table-tennis/TableTennisBoard.jsx'));
 const SinglePlayerLanding = lazy(() => import('./components/SinglePlayerLanding.jsx'));
 const TrafficRun = lazy(() => import('./games/traffic-run/TrafficRun.jsx'));
+const RajaMantriLanding = lazy(() => import('./games/raja-mantri/landing.jsx'));
+const RajaMantriBoard = lazy(() => import('./games/raja-mantri/Board.jsx'));
+const ImposterLanding = lazy(() => import('./games/imposter/landing.jsx'));
+const ImposterBoard = lazy(() => import('./games/imposter/Board.jsx'));
+
 
 function RouteFallback() {
   return (
@@ -104,7 +108,14 @@ export default function App() {
           <Route path="games/stone-paper-scissor" element={<SPSLanding />} />
           <Route path="games/stone-paper-scissor/room/:roomCode" element={<SPSBoard />} />
 
+          <Route path="games/raja-mantri" element={<RajaMantriLanding />} />
+          <Route path="games/raja-mantri/room/:roomCode" element={<RajaMantriBoard />} />
+
+          <Route path="games/imposter" element={<ImposterLanding />} />
+          <Route path="games/imposter/room/:roomCode" element={<ImposterBoard />} />
+
           <Route path="games/2048" element={<Game2048 />} />
+
           <Route path="games/block-blaster" element={<BlockBlaster />} />
           <Route path="games/dino" element={<Dino />} />
           <Route path="games/flappy-bird" element={<FlappyBirdL />} />

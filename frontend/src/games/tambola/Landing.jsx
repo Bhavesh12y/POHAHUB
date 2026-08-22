@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
+import QrScannerModal from '../../components/QrScannerModal.jsx';
 
 export default function TambolaLanding() {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ export default function TambolaLanding() {
   const [roomCode, setRoomCode] = useState(searchParams.get('join')?.toUpperCase() || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     const savedUsername = localStorage.getItem('pohahub_username');
@@ -139,14 +141,25 @@ export default function TambolaLanding() {
             <label className="block text-sm font-black tracking-widest uppercase text-black mb-2">
               Room Code
             </label>
-            <input
-              type="text"
-              className="w-full px-4 py-4 bg-gray-100 border-[3px] border-black rounded focus:outline-none focus:ring-4 focus:ring-[#3b82f6] transition-all uppercase tracking-[0.3em] text-center font-black text-2xl text-black"
-              placeholder="ABC123"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              maxLength={6}
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="w-full px-4 py-3 bg-gray-100 border-[3px] border-black rounded focus:outline-none focus:ring-4 focus:ring-[#3b82f6] transition-all uppercase tracking-[0.3em] text-center font-black text-2xl text-black flex-1"
+                placeholder="ABC123"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                maxLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowScanner(true)}
+                className="px-4 py-2 bg-purple-300 border-[3px] border-black rounded font-black text-xs uppercase flex items-center gap-1.5 shadow-[3px_3px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 shrink-0"
+                title="Scan Room QR Code"
+              >
+                <span>📷</span>
+                <span>Scan QR</span>
+              </button>
+            </div>
           </div>
 
           {/* Join Room Button */}
@@ -158,8 +171,16 @@ export default function TambolaLanding() {
           >
             {loading ? 'Connecting...' : 'Join Room'}
           </button>
+
+          <QrScannerModal
+            isOpen={showScanner}
+            onClose={() => setShowScanner(false)}
+            onScan={(scannedCode) => {
+              setRoomCode(scannedCode);
+            }}
+          />
         </div>
       </div>
     </div>
   );
-}
+}

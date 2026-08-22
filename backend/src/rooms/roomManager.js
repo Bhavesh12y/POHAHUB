@@ -5,6 +5,9 @@ import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } fro
 import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } from '../games/tambola.js';
 import { createStonePaperScissorState, playSpsMove, nextSpsRound, serializeSpsState } from '../games/stonePaperScissor.js';
 import { createLudoState, rollLudoDice, moveLudoToken, serializeLudoState } from '../games/ludo.js';
+import { createRajaMantriState, startNewRound, applyRajaMantriAction } from '../games/rajaMantri.js';
+import { createImposterState, applyImposterAction } from '../games/imposter.js';
+
 
 const PLAYER_COLORS = ['red', 'yellow'];
 const PLAYER_SYMBOLS = ['X', 'O'];
@@ -73,9 +76,12 @@ class RoomManager {
     if (gameType === 'scribble') limit = 8;
     if (gameType === 'tambola') limit = 50; 
     if (gameType === 'ludo') limit = 4;
+    if (gameType === 'raja-mantri') limit = 4;
+    if (gameType === 'imposter') limit = 8;
     if (gameType === 'stone-paper-scissor') limit = 2;
     if (gameType === 'air-hockey') limit = 2;
     if (gameType === 'table-tennis') limit = 2;
+
     const host = { id: hostId, name: hostName, socketId: null, deviceToken: null };
     const room = {
       code: this.generateRoomCode(),
@@ -267,6 +273,15 @@ class RoomManager {
       room.gameState = createStonePaperScissorState(room.players.map((p) => ({ id: p.id, name: p.name }))); 
     } else if (room.gameType === 'ludo') {
       room.gameState = createLudoState(room.players.map((p) => ({ id: p.id, name: p.name })));
+    } else if (room.gameType === 'raja-mantri') {
+      if (room.players.length < 4) return { ok: false, error: 'Exactly 4 players required for Raja Mantri Chor Sipahi' };
+      const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
+      room.gameState = createRajaMantriState(room.players.map((p) => ({ id: p.id, name: p.name })), previousStartingIndex);
+      startNewRound(room.gameState, room.players);
+    } else if (room.gameType === 'imposter') {
+      if (room.players.length < 3) return { ok: false, error: 'At least 3 players required for Word Imposter' };
+      const previousStartingIndex = room.gameState ? room.gameState.startingIndex : null;
+      room.gameState = createImposterState(room.players.map((p) => ({ id: p.id, name: p.name })), previousStartingIndex);
     } else if (room.gameType === 'air-hockey') {
       room.gameState = { status: 'starting' }; 
     }
@@ -305,6 +320,14 @@ class RoomManager {
       if (payload.action === 'roll') return rollLudoDice(room.gameState, playerId).ok ? { ok: true, room } : { ok: false };
       if (payload.action === 'move') return moveLudoToken(room.gameState, playerId, payload.tokenId).ok ? { ok: true, room } : { ok: false };
     }
+    if (room.gameType === 'raja-mantri') {
+      const result = applyRajaMantriAction(room.gameState, playerId, payload.action, payload, room.players);
+      return result.ok ? { ok: true, room } : { ok: false, error: result.error };
+    }
+    if (room.gameType === 'imposter') {
+      const result = applyImposterAction(room.gameState, playerId, payload.action, payload, room.players);
+      return result.ok ? { ok: true, room } : { ok: false, error: result.error };
+    }
     return { ok: false, error: 'Unsupported game type' };
   }
 
@@ -325,10 +348,45 @@ class RoomManager {
     else if (room.gameState && room.gameType === 'tambola') payload.gameState = serializeTambolaState(room.gameState);
     else if (room.gameState && room.gameType === 'stone-paper-scissor') payload.gameState = serializeSpsState(room.gameState);
     else if (room.gameState && room.gameType === 'ludo') payload.gameState = serializeLudoState(room.gameState);
+    else if (room.gameState && room.gameType === 'raja-mantri') {
+      // Role Privacy masking: mask hidden roles unless round_result
+      const state = { ...room.gameState };
+      const myRole = state.roundRoles ? state.roundRoles[viewerId] : null;
+      if (state.roundPhase !== 'round_result') {
+        const maskedRoles = {};
+        // Viewer always sees their own role
+        if (myRole) maskedRoles[viewerId] = myRole;
+        // If Mantri revealed, everyone sees Mantri
+        if (state.mantriId && (state.roundPhase === 'mantri_guess' || state.roundPhase === 'round_result')) {
+          maskedRoles[state.mantriId] = 'MANTRI';
+        }
+        // If Raja called, everyone sees Raja
+        if (state.rajaId && state.roundPhase !== 'revealing') {
+          maskedRoles[state.rajaId] = 'RAJA';
+        }
+        state.roundRoles = maskedRoles;
+      }
+      payload.gameState = state;
+    }
+    else if (room.gameState && room.gameType === 'imposter') {
+      // Imposter privacy masking
+      const state = { ...room.gameState };
+      const isImposter = viewerId === state.imposterId;
+      const isRoundOver = state.roundPhase === 'round_result' || state.roundPhase === 'imposter_guess';
+
+      if (isImposter && !isRoundOver) {
+        state.secretWord = '???'; // Hidden from imposter
+      }
+      if (!isRoundOver) {
+        state.imposterId = null; // Hide imposter identity during clue & voting
+      }
+      payload.gameState = state;
+    }
     else if (room.gameState && room.gameType === 'air-hockey') payload.gameState = room.gameState;
     else if (room.gameState && room.gameType === 'table-tennis') payload.gameState = room.gameState;
     return payload;
   }
+
 }
 
 export const roomManager = new RoomManager();

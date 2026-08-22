@@ -133,24 +133,43 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
         </div>
 
         {/* Players List */}
-        {players.length > 0 && (
-          <div className="w-full max-w-md mb-8">
-            <h3 className="text-sm text-gray-800 uppercase tracking-wide mb-4 font-black">
-              Players in Lobby ({players.length})
-            </h3>
-            <div className="flex flex-wrap justify-center gap-3">
-              {players.map((player, idx) => (
-                <div
-                  key={player.id || idx}
-                  className="sketch-border bg-green-200 px-3 py-1.5 text-sm text-ink font-bold flex items-center gap-2 uppercase"
-                >
-                  <span className="inline-block h-2 w-2 bg-green-600 border-2 border-black" />
-                  {player.name}
-                </div>
-              ))}
-            </div>
+        <div className="w-full max-w-md mb-8">
+          <h3 className="text-sm text-gray-800 uppercase tracking-wider mb-4 font-black flex items-center justify-center gap-2">
+            <span>🎮 Players in Lobby</span>
+            <span className="bg-[#facc15] border-[2px] border-black px-2 py-0.5 rounded text-xs">
+              {players.length || playerCount}
+            </span>
+          </h3>
+          <div className="flex flex-wrap justify-center gap-3">
+            {players && players.length > 0 ? (
+              players.map((player, idx) => {
+                const colors = ['bg-[#fef08a]', 'bg-[#bbf7d0]', 'bg-[#bae6fd]', 'bg-[#fbcfe8]', 'bg-[#fed7aa]', 'bg-[#ddd6fe]'];
+                const badgeColor = colors[idx % colors.length];
+                const isPlayerHost = idx === 0;
+
+                return (
+                  <div
+                    key={player.id || idx}
+                    className={`sketch-border ${badgeColor} px-3.5 py-2 text-sm text-ink font-black flex items-center gap-2 uppercase shadow-[2px_2px_0px_#000]`}
+                  >
+                    <span className="inline-block h-2.5 w-2.5 bg-green-500 rounded-full border border-black animate-pulse" />
+                    <span>{player.name || `Player ${idx + 1}`}</span>
+                    {isPlayerHost && (
+                      <span className="text-[10px] bg-yellow-400 border border-black px-1.5 py-0.5 rounded font-black tracking-widest text-black">
+                        HOST 👑
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="sketch-border bg-gray-100 px-4 py-2 text-xs font-bold text-gray-600 uppercase">
+                Waiting for players to join...
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
 
         {/* Host Controls */}
         {isHost ? (
