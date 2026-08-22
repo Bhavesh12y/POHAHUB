@@ -1,15 +1,14 @@
-const GAME_WIDTH = 400;
-const GAME_HEIGHT = 600;
-const PUCK_RADIUS = 20;
-const STRIKER_RADIUS = 35;
-const GOAL_WIDTH = 140;
+const GAME_WIDTH = 480;
+const GAME_HEIGHT = 720;
+const PUCK_RADIUS = 22;
+const STRIKER_RADIUS = 38;
+const GOAL_WIDTH = 160;
 const MAX_SCORE = 5;
 
-// --- Simulation Constants ---
-const FRICTION = 0.991;             // smooth air table glide
-const MAX_PUCK_SPEED = 14;          // balanced, controllable puck speed in pixels per tick
-const SUB_STEPS = 4;                // 4 physics sub-steps per frame for continuous collision
-
+// --- Real Physics Constants ---
+const FRICTION = 0.995;             // Low friction air cushion table
+const MAX_PUCK_SPEED = 22;          // Fast, punchy arcade puck speed
+const SUB_STEPS = 6;                // 6 physics sub-steps per frame for continuous collision detection (CCD)
 
 export default class AirHockeyGame {
     constructor(roomId, io) {
@@ -33,14 +32,14 @@ export default class AirHockeyGame {
             winner: null,
             puck: { x: centerX, y: centerY, vx: 0, vy: 0 },
             strikers: {
-                p1: { x: centerX, y: GAME_HEIGHT - 60, vx: 0, vy: 0 },
-                p2: { x: centerX, y: 60, vx: 0, vy: 0 }
+                p1: { x: centerX, y: GAME_HEIGHT - 80, vx: 0, vy: 0 },
+                p2: { x: centerX, y: 80, vx: 0, vy: 0 }
             }
         };
 
         this.targets = {
-            p1: { x: centerX, y: GAME_HEIGHT - 60 },
-            p2: { x: centerX, y: 60 }
+            p1: { x: centerX, y: GAME_HEIGHT - 80 },
+            p2: { x: centerX, y: 80 }
         };
     }
 
@@ -101,7 +100,7 @@ export default class AirHockeyGame {
         if (this.gameInterval) clearInterval(this.gameInterval);
         if (this.networkInterval) clearInterval(this.networkInterval);
 
-        // 60 Hz physics loop with 4 sub-steps
+        // 60 Hz physics update loop with 6 sub-steps for precision
         this.gameInterval = setInterval(() => {
             if (this.state.status !== 'playing') return;
             this.updateStrikers();
@@ -112,14 +111,13 @@ export default class AirHockeyGame {
             }
         }, 1000 / 60);
 
-        // High frequency 45 Hz network broadcast for low-latency smoothness
+        // 60 Hz high-frequency network broadcast for zero-stutter smoothness
         this.networkInterval = setInterval(() => {
             if (this.state.status !== 'playing') return;
             this.broadcastState();
-        }, 1000 / 45);
+        }, 1000 / 60);
     }
 
-    // Direct, instant response: mallet follows touch with instantaneous velocity calculation
     updateStrikers() {
         for (const role of ['p1', 'p2']) {
             const striker = this.state.strikers[role];
@@ -127,7 +125,7 @@ export default class AirHockeyGame {
             const dx = target.x - striker.x;
             const dy = target.y - striker.y;
 
-            // Velocity is exact frame-by-frame displacement
+            // Accurate frame velocity
             striker.vx = dx;
             striker.vy = dy;
             striker.x = target.x;
@@ -143,11 +141,11 @@ export default class AirHockeyGame {
         puck.vx *= subFriction;
         puck.vy *= subFriction;
 
-        // Move puck by delta
+        // Move puck
         puck.x += puck.vx * dt;
         puck.y += puck.vy * dt;
 
-        // Wall collisions (left/right)
+        // Left / Right Walls
         if (puck.x - PUCK_RADIUS <= 0) {
             puck.vx = Math.abs(puck.vx) * 0.98;
             puck.x = PUCK_RADIUS;
@@ -156,11 +154,13 @@ export default class AirHockeyGame {
             puck.x = GAME_WIDTH - PUCK_RADIUS;
         }
 
-        // Top wall and P2's goal
+        // Top Wall and P2 Goal
+        const goalLeft = (GAME_WIDTH - GOAL_WIDTH) / 2;
+        const goalRight = (GAME_WIDTH + GOAL_WIDTH) / 2;
+
         if (puck.y - PUCK_RADIUS <= 0) {
-            const inGoal = puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2;
-            if (inGoal) {
-                this.handleGoal('p1'); // p1 scored
+            if (puck.x > goalLeft && puck.x < goalRight) {
+                this.handleGoal('p1'); // P1 scores
                 return;
             } else {
                 puck.vy = Math.abs(puck.vy) * 0.98;
@@ -168,11 +168,10 @@ export default class AirHockeyGame {
             }
         }
 
-        // Bottom wall and P1's goal
+        // Bottom Wall and P1 Goal
         if (puck.y + PUCK_RADIUS >= GAME_HEIGHT) {
-            const inGoal = puck.x > GAME_WIDTH / 2 - GOAL_WIDTH / 2 && puck.x < GAME_WIDTH / 2 + GOAL_WIDTH / 2;
-            if (inGoal) {
-                this.handleGoal('p2'); // p2 scored
+            if (puck.x > goalLeft && puck.x < goalRight) {
+                this.handleGoal('p2'); // P2 scores
                 return;
             } else {
                 puck.vy = -Math.abs(puck.vy) * 0.98;
@@ -195,49 +194,38 @@ export default class AirHockeyGame {
         const minDist = PUCK_RADIUS + STRIKER_RADIUS;
 
         if (distance < minDist) {
-            // Push puck out of mallet along normal
-            const overlap = minDist - distance;
             let nx = dx / distance;
             let ny = dy / distance;
 
-            // Defensive safety: If P1 hits puck, guarantee normal points upward away from P1 goal
-            if (playerRole === 'p1' && ny > -0.2) {
-                ny = -Math.abs(ny || 0.5);
-                const len = Math.hypot(nx, ny) || 1;
-                nx /= len;
-                ny /= len;
-            } else if (playerRole === 'p2' && ny < 0.2) {
-                ny = Math.abs(ny || 0.5);
-                const len = Math.hypot(nx, ny) || 1;
-                nx /= len;
-                ny /= len;
-            }
+            // Push puck completely out of striker volume
+            const overlap = minDist - distance;
+            puck.x += nx * (overlap + 1.5);
+            puck.y += ny * (overlap + 1.5);
 
-            puck.x += nx * overlap * 1.05;
-            puck.y += ny * overlap * 1.05;
+            // Striker velocity transfer
+            const strikerVx = striker.vx;
+            const strikerVy = striker.vy;
 
-            // Clamped striker velocity contribution (cannot push into own goal during defensive swipe)
-            const safeStrikerVx = striker.vx * 0.22;
-            const safeStrikerVy = playerRole === 'p1' 
-                ? Math.min(0, striker.vy * 0.22) 
-                : Math.max(0, striker.vy * 0.22);
-
-            const vRelX = puck.vx - safeStrikerVx;
-            const vRelY = puck.vy - safeStrikerVy;
+            // Relative velocity
+            const vRelX = puck.vx - strikerVx;
+            const vRelY = puck.vy - strikerVy;
             const dot = vRelX * nx + vRelY * ny;
 
-            // If closing in
+            // If objects are moving towards each other
             if (dot < 0) {
-                const e = 0.95; // Crisp, balanced elastic rebound
-                const impulse = -(1 + e) * dot;
-                puck.vx += nx * impulse + safeStrikerVx;
-                puck.vy += ny * impulse + safeStrikerVy;
+                const elasticity = 1.15; // Crisp, lively elastic strike
+                const impulse = -(1 + elasticity) * dot;
+                puck.vx += nx * impulse + strikerVx * 0.6;
+                puck.vy += ny * impulse + strikerVy * 0.6;
 
-                // Ensure clean direction away from own goal
-                if (playerRole === 'p1' && puck.vy > -1.5) puck.vy = -Math.abs(puck.vy || 3) - 1.5;
-                if (playerRole === 'p2' && puck.vy < 1.5) puck.vy = Math.abs(puck.vy || 3) + 1.5;
+                // Defensive safety: prevent defending striker from deflecting ball into own net
+                if (playerRole === 'p1' && puck.vy > -2) {
+                    puck.vy = -Math.abs(puck.vy || 4) - 2;
+                } else if (playerRole === 'p2' && puck.vy < 2) {
+                    puck.vy = Math.abs(puck.vy || 4) + 2;
+                }
 
-                // Clamp to balanced max speed
+                // Clamp to maximum puck velocity
                 const speed = Math.hypot(puck.vx, puck.vy);
                 if (speed > MAX_PUCK_SPEED) {
                     puck.vx = (puck.vx / speed) * MAX_PUCK_SPEED;
@@ -246,8 +234,6 @@ export default class AirHockeyGame {
             }
         }
     }
-
-
 
     handleGoal(scorer) {
         this.state.score[scorer]++;
@@ -268,35 +254,23 @@ export default class AirHockeyGame {
         const centerX = GAME_WIDTH / 2;
         const centerY = GAME_HEIGHT / 2;
         this.state.puck = { x: centerX, y: centerY, vx: 0, vy: 0 };
-        // Reset strikers and targets
         for (const role of ['p1', 'p2']) {
-            const y = role === 'p1' ? GAME_HEIGHT - 50 : 50;
+            const y = role === 'p1' ? GAME_HEIGHT - 80 : 80;
             this.state.strikers[role] = { x: centerX, y, vx: 0, vy: 0 };
             this.targets[role] = { x: centerX, y };
         }
     }
 
-    // Client sends its desired position (already in server coordinates).
-    // We only store it as a movement target – no direct teleportation.
     handlePlayerMove(socketId, position) {
         const player = this.players[socketId];
         if (!player || this.state.status !== 'playing') return;
 
-        let { x, y } = position;
+        const role = player.role;
+        const x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, position.x));
+        const y = role === 'p1'
+            ? Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, position.y))
+            : Math.max(STRIKER_RADIUS, Math.min(GAME_HEIGHT / 2 - STRIKER_RADIUS, position.y));
 
-        // Clamp to allowed half-field
-        x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, x));
-        if (player.role === 'p1') {
-            y = Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, y));
-        } else {
-            y = Math.max(STRIKER_RADIUS, Math.min(GAME_HEIGHT / 2 - STRIKER_RADIUS, y));
-        }
-
-        this.targets[player.role] = { x, y };
-    }
-
-    handleRematch() {
-        this.resetGameState();
-        this.startCountdown();
+        this.targets[role] = { x, y };
     }
 }

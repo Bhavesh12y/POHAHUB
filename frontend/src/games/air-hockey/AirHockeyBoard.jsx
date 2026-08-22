@@ -8,13 +8,14 @@ import VoiceChat from '../../components/VoiceChat';
 // AUTHORITATIVE CONSTANTS – keep EXACTLY in sync with backend
 // (airHockey.js). The server is the single source of truth.
 // ============================================================
-const GAME_WIDTH = 400;
-const GAME_HEIGHT = 600;
-const PUCK_RADIUS = 20;      // ← updated from 15
-const STRIKER_RADIUS = 35;   // ← updated from 25
-const GOAL_WIDTH = 140;      // ← updated from 120
+const GAME_WIDTH = 480;
+const GAME_HEIGHT = 720;
+const PUCK_RADIUS = 22;
+const STRIKER_RADIUS = 38;
+const GOAL_WIDTH = 160;
 const GRAB_RADIUS = STRIKER_RADIUS * 1.8; // generous touch tolerance
 const GOAL_DROP_MS = 450;     // "falling into the hole" animation duration
+
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -696,7 +697,7 @@ export default function AirHockeyBoard() {
             )}
 
             {isPlaying && (
-              <div className="mx-auto w-full max-w-[420px] mt-4 flex flex-col items-center">
+              <div className="mx-auto w-full max-w-[500px] mt-4 flex flex-col items-center">
                 <div className="flex w-full justify-between px-4 py-3 bg-white border-[3px] border-black shadow-[4px_4px_0px_#000] rounded mb-4 font-black text-xl uppercase rotate-1">
                   <div className="text-[#3b82f6]">P1 Score: {uiState.score.p1}</div>
                   <div className="text-[#ef4444]">P2 Score: {uiState.score.p2}</div>
@@ -706,7 +707,7 @@ export default function AirHockeyBoard() {
                     You're <span className={myRole === 'p1' ? 'text-[#3b82f6]' : 'text-[#ef4444]'}>{myRole === 'p1' ? 'Blue · P1' : 'Red · P2'}</span> — always at the bottom of your screen
                   </p>
                 )}
-                <div className="relative border-[4px] border-black bg-white p-2 shadow-[8px_8px_0px_#000] rounded-xl -rotate-1">
+                <div className="relative w-full border-[4px] border-black bg-white p-2 shadow-[8px_8px_0px_#000] rounded-xl -rotate-0.5">
                   {countdown && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-10 rounded-xl">
                       <span className="text-[6rem] font-black text-black animate-pop-in">{countdown}</span>
@@ -725,11 +726,12 @@ export default function AirHockeyBoard() {
                     onPointerMove={handlePointerMove}
                     onPointerUp={endDrag}
                     onPointerCancel={endDrag}
-                    className="cursor-grab active:cursor-grabbing touch-none block max-w-full h-auto rounded"
+                    className="cursor-grab active:cursor-grabbing touch-none block w-full h-auto rounded aspect-[2/3]"
                   />
                 </div>
               </div>
             )}
+
           </div>
         </div>
         <div className="w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0">
