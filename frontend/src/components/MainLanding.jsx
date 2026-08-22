@@ -89,9 +89,9 @@ const GAMES = [
     buttonColor: 'bg-[#e5e7eb]',
     tilt: 'rotate-1',
   },
-   {
+  {
     id: 'air-hockey',
-    title: 'Air Hockey (IN TESTING PHASE)',
+    title: 'Air Hockey',
     description: 'Slide, strike, and score in fast-paced 1v1 Air Hockey!',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/test.png',
     path: '/air-hockey',
@@ -100,20 +100,31 @@ const GAMES = [
     buttonColor: 'bg-[#e5e7eb]',
     tilt: 'rotate-1',
   },
-     {
-    id: 'table-tennis',
-    title: 'Table Tennis (IN TESTING PHASE)',
-    description: 'Play fast-paced 1v1 Table Tennis!',
+  {
+    id: 'raja-mantri',
+    title: 'Raja Mantri Chor Sipahi',
+    description: 'The 4-player royal chit game! Guess the thief across 5 rounds.',
     image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/test.png',
-    path: '/table-tennis',
-    available: true, 
+    path: '/games/raja-mantri',
+    available: true,
     headerColor: 'bg-[#facc15]',
-    buttonColor: 'bg-[#e5e7eb]',
+    buttonColor: 'bg-[#38bdf8]',
+    tilt: '-rotate-1',
+  },
+  {
+    id: 'imposter',
+    title: 'Word Imposter',
+    description: 'Everyone knows the word except the Imposter. Give clues & unmask them!',
+    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/test.png',
+    path: '/games/imposter',
+    available: true,
+    headerColor: 'bg-[#f87171]',
+    buttonColor: 'bg-[#4ade80]',
     tilt: 'rotate-1',
   },
-
-
 ];
+
+
 
 const SINGLE_PLAYER_GAMES = [
   // ... (Keep your SINGLE_PLAYER_GAMES array the same)

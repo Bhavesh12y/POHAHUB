@@ -146,27 +146,39 @@ export default function Layout() {
       <Analytics />
       <SpeedInsights />
 
-      <footer className="border-t-[4px] border-black bg-white mt-12">
-        <div className="max-w-7xl mx-auto px-5 py-8 flex flex-col gap-6 text-sm font-black uppercase tracking-widest text-black">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <p>(c) {new Date().getFullYear()} Doozles</p>
-            <nav aria-label="Legal pages" className="flex flex-wrap gap-4 sm:gap-6">
-              <Link to="/about" className="hover:underline decoration-[3px] underline-offset-4">
-                About
-              </Link>
-              <Link to="/contact" className="hover:underline decoration-[3px] underline-offset-4">
-                Contact
-              </Link>
-              <Link to="/privacy-policy" className="hover:underline decoration-[3px] underline-offset-4">
-                Privacy Policy
-              </Link>
-              <Link to="/terms" className="hover:underline decoration-[3px] underline-offset-4">
-                Terms
-              </Link>
-            </nav>
+      {/* FOOTER */}
+      {isInGameRoom ? (
+        <footer className="border-t-[2px] border-black bg-white/90 py-2.5 px-4 text-center z-20">
+          <div className="max-w-7xl mx-auto flex items-center justify-between text-[11px] font-black uppercase text-gray-700 tracking-wider">
+            <span>(c) {new Date().getFullYear()} Doozles Arcade</span>
+            <div className="flex gap-4">
+              <Link to="/about" className="hover:underline">About</Link>
+              <Link to="/privacy-policy" className="hover:underline">Privacy</Link>
+              <Link to="/terms" className="hover:underline">Terms</Link>
+            </div>
           </div>
+        </footer>
+      ) : (
+        <footer className="border-t-[4px] border-black bg-white mt-8">
+          <div className="max-w-7xl mx-auto px-5 py-8 flex flex-col gap-6 text-sm font-black uppercase tracking-widest text-black">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <p>(c) {new Date().getFullYear()} Doozles</p>
+              <nav aria-label="Legal pages" className="flex flex-wrap gap-4 sm:gap-6">
+                <Link to="/about" className="hover:underline decoration-[3px] underline-offset-4">
+                  About
+                </Link>
+                <Link to="/contact" className="hover:underline decoration-[3px] underline-offset-4">
+                  Contact
+                </Link>
+                <Link to="/privacy-policy" className="hover:underline decoration-[3px] underline-offset-4">
+                  Privacy Policy
+                </Link>
+                <Link to="/terms" className="hover:underline decoration-[3px] underline-offset-4">
+                  Terms
+                </Link>
+              </nav>
+            </div>
 
-          {!isInGameRoom && (
             <nav aria-label="Game guides" className="flex flex-wrap gap-4 sm:gap-6 text-xs">
               <Link to="/ludo" className="hover:underline decoration-[3px] underline-offset-4">
                 Ludo Guide
@@ -208,9 +220,9 @@ export default function Layout() {
                 Helix Jump Guide
               </Link>
             </nav>
-          )}
-        </div>
-      </footer>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

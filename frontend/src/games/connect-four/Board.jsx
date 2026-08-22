@@ -491,7 +491,6 @@ export default function ConnectFourBoard() {
                     <span className={myColor === 'red' ? 'text-[#ef4444]' : 'text-[#facc15]'} style={{ WebkitTextStroke: '1px black' }}>
                       {myColor}
                     </span>
-                    {canDrop && <span className="block text-xs text-blue-600 mt-1 font-black animate-pulse">👉 Tap anywhere on a column to drop!</span>}
                   </p>
                 )}
               </div>

@@ -281,22 +281,52 @@ export default function FlappyBird() {
         </div>
 
         <div 
-          className="mx-auto bg-white border-[4px] border-black shadow-[8px_8px_0_0_#000] relative overflow-hidden mb-8 touch-none select-none cursor-pointer"
+          className="mx-auto bg-gradient-to-b from-[#bae6fd] via-[#e0f2fe] to-[#fef08a] border-[4px] border-black shadow-[8px_8px_0_0_#000] relative overflow-hidden mb-8 touch-none select-none cursor-pointer"
           style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
           onPointerDown={jump}
         >
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgMjBoMjBWMEgwem0xOS0xdjEtMWgtMXYxLTEtMS0xIiBmaWxsPSJub25lIiBzdHJva2U9IiNlNWU3ZWIiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==')] opacity-50 z-0 pointer-events-none" />
+          {/* Parallax Clouds & Distant Hills */}
+          <style>{`
+            @keyframes cloudMoveSlow { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+            @keyframes cloudMoveFast { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+            @keyframes groundScroll { from { background-position-x: 0px; } to { background-position-x: 40px; } }
+            .clouds-layer-1 {
+              animation: cloudMoveSlow 25s linear infinite;
+              background-image: radial-gradient(circle 18px at 20px 20px, white 98%, transparent), radial-gradient(circle 24px at 45px 16px, white 98%, transparent), radial-gradient(circle 16px at 70px 22px, white 98%, transparent);
+            }
+            .clouds-layer-2 {
+              animation: cloudMoveFast 15s linear infinite;
+              background-image: radial-gradient(circle 14px at 15px 15px, rgba(255,255,255,0.8) 98%, transparent), radial-gradient(circle 18px at 35px 12px, rgba(255,255,255,0.8) 98%, transparent);
+            }
+            .ground-pattern {
+              animation: groundScroll 0.3s linear infinite;
+              background-image: repeating-linear-gradient(45deg, #15803d 0 10px, #16a34a 10px 20px);
+            }
+            .paused { animation-play-state: paused; }
+          `}</style>
+
+          {/* Distant Mountains */}
+          <div className="absolute bottom-4 left-0 right-0 h-24 pointer-events-none opacity-40 flex items-end">
+            <div className="w-28 h-20 bg-[#a7f3d0] rounded-t-full border-t-2 border-black -ml-4" />
+            <div className="w-36 h-24 bg-[#6ee7b7] rounded-t-full border-t-2 border-black -ml-8" />
+            <div className="w-32 h-16 bg-[#a7f3d0] rounded-t-full border-t-2 border-black -ml-6" />
+            <div className="w-40 h-22 bg-[#6ee7b7] rounded-t-full border-t-2 border-black -ml-8" />
+          </div>
+
+          {/* Scrolling Clouds */}
+          <div className={`clouds-layer-1 absolute top-4 left-0 w-[200%] h-12 pointer-events-none opacity-90 ${gameStarted && !gameOver ? '' : 'paused'}`} />
+          <div className={`clouds-layer-2 absolute top-14 left-0 w-[200%] h-10 pointer-events-none opacity-75 ${gameStarted && !gameOver ? '' : 'paused'}`} />
 
           {!gameStarted && !gameOver && countdown === null && (
-            <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/50 backdrop-blur-[2px]">
+            <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/40 backdrop-blur-[1px]">
               <div className="bg-[#fcf6bd] border-[3px] border-black shadow-[4px_4px_0_0_#000] p-4 text-center animate-bounce">
                 <p className="font-black text-xl uppercase">Tap or Space<br/>to Start!</p>
               </div>
             </div>
           )}
 
-          {!gameStarted && countdown !== null && (
-            <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/50 backdrop-blur-[2px]">
+          {countdown !== null && (
+            <div className="absolute inset-0 flex items-center justify-center z-30 bg-white/30 backdrop-blur-[1px]">
               <div className="text-7xl font-black text-[#ef476f] animate-ping" style={{ textShadow: '4px 4px 0 #000' }}>
                 {countdown}
               </div>
@@ -317,6 +347,7 @@ export default function FlappyBird() {
             </div>
           )}
 
+          {/* Bird */}
           <div 
             className="absolute z-20 bg-[#ffd166] border-[3px] border-black shadow-[2px_2px_0_0_#000] rounded-sm transition-transform duration-75"
             style={{ 
@@ -330,24 +361,26 @@ export default function FlappyBird() {
             <div className="absolute top-3 right-[-6px] w-3 h-2 bg-[#ff99c8] border-[1px] border-black rounded-r-full" />
           </div>
 
+          {/* Pipes */}
           {gameState.pipes.map((pipe, idx) => (
             <React.Fragment key={idx}>
               <div 
                 className="absolute z-10 bg-[#06d6a0] border-[3px] border-black shadow-[4px_4px_0_0_#000]"
                 style={{ left: pipe.x, top: 0, width: PIPE_WIDTH, height: pipe.topHeight }}
               >
-                <div className="absolute bottom-[-3px] left-[-4px] right-[-4px] h-6 bg-[#06d6a0] border-[3px] border-black" />
+                <div className="absolute bottom-[-3px] left-[-4px] right-[-4px] h-6 bg-[#06d6a0] border-[3px] border-black shadow-inner" />
               </div>
               <div 
                 className="absolute z-10 bg-[#06d6a0] border-[3px] border-black shadow-[4px_4px_0_0_#000]"
-                // Updated to use the specific pipe's gap
                 style={{ left: pipe.x, top: pipe.topHeight + pipe.gap, width: PIPE_WIDTH, height: CANVAS_HEIGHT - (pipe.topHeight + pipe.gap) }}
               >
-                 <div className="absolute top-[-3px] left-[-4px] right-[-4px] h-6 bg-[#06d6a0] border-[3px] border-black" />
+                 <div className="absolute top-[-3px] left-[-4px] right-[-4px] h-6 bg-[#06d6a0] border-[3px] border-black shadow-inner" />
               </div>
             </React.Fragment>
           ))}
-          <div className="absolute bottom-0 left-0 right-0 h-4 bg-[#fcf6bd] border-t-[3px] border-black z-20" />
+
+          {/* Ground */}
+          <div className={`ground-pattern absolute bottom-0 left-0 right-0 h-5 border-t-[3px] border-black z-20 ${gameStarted && !gameOver ? '' : 'paused'}`} />
         </div>
 
         <div className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 w-full transform -rotate-1">
