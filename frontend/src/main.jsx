@@ -6,14 +6,23 @@ import ReactGA from 'react-ga4';
 import App from './App.jsx';
 import './index.css';
 
-ReactGA.initialize("G-E42XTCHEGN");
+// Page views are sent from Layout on every route change, so skip the automatic one.
+ReactGA.initialize('G-E42XTCHEGN', { gtagOptions: { send_page_view: false } });
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root');
+const app = (
   <React.StrictMode>
     <HelmetProvider>
       <BrowserRouter>
         <App />
       </BrowserRouter>
     </HelmetProvider>
-  </React.StrictMode>,
+  </React.StrictMode>
 );
+
+// Content pages are prerendered at build time; hydrate them instead of re-rendering.
+if (rootElement.firstElementChild) {
+  ReactDOM.hydrateRoot(rootElement, app);
+} else {
+  ReactDOM.createRoot(rootElement).render(app);
+}

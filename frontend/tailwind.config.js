@@ -31,6 +31,7 @@ export default {
         sans: ['Architects Daughter', 'cursive'],
         display: ['Architects Daughter', 'cursive'],
         sketch: ['Architects Daughter', 'cursive'],
+        body: ['Nunito', 'ui-rounded', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         sketch: '6px 6px 0 0 #000000',

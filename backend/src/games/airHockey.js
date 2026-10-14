@@ -1,276 +1,269 @@
-const GAME_WIDTH = 480;
-const GAME_HEIGHT = 720;
-const PUCK_RADIUS = 22;
-const STRIKER_RADIUS = 38;
-const GOAL_WIDTH = 160;
-const MAX_SCORE = 5;
+import {
+  TABLE,
+  createTableState,
+  resetAfterGoal,
+  clampStriker,
+  stepTable,
+  puckHalf,
+  isPlausiblePuck,
+  isInGoalMouth,
+} from './airHockeyPhysics.js';
 
-// --- Real Physics Constants ---
-const FRICTION = 0.995;             // Low friction air cushion table
-const MAX_PUCK_SPEED = 22;          // Fast, punchy arcade puck speed
-const SUB_STEPS = 6;                // 6 physics sub-steps per frame for continuous collision detection (CCD)
+const { HEIGHT, PUCK_RADIUS, MAX_SCORE } = TABLE;
+const TICK_MS = 1000 / 60;
+const SNAPSHOT_MS = 1000 / 30;
+// If the puck owner stops reporting for this long, the server simulates the puck itself.
+const AUTHORITY_TIMEOUT_MS = 250;
+const GOAL_PAUSE_MS = 1100;
 
+const round1 = (n) => Math.round(n * 10) / 10;
+
+/**
+ * Online air hockey match.
+ *
+ * The player whose half the puck is on simulates it locally (instant hits) and
+ * reports it here. The server validates every report, decides goals and keeps
+ * score, and takes over the puck whenever the owner goes quiet.
+ */
 export default class AirHockeyGame {
-    constructor(roomId, io) {
-        this.roomId = roomId;
-        this.io = io;
-        this.players = {};
-        this.gameInterval = null;
-        this.networkInterval = null;
-        this.countdownInterval = null;
-        this.destroyTimeout = null;
-        this.resetGameState();
+  constructor(roomId, io) {
+    this.roomId = roomId;
+    this.io = io;
+    this.roles = { p1: null, p2: null }; // role -> socketId
+    this.loop = null;
+    this.snapshotLoop = null;
+    this.timers = new Set();
+    this.destroyTimeout = null;
+    this.resetGameState();
+  }
+
+  resetGameState() {
+    this.state = { status: 'waiting', score: { p1: 0, p2: 0 }, winner: null, ...createTableState() };
+    this.targets = { p1: { ...this.state.strikers.p1 }, p2: { ...this.state.strikers.p2 } };
+    this.authority = null;
+    this.lastPuckUpdate = 0;
+    this.lastPuckReport = 0;
+    this.nextKickoffConceder = null;
+  }
+
+  later(fn, ms) {
+    const handle = setTimeout(() => {
+      this.timers.delete(handle);
+      fn();
+    }, ms);
+    this.timers.add(handle);
+  }
+
+  clearTimers() {
+    this.timers.forEach(clearTimeout);
+    this.timers.clear();
+  }
+
+  roleOf(socketId) {
+    if (this.roles.p1 === socketId) return 'p1';
+    if (this.roles.p2 === socketId) return 'p2';
+    return null;
+  }
+
+  playerCount() {
+    return Number(Boolean(this.roles.p1)) + Number(Boolean(this.roles.p2));
+  }
+
+  addPlayer(socketId) {
+    if (this.destroyTimeout) {
+      clearTimeout(this.destroyTimeout);
+      this.destroyTimeout = null;
     }
 
-    resetGameState() {
-        const centerX = GAME_WIDTH / 2;
-        const centerY = GAME_HEIGHT / 2;
-
-        this.state = {
-            status: 'waiting',
-            score: { p1: 0, p2: 0 },
-            winner: null,
-            puck: { x: centerX, y: centerY, vx: 0, vy: 0 },
-            strikers: {
-                p1: { x: centerX, y: GAME_HEIGHT - 80, vx: 0, vy: 0 },
-                p2: { x: centerX, y: 80, vx: 0, vy: 0 }
-            }
-        };
-
-        this.targets = {
-            p1: { x: centerX, y: GAME_HEIGHT - 80 },
-            p2: { x: centerX, y: 80 }
-        };
+    let role = this.roleOf(socketId);
+    if (!role) {
+      role = !this.roles.p1 ? 'p1' : !this.roles.p2 ? 'p2' : null;
+      if (!role) return false;
+      this.roles[role] = socketId;
     }
 
-    addPlayer(socketId, playerId) {
-        if (this.destroyTimeout) {
-            clearTimeout(this.destroyTimeout);
-            this.destroyTimeout = null;
-        }
-        if (this.players[socketId]) return false;
-        if (Object.keys(this.players).length >= 2) return false;
+    this.io.to(socketId).emit('airHockeyRole', { role });
+    this.emitState();
 
-        const role = Object.keys(this.players).length === 0 ? 'p1' : 'p2';
-        this.players[socketId] = { id: playerId, role };
-        this.io.to(socketId).emit('airHockeyRole', { role });
+    if (this.playerCount() === 2 && ['waiting', 'paused'].includes(this.state.status)) {
+      this.startCountdown();
+    }
+    return true;
+  }
 
-        if (Object.keys(this.players).length === 2) {
-            this.startCountdown();
-        }
-        return true;
+  removePlayer(socketId) {
+    const role = this.roleOf(socketId);
+    if (!role) return;
+    this.roles[role] = null;
+
+    if (this.state.status !== 'finished') {
+      this.clearTimers();
+      this.state.status = 'paused';
+      this.authority = null;
+      this.emitState();
+    }
+    this.io.to(this.roomId).emit('playerDisconnected');
+
+    if (this.playerCount() === 0) {
+      this.destroyTimeout = setTimeout(() => this.destroy(), 10000);
+    }
+  }
+
+  destroy() {
+    if (this.loop) clearInterval(this.loop);
+    if (this.snapshotLoop) clearInterval(this.snapshotLoop);
+    this.loop = null;
+    this.snapshotLoop = null;
+    this.clearTimers();
+  }
+
+  publicState() {
+    return {
+      status: this.state.status,
+      score: this.state.score,
+      winner: this.state.winner,
+      puck: this.state.puck,
+      strikers: this.state.strikers,
+    };
+  }
+
+  // Low-frequency full state for status / score changes.
+  emitState() {
+    this.io.to(this.roomId).emit('gameState', this.publicState());
+  }
+
+  // High-frequency compact snapshot. Volatile: dropped rather than queued when a client lags.
+  emitSnapshot() {
+    const { puck, strikers } = this.state;
+    this.io.to(this.roomId).volatile.emit('ah:snap', {
+      t: Date.now(),
+      st: this.state.status,
+      au: this.authority,
+      p: [round1(puck.x), round1(puck.y), round1(puck.vx), round1(puck.vy)],
+      s: [round1(strikers.p1.x), round1(strikers.p1.y), round1(strikers.p2.x), round1(strikers.p2.y)],
+    });
+  }
+
+  ensureLoops() {
+    if (this.loop) return;
+    this.lastTick = Date.now();
+    this.loop = setInterval(() => this.tick(), TICK_MS);
+    this.snapshotLoop = setInterval(() => {
+      if (['countdown', 'playing', 'goal'].includes(this.state.status)) this.emitSnapshot();
+    }, SNAPSHOT_MS);
+  }
+
+  startCountdown() {
+    this.clearTimers();
+    resetAfterGoal(this.state, this.nextKickoffConceder);
+    this.targets = { p1: { ...this.state.strikers.p1 }, p2: { ...this.state.strikers.p2 } };
+    this.authority = puckHalf(this.state.puck);
+    this.lastPuckUpdate = 0;
+    this.state.status = 'countdown';
+    this.emitState();
+    this.ensureLoops();
+
+    let count = 3;
+    this.io.to(this.roomId).emit('countdown', count);
+    const step = () => {
+      count -= 1;
+      this.io.to(this.roomId).emit('countdown', count);
+      if (count <= 0) {
+        this.state.status = 'playing';
+        this.emitState();
+      } else {
+        this.later(step, 800);
+      }
+    };
+    this.later(step, 800);
+  }
+
+  tick() {
+    const now = Date.now();
+    const dt = Math.min(0.05, (now - this.lastTick) / 1000);
+    this.lastTick = now;
+    if (dt <= 0) return;
+
+    const status = this.state.status;
+    if (!['countdown', 'playing', 'goal'].includes(status)) return;
+
+    const ownerActive = this.authority && now - this.lastPuckUpdate < AUTHORITY_TIMEOUT_MS;
+    const simulatePuck = status === 'playing' && !ownerActive;
+    const events = stepTable(this.state, this.targets, dt, { simulatePuck });
+
+    if (simulatePuck) {
+      if (events.goal) {
+        this.handleGoal(events.goal);
+        return;
+      }
+      this.authority = puckHalf(this.state.puck, this.authority);
+    }
+  }
+
+  handlePlayerMove(socketId, position) {
+    const role = this.roleOf(socketId);
+    if (!role || !position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+    this.targets[role] = clampStriker(role, position);
+  }
+
+  handlePuckUpdate(socketId, report) {
+    const role = this.roleOf(socketId);
+    if (!role || this.state.status !== 'playing' || !report) return;
+
+    const now = Date.now();
+    const puck = { x: +report.x, y: +report.y, vx: +report.vx, vy: +report.vy };
+
+    // Only the current owner, or a player claiming a puck on their own half, may report.
+    const half = puckHalf(puck, role);
+    if (role !== this.authority && half !== role) return;
+    if (!isPlausiblePuck(puck, this.state.puck, (now - this.lastPuckReport) / 1000)) return;
+
+    this.state.puck = puck;
+    this.lastPuckReport = now;
+
+    if (puck.y - PUCK_RADIUS <= 0 && isInGoalMouth(puck.x)) return this.handleGoal('p1');
+    if (puck.y + PUCK_RADIUS >= HEIGHT && isInGoalMouth(puck.x)) return this.handleGoal('p2');
+
+    if (half === role) {
+      this.authority = role;
+      this.lastPuckUpdate = now;
+    } else {
+      // Handoff: the puck crossed the centre line. The server carries it until
+      // the other player's first report arrives.
+      this.authority = half;
+      this.lastPuckUpdate = 0;
+    }
+  }
+
+  handleGoal(scorer) {
+    if (this.state.status !== 'playing') return;
+    this.state.score[scorer] += 1;
+    this.authority = null;
+    this.nextKickoffConceder = scorer === 'p1' ? 'p2' : 'p1';
+
+    if (this.state.score[scorer] >= MAX_SCORE) {
+      this.state.status = 'finished';
+      this.state.winner = scorer;
+      this.emitState();
+      this.io.to(this.roomId).emit('gameOver', this.publicState());
+      return;
     }
 
-    removePlayer(socketId) {
-        delete this.players[socketId];
-        this.state.status = 'waiting';
-        this.io.to(this.roomId).emit('playerDisconnected');
-        this.destroyTimeout = setTimeout(() => this.destroy(), 10000);
-    }
+    this.state.status = 'goal';
+    this.emitState();
+    this.io.to(this.roomId).emit('goalAnimation', scorer);
+    this.later(() => {
+      if (this.playerCount() === 2) this.startCountdown();
+      else this.state.status = 'paused';
+    }, GOAL_PAUSE_MS);
+  }
 
-    destroy() {
-        if (this.gameInterval) clearInterval(this.gameInterval);
-        if (this.networkInterval) clearInterval(this.networkInterval);
-        if (this.countdownInterval) clearInterval(this.countdownInterval);
-    }
-
-    broadcastState() {
-        this.io.to(this.roomId).emit('gameState', this.state);
-    }
-
-    startCountdown() {
-        this.state.status = 'countdown';
-        if (this.countdownInterval) clearInterval(this.countdownInterval);
-        this.resetPuck();
-        this.broadcastState();
-
-        let count = 3;
-        this.countdownInterval = setInterval(() => {
-            count--;
-            this.io.to(this.roomId).emit('countdown', count);
-            if (count === 0) {
-                clearInterval(this.countdownInterval);
-                this.state.status = 'playing';
-                this.startGameLoop();
-            }
-        }, 1000);
-    }
-
-    startGameLoop() {
-        if (this.gameInterval) clearInterval(this.gameInterval);
-        if (this.networkInterval) clearInterval(this.networkInterval);
-
-        // 60 Hz physics update loop with 6 sub-steps for precision
-        this.gameInterval = setInterval(() => {
-            if (this.state.status !== 'playing') return;
-            this.updateStrikers();
-            
-            const dt = 1 / SUB_STEPS;
-            for (let s = 0; s < SUB_STEPS; s++) {
-                this.updatePhysicsSubstep(dt);
-            }
-        }, 1000 / 60);
-
-        // 60 Hz high-frequency network broadcast for zero-stutter smoothness
-        this.networkInterval = setInterval(() => {
-            if (this.state.status !== 'playing') return;
-            this.broadcastState();
-        }, 1000 / 60);
-    }
-
-    updateStrikers() {
-        for (const role of ['p1', 'p2']) {
-            const striker = this.state.strikers[role];
-            const target = this.targets[role];
-            const dx = target.x - striker.x;
-            const dy = target.y - striker.y;
-
-            // Accurate frame velocity
-            striker.vx = dx;
-            striker.vy = dy;
-            striker.x = target.x;
-            striker.y = target.y;
-        }
-    }
-
-    updatePhysicsSubstep(dt) {
-        const puck = this.state.puck;
-        const subFriction = Math.pow(FRICTION, dt);
-
-        // Apply friction
-        puck.vx *= subFriction;
-        puck.vy *= subFriction;
-
-        // Move puck
-        puck.x += puck.vx * dt;
-        puck.y += puck.vy * dt;
-
-        // Left / Right Walls
-        if (puck.x - PUCK_RADIUS <= 0) {
-            puck.vx = Math.abs(puck.vx) * 0.98;
-            puck.x = PUCK_RADIUS;
-        } else if (puck.x + PUCK_RADIUS >= GAME_WIDTH) {
-            puck.vx = -Math.abs(puck.vx) * 0.98;
-            puck.x = GAME_WIDTH - PUCK_RADIUS;
-        }
-
-        // Top Wall and P2 Goal
-        const goalLeft = (GAME_WIDTH - GOAL_WIDTH) / 2;
-        const goalRight = (GAME_WIDTH + GOAL_WIDTH) / 2;
-
-        if (puck.y - PUCK_RADIUS <= 0) {
-            if (puck.x > goalLeft && puck.x < goalRight) {
-                this.handleGoal('p1'); // P1 scores
-                return;
-            } else {
-                puck.vy = Math.abs(puck.vy) * 0.98;
-                puck.y = PUCK_RADIUS;
-            }
-        }
-
-        // Bottom Wall and P1 Goal
-        if (puck.y + PUCK_RADIUS >= GAME_HEIGHT) {
-            if (puck.x > goalLeft && puck.x < goalRight) {
-                this.handleGoal('p2'); // P2 scores
-                return;
-            } else {
-                puck.vy = -Math.abs(puck.vy) * 0.98;
-                puck.y = GAME_HEIGHT - PUCK_RADIUS;
-            }
-        }
-
-        // Striker collisions
-        this.checkStrikerCollision('p1');
-        this.checkStrikerCollision('p2');
-    }
-
-    checkStrikerCollision(playerRole) {
-        const striker = this.state.strikers[playerRole];
-        const puck = this.state.puck;
-
-        let dx = puck.x - striker.x;
-        let dy = puck.y - striker.y;
-        let distance = Math.hypot(dx, dy) || 0.001;
-        const minDist = PUCK_RADIUS + STRIKER_RADIUS;
-
-        if (distance < minDist) {
-            let nx = dx / distance;
-            let ny = dy / distance;
-
-            // Push puck completely out of striker volume
-            const overlap = minDist - distance;
-            puck.x += nx * (overlap + 1.5);
-            puck.y += ny * (overlap + 1.5);
-
-            // Striker velocity transfer
-            const strikerVx = striker.vx;
-            const strikerVy = striker.vy;
-
-            // Relative velocity
-            const vRelX = puck.vx - strikerVx;
-            const vRelY = puck.vy - strikerVy;
-            const dot = vRelX * nx + vRelY * ny;
-
-            // If objects are moving towards each other
-            if (dot < 0) {
-                const elasticity = 1.15; // Crisp, lively elastic strike
-                const impulse = -(1 + elasticity) * dot;
-                puck.vx += nx * impulse + strikerVx * 0.6;
-                puck.vy += ny * impulse + strikerVy * 0.6;
-
-                // Defensive safety: prevent defending striker from deflecting ball into own net
-                if (playerRole === 'p1' && puck.vy > -2) {
-                    puck.vy = -Math.abs(puck.vy || 4) - 2;
-                } else if (playerRole === 'p2' && puck.vy < 2) {
-                    puck.vy = Math.abs(puck.vy || 4) + 2;
-                }
-
-                // Clamp to maximum puck velocity
-                const speed = Math.hypot(puck.vx, puck.vy);
-                if (speed > MAX_PUCK_SPEED) {
-                    puck.vx = (puck.vx / speed) * MAX_PUCK_SPEED;
-                    puck.vy = (puck.vy / speed) * MAX_PUCK_SPEED;
-                }
-            }
-        }
-    }
-
-    handleGoal(scorer) {
-        this.state.score[scorer]++;
-        if (this.state.score[scorer] >= MAX_SCORE) {
-            this.state.status = 'finished';
-            this.state.winner = scorer;
-            this.broadcastState();
-            if (this.gameInterval) clearInterval(this.gameInterval);
-            if (this.networkInterval) clearInterval(this.networkInterval);
-            this.io.to(this.roomId).emit('gameOver', this.state);
-        } else {
-            this.io.to(this.roomId).emit('goalAnimation', scorer);
-            this.startCountdown();
-        }
-    }
-
-    resetPuck() {
-        const centerX = GAME_WIDTH / 2;
-        const centerY = GAME_HEIGHT / 2;
-        this.state.puck = { x: centerX, y: centerY, vx: 0, vy: 0 };
-        for (const role of ['p1', 'p2']) {
-            const y = role === 'p1' ? GAME_HEIGHT - 80 : 80;
-            this.state.strikers[role] = { x: centerX, y, vx: 0, vy: 0 };
-            this.targets[role] = { x: centerX, y };
-        }
-    }
-
-    handlePlayerMove(socketId, position) {
-        const player = this.players[socketId];
-        if (!player || this.state.status !== 'playing') return;
-
-        const role = player.role;
-        const x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, position.x));
-        const y = role === 'p1'
-            ? Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, position.y))
-            : Math.max(STRIKER_RADIUS, Math.min(GAME_HEIGHT / 2 - STRIKER_RADIUS, position.y));
-
-        this.targets[role] = { x, y };
-    }
+  handleRematch() {
+    this.clearTimers();
+    const roles = this.roles;
+    this.resetGameState();
+    this.roles = roles;
+    this.emitState();
+    if (this.playerCount() === 2) this.startCountdown();
+  }
 }

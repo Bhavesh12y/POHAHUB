@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
+import { getPlayerName } from '../../lib/playerName.js';
 
 function ChatPanel({ messages, onSend, disabled, className = '' }) {
   const [text, setText] = useState('');
@@ -36,7 +37,7 @@ function ChatPanel({ messages, onSend, disabled, className = '' }) {
             )}
             <span className={
               msg.playerId === 'SYSTEM' ? 'text-black font-black text-[10px] uppercase tracking-wider' :
-              msg.message.includes('🎉') ? 'text-[#10b981] font-black tracking-wide' : 
+              msg.message.includes('Guessed the word') ? 'text-[#10b981] font-black tracking-wide' : 
               'text-gray-100 font-medium'
             }>
               {msg.message}
@@ -149,7 +150,7 @@ export default function ScribbleBoard() {
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username') || sessionStorage.getItem('pohahub_username');
+    const username = getPlayerName();
     if (!username) {
       navigate(`/games/scribble?join=${roomCode}`);
       return;
@@ -348,7 +349,7 @@ export default function ScribbleBoard() {
             <span className={`text-[10px] sm:text-xs font-black uppercase px-2.5 py-1 rounded border-[2px] border-black ${
               isMyTurn ? 'bg-[#3b82f6] text-white shadow-[2px_2px_0px_#000]' : 'bg-[#10b981] text-black shadow-[2px_2px_0px_#000]'
             }`}>
-              {room.status === 'waiting' ? 'Lobby' : gameState?.turnState === 'selecting' ? 'Picking' : isMyTurn ? "✏️ Draw" : "💡 Guess"}
+              {room.status === 'waiting' ? 'Lobby' : gameState?.turnState === 'selecting' ? 'Picking' : isMyTurn ? "Draw" : "Guess"}
             </span>
           </div>
         </div>
@@ -380,13 +381,13 @@ export default function ScribbleBoard() {
                     onClick={() => setActiveTool('brush')} 
                     className={`px-2.5 sm:px-3 py-1 rounded text-xs sm:text-sm font-bold border transition-all ${activeTool === 'brush' ? 'bg-[#facc15] border-black shadow-[2px_2px_0px_#000]' : 'bg-transparent border-transparent text-gray-700'}`}
                   >
-                    ✏️ Brush
+                    Brush
                   </button>
                   <button 
                     onClick={() => setActiveTool('fill')} 
                     className={`px-2.5 sm:px-3 py-1 rounded text-xs sm:text-sm font-bold border transition-all ${activeTool === 'fill' ? 'bg-[#facc15] border-black shadow-[2px_2px_0px_#000]' : 'bg-transparent border-transparent text-gray-700'}`}
                   >
-                    🪣 Fill
+                    Fill
                   </button>
                 </div>
 
@@ -460,7 +461,7 @@ export default function ScribbleBoard() {
                     </div>
                   ) : (
                     <div className="text-center bg-white border-[3px] border-black p-4 sm:p-6 rounded-lg shadow-[6px_6px_0px_#000] animate-pulse text-black font-black uppercase text-xs sm:text-lg">
-                      🎨 The Drawer is choosing a word...
+                      The drawer is choosing a word...
                     </div>
                   )}
                 </div>
@@ -497,7 +498,7 @@ export default function ScribbleBoard() {
                   >
                     <span className="font-black text-xs">#{index + 1}</span>
                     <span className="text-xs font-bold truncate max-w-[90px] sm:max-w-[120px]">
-                      {player.name} {isDrawer && '✏️'} {hasGuessed && '✔️'}
+                      {player.name} {isDrawer && '(drawing)'} {hasGuessed && '(guessed)'}
                     </span>
                     <span className={`text-[10px] font-black ml-1 px-1 rounded ${isDrawer ? 'bg-blue-800 text-white' : 'bg-gray-200 text-black'}`}>
                       {player.score ?? 0}
@@ -521,4 +522,4 @@ export default function ScribbleBoard() {
       )}
     </div>
   );
-}
+}

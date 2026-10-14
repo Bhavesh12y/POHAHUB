@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
+import { getPlayerName, setPlayerName } from '../../lib/playerName.js';
 
 export default function TableTennisLanding() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function TableTennisLanding() {
 
   // Load username from localStorage on mount
   useEffect(() => {
-    const savedUsername = localStorage.getItem('pohahub_username');
+    const savedUsername = getPlayerName();
     if (savedUsername) {
       setUsername(savedUsername);
     }
@@ -38,7 +39,7 @@ export default function TableTennisLanding() {
       setError(result.error || 'Failed to create room');
       return;
     }
-    localStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     // IMPORTANT: Changed route to table-tennis
     navigate(`/games/table-tennis/room/${result.room.code}`, { state: { room: result.room } });
   };
@@ -66,7 +67,7 @@ export default function TableTennisLanding() {
       setError(result.error || 'Failed to join room');
       return;
     }
-    localStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     // IMPORTANT: Changed route to table-tennis
     navigate(`/games/table-tennis/room/${result.room.code}`, { state: { room: result.room } });
   };

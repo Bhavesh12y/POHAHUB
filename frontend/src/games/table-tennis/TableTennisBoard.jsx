@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
+import { getPlayerName } from '../../lib/playerName.js';
 
 const GAME_WIDTH = 1000;
 const GAME_HEIGHT = 600;
@@ -86,7 +87,7 @@ export default function TableTennisBoard() {
   const [isDragging, setIsDragging] = useState(false);
   
   const socket = connectSocket();
-  const username = localStorage.getItem('pohahub_username');
+  const username = getPlayerName();
   const myPlayerId = socket.id;
   const isHost = room?.hostId === myPlayerId;
 
@@ -329,7 +330,7 @@ export default function TableTennisBoard() {
   const leftPlayer = 'p1';
   const rightPlayer = 'p2';
   
-  const getPlayerLabel = (role) => role === myRole ? '⭐ YOU' : 'OPPONENT';
+  const getPlayerLabel = (role) => role === myRole ? 'YOU' : 'OPPONENT';
   const leftColor = myRole === 'p1' ? 'text-[#3b82f6]' : 'text-gray-500';
   const rightColor = myRole === 'p2' ? 'text-[#ef4444]' : 'text-gray-500';
 
@@ -470,7 +471,7 @@ export default function TableTennisBoard() {
                 
                 <div className="flex justify-center mt-8">
                   <p className={`text-center text-sm font-bold uppercase tracking-widest px-4 py-2 border-[3px] border-black shadow-[4px_4px_0px_#000] rotate-1 transition-all ${isDragging ? 'bg-[#facc15] text-black scale-105' : 'bg-[#222] text-white'}`}>
-                    {isDragging ? '🏓 SWINGING!' : '👈 DRAG ANYWHERE TO MOVE RACKET'}
+                    {isDragging ? 'SWINGING!' : 'DRAG ANYWHERE TO MOVE RACKET'}
                   </p>
                 </div>
               </div>

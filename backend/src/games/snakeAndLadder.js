@@ -43,10 +43,10 @@ export const rollDice = (state, playerId) => {
     // Check Snakes and Ladders
     if (SNAKES[newPosition]) {
       newPosition = SNAKES[newPosition];
-      message = `${currentPlayer.name} rolled a ${roll} and was bitten by a snake! 🐍`;
+      message = `${currentPlayer.name} rolled a ${roll} and was bitten by a snake!`;
     } else if (LADDERS[newPosition]) {
       newPosition = LADDERS[newPosition];
-      message = `${currentPlayer.name} rolled a ${roll} and climbed a ladder! 🪜`;
+      message = `${currentPlayer.name} rolled a ${roll} and climbed a ladder!`;
     }
   }
 

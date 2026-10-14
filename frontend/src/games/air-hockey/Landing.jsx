@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import QrScannerModal from '../../components/QrScannerModal.jsx';
+import { getPlayerName, setPlayerName } from '../../lib/playerName.js';
+import { CameraIcon } from '../../components/Icons.jsx';
 
 export default function AirHockeyLanding() {
   const navigate = useNavigate();
@@ -14,7 +16,7 @@ export default function AirHockeyLanding() {
 
   // Auto-fill previously used username[cite: 5]
   useEffect(() => {
-    const savedUsername = localStorage.getItem('pohahub_username');
+    const savedUsername = getPlayerName();
     if (savedUsername) {
       setUsername(savedUsername);
     }
@@ -43,7 +45,7 @@ export default function AirHockeyLanding() {
       return;
     }
 
-    localStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     
     // Navigate to the Air Hockey room[cite: 5]
     navigate(`/games/air-hockey/room/${result.room.code}`, { state: { room: result.room } });
@@ -75,7 +77,7 @@ export default function AirHockeyLanding() {
       return;
     }
 
-    localStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     navigate(`/games/air-hockey/room/${result.room.code}`, { state: { room: result.room } });
   };
 
@@ -154,7 +156,7 @@ export default function AirHockeyLanding() {
               className="sketch-button bg-purple-300 px-3.5 py-2 text-xs font-black uppercase flex items-center gap-1.5 shrink-0"
               title="Scan Room QR Code"
             >
-              <span>📷</span>
+              <CameraIcon />
               <span>Scan QR</span>
             </button>
           </div>
@@ -179,4 +181,4 @@ export default function AirHockeyLanding() {
       </div>
     </div>
   );
-}
+}

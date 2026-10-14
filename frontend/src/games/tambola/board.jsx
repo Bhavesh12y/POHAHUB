@@ -3,21 +3,47 @@ import { useParams } from 'react-router-dom';
 import { connectSocket } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
+import { getPlayerName } from '../../lib/playerName.js';
+import { CLAIMS_BY_ID, DEFAULT_CLAIMS } from '@engines/tambolaClaims.js';
+import ClaimPicker from './ClaimPicker.jsx';
 
-// Extended claims with descriptions for the Info Modal
-const CLAIMS = [
-  { id: 'early5', label: 'Early 5', desc: 'First 5 numbers marked anywhere on your ticket.' },
-  { id: 'topLine', label: 'Top Line', desc: 'All 5 numbers in the first (top) row.' },
-  { id: 'middleLine', label: 'Middle Line', desc: 'All 5 numbers in the second (middle) row.' },
-  { id: 'bottomLine', label: 'Bottom Line', desc: 'All 5 numbers in the third (bottom) row.' },
-  { id: 'fourCorners', label: '4 Corners', desc: 'The first and last numbers of both the top and bottom rows (4 numbers).' },
-  { id: 'ladoo', label: 'Ladoo', desc: 'The exact center number of your ticket (3rd number of the middle row).' },
-  { id: 'kingCorner', label: 'King Corner', desc: 'First number of top row & last number of bottom row (2 numbers).' },
-  { id: 'queenCorner', label: 'Queen Corner', desc: 'Last number of top row & first number of bottom row (2 numbers).' },
-  { id: 'smallest3', label: 'Smallest 3', desc: 'The 3 absolute lowest numbers on your ticket.' },
-  { id: 'largest3', label: 'Largest 3', desc: 'The 3 absolute highest numbers on your ticket.' },
-  { id: 'fullHouse', label: 'Full House', desc: 'Every single number on your ticket is marked.' },
-];
+// Players ranked by number of prizes won (ties keep join order).
+function PrizeTally({ players = [], viewerId, compact = false }) {
+  const ranked = [...players].sort((a, b) => (b.claimsWon?.length || 0) - (a.claimsWon?.length || 0));
+  const top = ranked[0]?.claimsWon?.length || 0;
+  return (
+    <ol className="space-y-2">
+      {ranked.map((p, idx) => {
+        const count = p.claimsWon?.length || 0;
+        const leader = count > 0 && count === top;
+        return (
+          <li
+            key={p.id}
+            className={`border-[2px] border-black px-3 py-2 ${leader ? 'bg-[#fde047] shadow-[3px_3px_0px_#000]' : 'bg-white'}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-black uppercase truncate">
+                {idx + 1}. {p.name} {p.id === viewerId && <span className="text-xs text-gray-500">(you)</span>}
+              </span>
+              <span className="font-black text-sm whitespace-nowrap bg-black text-white px-2 py-0.5">
+                {count} {count === 1 ? 'prize' : 'prizes'}
+              </span>
+            </div>
+            {!compact && count > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {p.claimsWon.map((id) => (
+                  <span key={id} className="text-[10px] font-black uppercase bg-white border-[1.5px] border-black px-1.5 py-0.5">
+                    {CLAIMS_BY_ID[id]?.label ?? id}
+                  </span>
+                ))}
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 // --- CHAT PANEL COMPONENT ---
 function ChatPanel({ messages, onSend, disabled }) {
@@ -93,7 +119,7 @@ export default function TambolaBoard() {
   const DRAW_SPEED_MS = 3500;
 
   const currentUsername = sessionStorage.getItem('playerName') 
-    || localStorage.getItem('pohahub_username') 
+    || getPlayerName() 
     || 'Player';
 
   useEffect(() => {
@@ -185,9 +211,27 @@ export default function TambolaBoard() {
           }
         })}
         gamePath="tambola/room"
-      />
+      >
+        <ClaimPicker
+          selected={room?.settings?.tambolaClaims ?? DEFAULT_CLAIMS}
+          isHost={isHost}
+          onChange={(tambolaClaims) =>
+            socket.emit('room:settings', { tambolaClaims }, (result) => {
+              if (!result?.ok) {
+                setErrorToast(result?.error || 'Could not update prizes');
+                setTimeout(() => setErrorToast(''), 3000);
+              }
+            })
+          }
+        />
+      </WaitingLobby>
     );
   }
+
+  const CLAIMS = (gameState?.enabledClaims ?? DEFAULT_CLAIMS).map((id) => CLAIMS_BY_ID[id]).filter(Boolean);
+  const ranked = [...(gameState?.players ?? [])].sort((a, b) => (b.claimsWon?.length || 0) - (a.claimsWon?.length || 0));
+  const topCount = ranked[0]?.claimsWon?.length || 0;
+  const champions = topCount > 0 ? ranked.filter((p) => (p.claimsWon?.length || 0) === topCount) : [];
 
   const handleDraw = () => {
     socket.emit('game:move', { action: 'draw' }, (result) => {
@@ -251,7 +295,7 @@ export default function TambolaBoard() {
           onClick={scrollToChat}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3b82f6] border-[3px] border-black text-white px-4 py-3 rounded shadow-[6px_6px_0px_#000] z-50 flex items-center gap-3 cursor-pointer w-11/12 max-w-sm lg:hidden animate-[popIn_0.3s_ease-out] -rotate-1"
         >
-          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black">💬</span>
+          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black"><svg aria-hidden="true" viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"><path d="M4 5h16v11H9l-5 4V5z" /></svg></span>
           <div className="flex flex-col flex-1 truncate">
             <span className="text-xs font-black uppercase text-[#facc15]">{chatToast.playerName}</span>
             <span className="text-sm font-bold truncate">{chatToast.message}</span>
@@ -292,9 +336,24 @@ export default function TambolaBoard() {
           >
             Game Over!
           </h1>
+          {champions.length > 0 && (
+            <div className="bg-[#fde047] border-[4px] border-black shadow-[8px_8px_0px_#000] px-6 py-4 mb-8 -rotate-1 text-center animate-pop-in">
+              <p className="text-xs font-black uppercase tracking-widest">{champions.length > 1 ? 'Joint champions' : 'Champion'}</p>
+              <p className="text-3xl sm:text-4xl font-black uppercase">{champions.map((p) => p.name).join(' & ')}</p>
+              <p className="font-black uppercase text-sm">
+                {topCount} {topCount === 1 ? 'prize' : 'prizes'}
+              </p>
+            </div>
+          )}
+          <div className="w-full max-w-3xl bg-white border-[4px] border-black rounded-lg p-4 sm:p-8 shadow-[12px_12px_0px_#000] mb-6 -rotate-[0.5deg] animate-pop-in">
+            <h2 className="text-2xl sm:text-3xl font-black text-black mb-5 border-b-[4px] border-black pb-3 text-center tracking-widest uppercase">
+              Prize Tally
+            </h2>
+            <PrizeTally players={gameState?.players} viewerId={playerId} />
+          </div>
           <div className="w-full max-w-3xl bg-white border-[4px] border-black rounded-lg p-4 sm:p-8 shadow-[12px_12px_0px_#000] mb-10 rotate-1 animate-pop-in">
             <h2 className="text-2xl sm:text-4xl font-black text-black mb-6 border-b-[4px] border-black pb-4 text-center tracking-widest uppercase">
-              Final Results
+              Winners List
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {CLAIMS.map(claim => {
@@ -325,7 +384,7 @@ export default function TambolaBoard() {
                 className={`w-10 h-10 border-[2px] border-black rounded flex items-center justify-center shadow-[3px_3px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_#000] ${isSoundEnabled ? 'bg-[#facc15] text-black' : 'bg-gray-300 text-gray-500'}`}
                 title="Toggle Announcer"
               >
-                {isSoundEnabled ? '🔊' : '🔇'}
+                {isSoundEnabled ? 'Sound On' : 'Muted'}
               </button>
             </div>
             
@@ -355,7 +414,7 @@ export default function TambolaBoard() {
                     isAutoDrawing ? 'bg-[#ef4444]' : 'bg-[#10b981]'
                   }`}
                 >
-                  {isAutoDrawing ? '⏸ Pause Auto' : '▶️ Start Auto'}
+                  {isAutoDrawing ? 'Pause Auto Draw' : 'Start Auto Draw'}
                 </button>
                 <button 
                   onClick={handleDraw} 
@@ -424,7 +483,7 @@ export default function TambolaBoard() {
                 className={`w-9 h-9 border-[2px] border-black rounded-lg flex items-center justify-center shadow-[2px_2px_0px_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] ${isSoundEnabled ? 'bg-[#facc15] text-black' : 'bg-gray-600 text-gray-300'}`}
                 title="Toggle Voice Announcer"
               >
-                {isSoundEnabled ? '🔊' : '🔇'}
+                {isSoundEnabled ? 'Sound On' : 'Muted'}
               </button>
 
               {isHost && gameState?.status === 'playing' && (
@@ -435,7 +494,7 @@ export default function TambolaBoard() {
                       isAutoDrawing ? 'bg-[#ef4444] text-white' : 'bg-[#10b981]'
                     }`}
                   >
-                    {isAutoDrawing ? '⏸' : '▶️ Auto'}
+                    {isAutoDrawing ? 'Pause' : 'Auto'}
                   </button>
                   <button 
                     onClick={handleDraw} 
@@ -542,6 +601,13 @@ export default function TambolaBoard() {
                 );
               })}
             </div>
+          </div>
+
+          <div className="bg-white border-[3px] border-black rounded-xl p-4 sm:p-6 shadow-[8px_8px_0px_#000] w-full -rotate-[0.5deg]">
+            <h2 className="text-xl sm:text-2xl font-black text-black uppercase tracking-widest mb-4 border-b-[3px] border-black pb-3">
+              Prize Tally
+            </h2>
+            <PrizeTally players={gameState?.players} viewerId={playerId} />
           </div>
 
         </div>

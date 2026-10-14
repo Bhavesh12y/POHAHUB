@@ -3,222 +3,11 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
+import { getPlayerName } from '../../lib/playerName.js';
 
-// ============================================================
-// AUTHORITATIVE CONSTANTS – keep EXACTLY in sync with backend
-// (airHockey.js). The server is the single source of truth.
-// ============================================================
-const GAME_WIDTH = 480;
-const GAME_HEIGHT = 720;
-const PUCK_RADIUS = 22;
-const STRIKER_RADIUS = 38;
-const GOAL_WIDTH = 160;
-const GRAB_RADIUS = STRIKER_RADIUS * 1.8; // generous touch tolerance
-const GOAL_DROP_MS = 450;     // "falling into the hole" animation duration
+import { useAirHockeyOnline, TABLE } from './useAirHockeyOnline.js';
 
-
-const lerp = (a, b, t) => a + (b - a) * t;
-
-// ---------------------------------------------------------------------
-// Input helpers
-// ---------------------------------------------------------------------
-
-function getCanvasPoint(e, canvas) {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  return {
-    x: (e.clientX - rect.left) * scaleX,
-    y: (e.clientY - rect.top) * scaleY,
-  };
-}
-
-function toServerSpace(raw, role) {
-  return role === 'p2'
-    ? { x: GAME_WIDTH - raw.x, y: GAME_HEIGHT - raw.y }
-    : { x: raw.x, y: raw.y };
-}
-
-function clampStriker(pos, role) {
-  const x = Math.max(STRIKER_RADIUS, Math.min(GAME_WIDTH - STRIKER_RADIUS, pos.x));
-  const y = role === 'p1'
-    ? Math.max(GAME_HEIGHT / 2 + STRIKER_RADIUS, Math.min(GAME_HEIGHT - STRIKER_RADIUS, pos.y))
-    : Math.max(STRIKER_RADIUS, Math.min(GAME_HEIGHT / 2 - STRIKER_RADIUS, pos.y));
-  return { x, y };
-}
-
-// ---------------------------------------------------------------------
-// Drawing helpers
-// ---------------------------------------------------------------------
-
-function drawBoardSurface(ctx, canvas) {
-  const w = canvas.width;
-  const h = canvas.height;
-
-  const bg = ctx.createLinearGradient(0, 0, 0, h);
-  bg.addColorStop(0, '#0b1220');
-  bg.addColorStop(0.5, '#111827');
-  bg.addColorStop(1, '#0b1220');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, w, h);
-
-  const vignette = ctx.createRadialGradient(w / 2, h / 2, h * 0.15, w / 2, h / 2, h * 0.7);
-  vignette.addColorStop(0, 'rgba(0,0,0,0)');
-  vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
-  ctx.fillStyle = vignette;
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.save();
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = '#22d3ee';
-  ctx.strokeStyle = 'rgba(34,211,238,0.75)';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([10, 8]);
-  ctx.beginPath();
-  ctx.moveTo(12, h / 2);
-  ctx.lineTo(w - 12, h / 2);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.beginPath();
-  ctx.arc(w / 2, h / 2, 55, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(w / 2, h / 2, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#22d3ee';
-  ctx.shadowBlur = 12;
-  ctx.fill();
-  ctx.restore();
-
-  ctx.strokeStyle = '#1e293b';
-  ctx.lineWidth = 8;
-  ctx.strokeRect(4, 4, w - 8, h - 8);
-}
-
-function drawGoalHole(ctx, canvas, { y, color }) {
-  const cx = canvas.width / 2;
-  const halfW = GOAL_WIDTH / 2;
-  const depth = 22;
-
-  ctx.save();
-
-  const cavity = ctx.createRadialGradient(cx, y, 3, cx, y, halfW);
-  cavity.addColorStop(0, '#020617');
-  cavity.addColorStop(0.55, '#0f172a');
-  cavity.addColorStop(1, 'rgba(15, 23, 42, 0)');
-  ctx.beginPath();
-  ctx.ellipse(cx, y, halfW, depth, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cavity;
-  ctx.fill();
-
-  ctx.shadowBlur = 20;
-  ctx.shadowColor = color;
-  ctx.strokeStyle = `${color}66`;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.ellipse(cx, y, halfW - 3, depth - 5, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  ctx.strokeStyle = 'rgba(226,232,240,0.5)';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.ellipse(cx, y, halfW, depth, 0, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function drawPuckTrail(ctx, trail) {
-  if (!trail || trail.length < 2) return;
-  ctx.save();
-  for (let i = 0; i < trail.length; i++) {
-    const p = trail[i];
-    const t = (i + 1) / trail.length;
-    ctx.beginPath();
-    ctx.fillStyle = `rgba(148, 197, 255, ${t * 0.25})`;
-    ctx.arc(p.x, p.y, PUCK_RADIUS * (0.35 + 0.5 * t), 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawStriker(ctx, pos, color) {
-  if (!pos) return;
-  ctx.save();
-  ctx.shadowBlur = 22;
-  ctx.shadowColor = color;
-
-  const grad = ctx.createRadialGradient(pos.x - 8, pos.y - 8, 4, pos.x, pos.y, STRIKER_RADIUS);
-  grad.addColorStop(0, '#ffffff');
-  grad.addColorStop(0.35, color);
-  grad.addColorStop(1, color);
-
-  ctx.beginPath();
-  ctx.arc(pos.x, pos.y, STRIKER_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = '#0f172a';
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawPuck(ctx, pos, { scale = 1, alpha = 1 } = {}) {
-  if (!pos || scale <= 0) return;
-  const r = PUCK_RADIUS * scale;
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.shadowBlur = 26 * scale;
-  ctx.shadowColor = '#38bdf8';
-
-  const grad = ctx.createRadialGradient(pos.x - 5, pos.y - 5, 1, pos.x, pos.y, Math.max(r, 0.01));
-  grad.addColorStop(0, '#334155');
-  grad.addColorStop(1, '#020617');
-
-  ctx.beginPath();
-  ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  ctx.shadowBlur = 14 * scale;
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#38bdf8';
-  ctx.stroke();
-  ctx.restore();
-}
-
-function renderGame({ puck, strikers, role, trail, drop }, canvas) {
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.save();
-  if (role === 'p2') {
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(Math.PI);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-  }
-
-  drawBoardSurface(ctx, canvas);
-  drawGoalHole(ctx, canvas, { y: 0, color: '#ef4444' });
-  drawGoalHole(ctx, canvas, { y: canvas.height, color: '#3b82f6' });
-  drawPuckTrail(ctx, trail);
-
-  drawStriker(ctx, strikers.p1, '#3b82f6');
-  drawStriker(ctx, strikers.p2, '#ef4444');
-
-  if (drop) {
-    drawPuck(ctx, drop, { scale: 1 - drop.progress, alpha: 1 - drop.progress });
-  } else if (puck) {
-    drawPuck(ctx, puck);
-  }
-
-  ctx.restore();
-}
+const { WIDTH: GAME_WIDTH, HEIGHT: GAME_HEIGHT } = TABLE;
 
 function ChatPanel({ messages = [], onSend, disabled }) {
   const [text, setText] = useState('');
@@ -291,32 +80,16 @@ export default function AirHockeyBoard() {
   const [error, setError] = useState('');
 
   const canvasRef = useRef(null);
-  const gameStateRef = useRef(null);
-  const prevGameStateRef = useRef(null);
-  const currStateTimeRef = useRef(0);
-  const prevStateTimeRef = useRef(0);
-  const myStrikerRef = useRef(null);
-  const myRoleRef = useRef(null);
-  const isDraggingRef = useRef(false);
-  const dragPointerIdRef = useRef(null);
-  const dragOriginRef = useRef({ x: 0, y: 0 });
-  const strikerOriginRef = useRef({ x: 0, y: 0 });
-  const puckTrailRef = useRef([]);
-  const goalDropRef = useRef(null);
-  const lastMoveEmit = useRef(0);
-
-  const [uiState, setUiState] = useState({ score: { p1: 0, p2: 0 }, status: 'playing' });
-  const [countdown, setCountdown] = useState(null);
-  const [showGoal, setShowGoal] = useState(false);
-  const [myRole, setMyRole] = useState(null);
-
   const myPlayerId = room?.viewerId;
   const isPlaying = room?.status === 'playing';
   const isHost = room?.hostId === myPlayerId;
 
-  useEffect(() => {
-    myRoleRef.current = myRole;
-  }, [myRole]);
+  const { ui: uiState, countdown, goalBy, myRole } = useAirHockeyOnline({
+    canvasRef,
+    roomCode: room?.code,
+    active: Boolean(isPlaying && connected && room?.code),
+  });
+  const showGoal = Boolean(goalBy);
 
   useEffect(() => {
     if (isPlaying && connected && room?.code && myPlayerId) {
@@ -330,7 +103,7 @@ export default function AirHockeyBoard() {
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username');
+    const username = getPlayerName();
     const deviceToken = localStorage.getItem('pohahub_device_token'); 
 
     if (!username) {
@@ -374,60 +147,11 @@ export default function AirHockeyBoard() {
       setTimeout(() => navigate('/games/air-hockey'), 2000);
     };
 
-    const onGameOver = (state) => {
-      setUiState({ score: state.score, status: state.status, winner: state.winner });
-    };
-
-    const onAirHockeyRole = ({ role }) => setMyRole(role);
-
-    const onHighFreqGameState = (state) => {
-      const now = performance.now();
-      const previous = gameStateRef.current;
-
-      const hardReset = !previous || previous.status !== state.status;
-
-      prevGameStateRef.current = hardReset ? state : previous;
-      prevStateTimeRef.current = hardReset ? now : currStateTimeRef.current;
-      currStateTimeRef.current = now;
-      gameStateRef.current = state;
-
-      if (hardReset) {
-        puckTrailRef.current = [];
-      }
-
-      const role = myRoleRef.current;
-      if (role && !isDraggingRef.current) {
-        myStrikerRef.current = { ...state.strikers[role] };
-      }
-
-      setUiState((prev) => {
-        if (prev.status !== state.status || prev.score.p1 !== state.score.p1 || prev.score.p2 !== state.score.p2) {
-          return { score: state.score, status: state.status, winner: state.winner };
-        }
-        return prev;
-      });
-    };
-
-    const onCountdown = (count) => setCountdown(count === 0 ? null : count);
-    const onGoalAnimation = () => {
-      setShowGoal(true);
-      const lastPuck = gameStateRef.current?.puck;
-      if (lastPuck) {
-        goalDropRef.current = { x: lastPuck.x, y: lastPuck.y, start: performance.now() };
-      }
-      setTimeout(() => setShowGoal(false), 1500);
-    };
-
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('room:update', onRoomUpdate);
     socket.on('chat:message', onChatMessage);
     socket.on('room:closed', onRoomClosed);
-    socket.on('airHockeyRole', onAirHockeyRole);
-    socket.on('gameState', onHighFreqGameState);
-    socket.on('countdown', onCountdown);
-    socket.on('goalAnimation', onGoalAnimation);
-    socket.on('gameOver', onGameOver);
 
     if (socket.connected) {
       setConnected(true);
@@ -442,148 +166,8 @@ export default function AirHockeyBoard() {
       socket.off('room:update', onRoomUpdate);
       socket.off('chat:message', onChatMessage);
       socket.off('room:closed', onRoomClosed);
-      socket.off('airHockeyRole', onAirHockeyRole);
-      socket.off('gameState', onHighFreqGameState);
-      socket.off('countdown', onCountdown);
-      socket.off('goalAnimation', onGoalAnimation);
-      socket.off('gameOver', onGameOver);
     };
   }, [roomCode, navigate, location.state]);
-
-  useEffect(() => {
-    let animationId;
-
-    const renderLoop = () => {
-      const canvas = canvasRef.current;
-      const state = gameStateRef.current;
-
-      if (canvas && state && isPlaying) {
-        const role = myRoleRef.current;
-        let puckToRender = state.puck;
-        let strikersToRender = state.strikers;
-        let trailToRender = [];
-
-        if (role) {
-          const prevState = prevGameStateRef.current || state;
-          const span = Math.max(currStateTimeRef.current - prevStateTimeRef.current, 1);
-          const t = Math.min(Math.max((performance.now() - currStateTimeRef.current) / span, 0), 1);
-
-          const opponentRole = role === 'p1' ? 'p2' : 'p1';
-          puckToRender = {
-            x: lerp(prevState.puck.x, state.puck.x, t),
-            y: lerp(prevState.puck.y, state.puck.y, t),
-          };
-          strikersToRender = {
-            [opponentRole]: {
-              x: lerp(prevState.strikers[opponentRole].x, state.strikers[opponentRole].x, t),
-              y: lerp(prevState.strikers[opponentRole].y, state.strikers[opponentRole].y, t),
-            },
-            [role]: myStrikerRef.current || state.strikers[role],
-          };
-
-          const speed = Math.hypot(state.puck.vx, state.puck.vy);
-          if (speed > 3) {
-            puckTrailRef.current.push({ x: puckToRender.x, y: puckToRender.y });
-            if (puckTrailRef.current.length > 10) puckTrailRef.current.shift();
-          } else {
-            puckTrailRef.current.length = 0;
-          }
-          trailToRender = puckTrailRef.current;
-        }
-
-        let dropToRender = null;
-        const drop = goalDropRef.current;
-        if (drop) {
-          const elapsed = performance.now() - drop.start;
-          if (elapsed < GOAL_DROP_MS) {
-            dropToRender = { x: drop.x, y: drop.y, progress: elapsed / GOAL_DROP_MS };
-          } else {
-            goalDropRef.current = null;
-          }
-        }
-
-        renderGame(
-          {
-            puck: dropToRender ? null : puckToRender,
-            strikers: strikersToRender,
-            role,
-            trail: trailToRender,
-            drop: dropToRender,
-          },
-          canvas
-        );
-      }
-
-      animationId = requestAnimationFrame(renderLoop);
-    };
-
-    renderLoop();
-    return () => cancelAnimationFrame(animationId);
-  }, [isPlaying]);
-
-  const handlePointerDown = (e) => {
-    const canvas = canvasRef.current;
-    const role = myRoleRef.current;
-    const state = gameStateRef.current;
-    if (!canvas || !role || !state || state.status !== 'playing') return;
-
-    const raw = getCanvasPoint(e, canvas);
-    const target = toServerSpace(raw, role);
-    const next = clampStriker(target, role);
-
-    isDraggingRef.current = true;
-    dragPointerIdRef.current = e.pointerId;
-    myStrikerRef.current = next;
-    canvas.setPointerCapture?.(e.pointerId);
-
-    const socket = connectSocket();
-    socket.emit('airHockeyMove', { roomId: roomCode, position: next });
-  };
-
-  const handlePointerMove = (e) => {
-    if (!isDraggingRef.current || e.pointerId !== dragPointerIdRef.current) return;
-
-    const state = gameStateRef.current;
-    if (!state || state.status !== 'playing') {
-      isDraggingRef.current = false;
-      dragPointerIdRef.current = null;
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    const role = myRoleRef.current;
-    if (!canvas || !role) return;
-
-    const raw = getCanvasPoint(e, canvas);
-    const target = toServerSpace(raw, role);
-    const next = clampStriker(target, role);
-
-    myStrikerRef.current = next;
-
-    const now = Date.now();
-    if (now - lastMoveEmit.current < 12) return; // 80Hz max emit
-    lastMoveEmit.current = now;
-
-    const socket = connectSocket();
-    socket.emit('airHockeyMove', { roomId: roomCode, position: next });
-  };
-
-
-  const endDrag = (e) => {
-    if (e.pointerId !== dragPointerIdRef.current) return;
-    isDraggingRef.current = false;
-    dragPointerIdRef.current = null;
-
-    if (myStrikerRef.current) {
-      const socket = connectSocket();
-      socket.emit('airHockeyMove', { roomId: roomCode, position: myStrikerRef.current });
-    }
-
-    const canvas = canvasRef.current;
-    if (canvas?.hasPointerCapture?.(e.pointerId)) {
-      canvas.releasePointerCapture(e.pointerId);
-    }
-  };
 
   const handleStart = async () => {
     setError('');
@@ -722,10 +306,6 @@ export default function AirHockeyBoard() {
                     ref={canvasRef}
                     width={GAME_WIDTH}
                     height={GAME_HEIGHT}
-                    onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={endDrag}
-                    onPointerCancel={endDrag}
                     className="cursor-grab active:cursor-grabbing touch-none block w-full h-auto rounded aspect-[2/3]"
                   />
                 </div>

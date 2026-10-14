@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --ssr src/entry-server.jsx --outDir dist-server && node scripts/prerender.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/drei": "^9.114.0",
+    "@react-three/fiber": "^8.17.10",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@yudiel/react-qr-scanner": "^2.6.0",
@@ -18,9 +20,12 @@
     "react-dom": "^18.3.1",
     "react-ga4": "^3.0.1",
     "react-helmet-async": "^3.0.0",
+    "react-markdown": "^9.0.1",
     "react-qr-code": "^2.2.0",
     "react-router-dom": "^6.28.0",
-    "socket.io-client": "^4.8.1"
+    "remark-gfm": "^4.0.0",
+    "socket.io-client": "^4.8.1",
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

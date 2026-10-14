@@ -1,36 +1,54 @@
-import React from 'react';
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { BLOG_POSTS } from '../data/blogPosts.js';
+import { absoluteUrl, defaultSeo } from '../config/seo.js';
+import Markdown from '../components/Markdown.jsx';
+import { ArrowLeftIcon, ArrowRightIcon } from '../components/Icons.jsx';
+import NotFoundPage from './NotFoundPage.jsx';
+
+export function AuthorBadge({ author, size = 'md' }) {
+  const initials = author.name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  const dims = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-12 h-12 text-base';
+  return (
+    <span
+      aria-hidden="true"
+      className={`${dims} shrink-0 rounded-full border-[2px] border-black bg-[#fde047] flex items-center justify-center font-black shadow-[2px_2px_0px_#000]`}
+    >
+      {initials}
+    </span>
+  );
+}
 
 export default function BlogPostPage() {
-
   const { slug } = useParams();
-  const post = BLOG_POSTS.find(p => p.slug === slug);
+  const post = BLOG_POSTS.find((p) => p.slug === slug);
 
-  if (!post) {
-    return <Navigate to="/blog" replace />;
-  }
+  if (!post) return <NotFoundPage />;
 
-  const relatedPosts = BLOG_POSTS.filter(p => p.slug !== slug).slice(0, 2);
+  const canonicalUrl = absoluteUrl(`/blog/${post.slug}`);
+  const relatedPosts = BLOG_POSTS.filter((p) => p.slug !== slug && p.category === post.category)
+    .concat(BLOG_POSTS.filter((p) => p.slug !== slug && p.category !== post.category))
+    .slice(0, 2);
 
-  // Article structured data for Google SEO / AdSense
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.excerpt,
-    datePublished: '2026-08-15',
-    author: {
-      '@type': 'Person',
-      name: post.author.name,
-      jobTitle: post.author.role
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'Doozles',
-      url: 'https://doozles.xyz'
-    }
+    datePublished: post.date,
+    dateModified: post.updated || post.date,
+    mainEntityOfPage: canonicalUrl,
+    image: defaultSeo.image,
+    author:
+      post.author.name === 'Doozles Team'
+        ? { '@type': 'Organization', name: 'Doozles', url: absoluteUrl('/about') }
+        : { '@type': 'Person', name: post.author.name, url: absoluteUrl('/about') },
+    publisher: { '@type': 'Organization', name: 'Doozles', url: absoluteUrl('/') },
   };
 
   return (
@@ -38,131 +56,74 @@ export default function BlogPostPage() {
       <Helmet>
         <title>{`${post.title} | Doozles Blog`}</title>
         <meta name="description" content={post.excerpt} />
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:type" content="article" />
+        <meta property="og:site_name" content="Doozles" />
+        <meta property="og:title" content={post.title} />
+        <meta property="og:description" content={post.excerpt} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={defaultSeo.image} />
+        <meta property="article:published_time" content={post.date} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={post.title} />
+        <meta name="twitter:description" content={post.excerpt} />
       </Helmet>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      {/* Back to Blog */}
       <div className="mb-6">
         <Link
           to="/blog"
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-black uppercase text-black bg-yellow-200 px-3.5 py-1.5 rounded-lg border-[2px] border-black shadow-[2px_2px_0px_#000] hover:bg-yellow-300"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-black uppercase text-black bg-yellow-200 px-3.5 py-1.5 border-[3px] border-black shadow-[3px_3px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all"
         >
-          &larr; Back to all articles
+          <ArrowLeftIcon /> All articles
         </Link>
       </div>
 
-      {/* Article Header Card */}
-      <header className="bg-white border-[4px] border-black rounded-2xl p-6 sm:p-10 shadow-[8px_8px_0px_#000] mb-10 -rotate-0.5">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-xs font-black uppercase bg-[#bae6fd] text-sky-900 px-3 py-1 rounded-full border border-black">
+      <header className="bg-white border-[4px] border-black p-6 sm:p-10 shadow-[8px_8px_0px_#000] mb-10 -rotate-[0.5deg]">
+        <div className="flex flex-wrap items-center gap-3 mb-5">
+          <span className="text-xs font-black uppercase bg-[#bae6fd] text-black px-3 py-1 border-[2px] border-black">
             {post.category}
           </span>
-          <span className="text-xs font-bold text-gray-500">• {post.readTime}</span>
+          <span className="text-xs font-black uppercase tracking-widest text-gray-500">{post.readTime}</span>
         </div>
 
-        <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-black leading-tight uppercase mb-6">
-          {post.title}
-        </h1>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black leading-tight mb-6">{post.title}</h1>
 
-        {/* Author Metadata */}
-        <div className="flex items-center gap-3.5 pt-4 border-t-2 border-black/20">
-          <img
-            src={post.author.avatar}
-            alt={post.author.name}
-            className="w-12 h-12 rounded-full border-[2px] border-black object-cover"
-          />
-          <div>
-            <span className="text-sm font-black text-black block">{post.author.name}</span>
-            <span className="text-xs font-bold text-gray-600 block">{post.author.role} • {post.publishedAt}</span>
+        <p className="font-body text-lg font-semibold text-gray-700 leading-relaxed mb-6">{post.excerpt}</p>
+
+        <div className="flex items-center gap-3.5 pt-5 border-t-[3px] border-dashed border-black">
+          <AuthorBadge author={post.author} />
+          <div className="font-body">
+            <span className="text-base font-extrabold text-black block">{post.author.name}</span>
+            <span className="text-sm font-semibold text-gray-600 block">
+              {post.author.role} · <time dateTime={post.date}>{post.publishedAt}</time>
+            </span>
           </div>
         </div>
       </header>
 
-      {/* Article Body */}
-      <article className="bg-white border-[4px] border-black rounded-2xl p-6 sm:p-12 shadow-[8px_8px_0px_#000] text-gray-900 leading-relaxed font-sans">
-        <div className="space-y-6 text-base sm:text-lg font-medium text-gray-800">
-          {post.content.split('\n\n').map((block, idx) => {
-            const trimmed = block.trim();
-            if (!trimmed) return null;
-
-            if (trimmed.startsWith('# ')) {
-              return (
-                <h1 key={idx} className="text-2xl sm:text-3xl font-black uppercase text-black border-b-[3px] border-black pb-2 pt-2">
-                  {trimmed.replace(/^#\s+/, '')}
-                </h1>
-              );
-            }
-            if (trimmed.startsWith('## ')) {
-              return (
-                <h2 key={idx} className="text-xl sm:text-2xl font-black uppercase text-black pt-4 border-b-2 border-black/20 pb-1">
-                  {trimmed.replace(/^##\s+/, '')}
-                </h2>
-              );
-            }
-            if (trimmed.startsWith('### ')) {
-              return (
-                <h3 key={idx} className="text-lg sm:text-xl font-black uppercase text-gray-900 pt-2">
-                  {trimmed.replace(/^###\s+/, '')}
-                </h3>
-              );
-            }
-            if (trimmed.startsWith('---')) {
-              return <hr key={idx} className="border-t-[3px] border-black my-6" />;
-            }
-            if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-              const items = trimmed.split('\n').filter(Boolean);
-              return (
-                <ul key={idx} className="list-disc pl-6 space-y-2">
-                  {items.map((item, i) => (
-                    <li key={i} className="font-semibold text-gray-800">
-                      {item.replace(/^[-*]\s+/, '')}
-                    </li>
-                  ))}
-                </ul>
-              );
-            }
-            if (trimmed.startsWith('1. ') || trimmed.startsWith('2. ') || trimmed.startsWith('3. ')) {
-              const items = trimmed.split('\n').filter(Boolean);
-              return (
-                <ol key={idx} className="list-decimal pl-6 space-y-2">
-                  {items.map((item, i) => (
-                    <li key={i} className="font-semibold text-gray-800">
-                      {item.replace(/^\d+\.\s+/, '')}
-                    </li>
-                  ))}
-                </ol>
-              );
-            }
-
-            return (
-              <p key={idx} className="leading-relaxed text-gray-800 font-medium">
-                {trimmed}
-              </p>
-            );
-          })}
-        </div>
+      <article className="bg-white border-[4px] border-black p-6 sm:p-12 shadow-[8px_8px_0px_#000]">
+        <Markdown>{post.content}</Markdown>
       </article>
 
-
-      {/* Related Articles */}
       <section className="mt-14">
-        <h3 className="text-xl sm:text-2xl font-black uppercase text-black mb-6">
-          More from Doozles Guides
-        </h3>
+        <h2 className="text-2xl sm:text-3xl font-black uppercase text-black mb-6">Keep reading</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {relatedPosts.map(p => (
+          {relatedPosts.map((p) => (
             <Link
               key={p.slug}
               to={`/blog/${p.slug}`}
-              className="bg-[#fed7aa] border-[3px] border-black rounded-xl p-5 shadow-[5px_5px_0px_#000] hover:-translate-y-1 transition-transform block"
+              className="group bg-[#fed7aa] border-[3px] border-black p-5 shadow-[5px_5px_0px_#000] hover:-translate-y-1 transition-transform block"
             >
-              <span className="text-[10px] font-black uppercase bg-white px-2 py-0.5 rounded border border-black text-black">
+              <span className="text-[11px] font-black uppercase bg-white px-2 py-0.5 border-[2px] border-black text-black">
                 {p.category}
               </span>
-              <h4 className="text-base sm:text-lg font-black text-black uppercase mt-2 leading-tight">
+              <span className="block font-body text-lg font-extrabold text-black mt-3 leading-snug group-hover:underline">
                 {p.title}
-              </h4>
-              <span className="text-xs font-bold text-gray-700 block mt-2">{p.readTime} &rarr;</span>
+              </span>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-black uppercase tracking-widest text-gray-700">
+                {p.readTime} <ArrowRightIcon className="w-3.5 h-3.5" />
+              </span>
             </Link>
           ))}
         </div>

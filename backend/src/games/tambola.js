@@ -1,3 +1,5 @@
+import { CLAIMS_BY_ID, DEFAULT_CLAIMS, checkClaim, sanitizeClaimIds } from './tambolaClaims.js';
+
 function shuffle(array) {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -62,26 +64,19 @@ function generateTicket() {
   return ticket;
 }
 
-export function createTambolaState(players, hostId) {
+export function createTambolaState(players, hostId, claimIds = DEFAULT_CLAIMS) {
   const availableNumbers = shuffle(Array.from({ length: 90 }, (_, i) => i + 1));
+  const enabledClaims = sanitizeClaimIds(claimIds);
 
   return {
     status: 'playing',
     drawnNumbers: [],
     availableNumbers,
-    activeClaims: {
-      early5: null,
-      topLine: null,
-      middleLine: null,
-      bottomLine: null,
-      fourCorners: null,
-      ladoo: null,          // NEW
-      kingCorner: null,     // NEW
-      queenCorner: null,    // NEW
-      smallest3: null,      // NEW
-      largest3: null,       // NEW
-      fullHouse: null,
-    },
+    enabledClaims,
+    // claimId -> winning playerId (null while open)
+    activeClaims: Object.fromEntries(enabledClaims.map((id) => [id, null])),
+    // Chronological list of wins: { claimId, playerId, playerName, number }
+    claimLog: [],
     players: players.map((p) => ({
       id: p.id,
       name: p.name,
@@ -105,94 +100,64 @@ export function drawNumber(state, playerId) {
 
   const drawnNumber = state.availableNumbers.pop();
   state.drawnNumbers.push(drawnNumber);
-
   return { ok: true, drawnNumber };
+}
+
+function isGameComplete(state) {
+  const houses = state.enabledClaims.filter((id) => CLAIMS_BY_ID[id]?.tier);
+  const lastHouse = houses[houses.length - 1];
+  if (lastHouse && state.activeClaims[lastHouse]) return true;
+  return state.enabledClaims.every((id) => state.activeClaims[id]);
 }
 
 export function claimPattern(state, playerId, patternName) {
   if (state.status !== 'playing') {
     return { ok: false, error: 'Game is finished' };
   }
-  if (state.activeClaims[patternName] !== undefined && state.activeClaims[patternName] !== null) {
-    return { ok: false, error: 'Pattern already claimed' };
+  if (!state.enabledClaims.includes(patternName)) {
+    return { ok: false, error: 'This prize is not part of this game' };
+  }
+  if (state.activeClaims[patternName]) {
+    return { ok: false, error: 'Prize already claimed' };
   }
 
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return { ok: false, error: 'Player not found in game' };
 
-  const drawnSet = new Set(state.drawnNumbers);
-  const getRowNumbers = (rowIndex) => player.ticket[rowIndex].filter((n) => n !== null);
-  
-  const row0 = getRowNumbers(0);
-  const row1 = getRowNumbers(1);
-  const row2 = getRowNumbers(2);
-  const allNumbers = [...row0, ...row1, ...row2];
-  const allSorted = [...allNumbers].sort((a, b) => a - b);
-
-  let isValid = false;
-
-  switch (patternName) {
-    case 'early5':
-      isValid = allNumbers.filter((n) => drawnSet.has(n)).length >= 5;
-      break;
-    case 'topLine':
-      isValid = row0.length > 0 && row0.every((n) => drawnSet.has(n));
-      break;
-    case 'middleLine':
-      isValid = row1.length > 0 && row1.every((n) => drawnSet.has(n));
-      break;
-    case 'bottomLine':
-      isValid = row2.length > 0 && row2.every((n) => drawnSet.has(n));
-      break;
-    case 'fourCorners':
-      const corners = [row0[0], row0[row0.length - 1], row2[0], row2[row2.length - 1]];
-      isValid = corners.every((n) => drawnSet.has(n));
-      break;
-    case 'ladoo':
-      // The exact middle number of the middle row (3rd out of 5 numbers)
-      isValid = row1.length >= 3 && drawnSet.has(row1[2]);
-      break;
-    case 'kingCorner':
-      // Top-Left and Bottom-Right bounds
-      isValid = row0.length > 0 && row2.length > 0 && drawnSet.has(row0[0]) && drawnSet.has(row2[row2.length - 1]);
-      break;
-    case 'queenCorner':
-      // Top-Right and Bottom-Left bounds
-      isValid = row0.length > 0 && row2.length > 0 && drawnSet.has(row0[row0.length - 1]) && drawnSet.has(row2[0]);
-      break;
-    case 'smallest3':
-      // The lowest 3 numbers on the ticket
-      isValid = allSorted.slice(0, 3).every((n) => drawnSet.has(n));
-      break;
-    case 'largest3':
-      // The highest 3 numbers on the ticket
-      isValid = allSorted.slice(-3).every((n) => drawnSet.has(n));
-      break;
-    case 'fullHouse':
-      isValid = allNumbers.every((n) => drawnSet.has(n));
-      break;
-    default:
-      return { ok: false, error: 'Invalid pattern name' };
-  }
-
-  if (isValid) {
-    state.activeClaims[patternName] = playerId;
-    player.claimsWon.push(patternName);
-    
-    if (patternName === 'fullHouse') {
-      state.status = 'finished';
+  const claim = CLAIMS_BY_ID[patternName];
+  if (claim.tier) {
+    const previousTier = state.enabledClaims.find((id) => CLAIMS_BY_ID[id]?.tier === claim.tier - 1);
+    if (previousTier && !state.activeClaims[previousTier]) {
+      return { ok: false, error: `${CLAIMS_BY_ID[previousTier].label} must be won first` };
     }
-    return { ok: true };
-  } else {
-    return { ok: false, error: 'Invalid claim: Conditions not met' };
+    const alreadyHasHouse = player.claimsWon.some((id) => CLAIMS_BY_ID[id]?.tier);
+    if (alreadyHasHouse) return { ok: false, error: 'You already won a Full House' };
   }
+
+  if (!checkClaim(patternName, player.ticket, state.drawnNumbers)) {
+    return { ok: false, error: 'Not yet! Those numbers have not all been called' };
+  }
+
+  state.activeClaims[patternName] = playerId;
+  player.claimsWon.push(patternName);
+  state.claimLog.push({
+    claimId: patternName,
+    playerId,
+    playerName: player.name,
+    number: state.drawnNumbers[state.drawnNumbers.length - 1] ?? null,
+  });
+
+  if (isGameComplete(state)) state.status = 'finished';
+  return { ok: true };
 }
 
 export function serializeTambolaState(state) {
   return {
     status: state.status,
     drawnNumbers: state.drawnNumbers,
+    enabledClaims: state.enabledClaims,
     activeClaims: state.activeClaims,
+    claimLog: state.claimLog,
     players: state.players,
     hostId: state.hostId,
   };

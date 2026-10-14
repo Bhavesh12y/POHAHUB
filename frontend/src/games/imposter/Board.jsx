@@ -5,6 +5,7 @@ import WaitingLobby from '../../components/WaitingLobby.jsx';
 import VoiceChat from '../../components/VoiceChat.jsx';
 import ChatPanel from '../../components/ChatPanel.jsx';
 import confetti from 'canvas-confetti';
+import { getPlayerName } from '../../lib/playerName.js';
 
 const CARD_COLORS = ['bg-[#fef08a]', 'bg-[#bae6fd]', 'bg-[#bbf7d0]', 'bg-[#fed7aa]', 'bg-[#fbcfe8]', 'bg-[#e9d5ff]'];
 
@@ -22,7 +23,7 @@ export default function ImposterBoard() {
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username') || sessionStorage.getItem('pohahub_username');
+    const username = getPlayerName();
     if (!username) {
       navigate(`/games/imposter?join=${roomCode}`);
       return;
@@ -118,7 +119,7 @@ export default function ImposterBoard() {
             <div className="bg-white border-[3px] border-black px-4 py-1.5 rounded-lg shadow-[3px_3px_0px_#000] text-center font-black">
               <span className="text-[10px] text-gray-500 uppercase block">Clue Round</span>
               <span className="text-sm sm:text-base text-black">
-                {gameState.roundPhase === 'voting' ? '🗳️ Voting' : gameState.roundPhase === 'game_over' ? '🏁 Finished' : `${gameState.clueRound} / ${gameState.totalClueRounds}`}
+                {gameState.roundPhase === 'voting' ? 'Voting' : gameState.roundPhase === 'game_over' ? 'Finished' : `${gameState.clueRound} / ${gameState.totalClueRounds}`}
               </span>
             </div>
           )}
@@ -126,7 +127,7 @@ export default function ImposterBoard() {
             onClick={() => setShowChatDrawer(!showChatDrawer)}
             className="lg:hidden bg-white border-[2px] border-black px-2.5 py-1 rounded text-xs font-black uppercase"
           >
-            💬 Chat
+            Chat
           </button>
         </div>
       </div>
@@ -190,7 +191,7 @@ export default function ImposterBoard() {
                     disabled={actionLoading}
                     className="sketch-button bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase px-8 py-3.5 text-sm sm:text-base transition-all hover:scale-105"
                   >
-                    🚀 Start Round 1 of 1-Word Clues!
+                    Start Round 1 of 1-Word Clues!
                   </button>
                 </div>
               )}
@@ -201,7 +202,7 @@ export default function ImposterBoard() {
               <div className="bg-[#fed7aa] border-[4px] border-black rounded-xl p-4 sm:p-5 shadow-[6px_6px_0px_#000] -rotate-0.5">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black/20 pb-2 mb-3">
                   <span className="font-black text-xs sm:text-sm uppercase text-amber-950 flex items-center gap-2">
-                    <span>⚡ Imposter Secret Word Steal:</span>
+                    <span>Imposter Secret Word Steal:</span>
                     <span className="bg-white border-2 border-black px-2 py-0.5 rounded-full text-xs text-black">
                       {gameState.imposterAttemptsLeft ?? 3} / 3 Attempts Left
                     </span>
@@ -228,7 +229,7 @@ export default function ImposterBoard() {
                       disabled={!imposterGuessInput.trim() || actionLoading || gameState.imposterAttemptsLeft <= 0}
                       className="sketch-button bg-red-400 hover:bg-red-500 text-white font-black uppercase px-6 py-2.5 text-sm shrink-0"
                     >
-                      🎯 Guess Word to Win!
+                      Guess Word to Win!
                     </button>
                   </div>
                 ) : (
@@ -243,7 +244,7 @@ export default function ImposterBoard() {
             <div className="bg-white border-[4px] border-black rounded-xl p-4 sm:p-5 shadow-[6px_6px_0px_#000]">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-black pb-3 mb-4">
                 <h3 className="text-base sm:text-lg font-black uppercase text-black flex items-center gap-2">
-                  <span>💬 Clues & Player Suspects (Round {gameState.clueRound} of 2)</span>
+                  <span>Clues & Player Suspects (Round {gameState.clueRound} of 2)</span>
                 </h3>
                 {gameState.roundPhase === 'clue_phase' && (
                   <span className="text-xs font-black uppercase bg-blue-100 text-blue-900 border-2 border-black px-3 py-1 rounded-full animate-pulse">
@@ -282,7 +283,7 @@ export default function ImposterBoard() {
                       {/* Top Header */}
                       <div className="flex items-center justify-between border-b-2 border-black/20 pb-2 mb-2">
                         <span className="font-black text-xs sm:text-sm uppercase truncate text-black flex items-center gap-1">
-                          <span>{player.isBot ? '🤖' : isMe ? '⭐' : '👤'}</span>
+                          <span>{player.isBot ? 'BOT' : isMe ? 'YOU' : ''}</span>
                           <span>{player.name} {isMe && '(You)'}</span>
                         </span>
                         <span className="text-[10px] font-black bg-black text-white px-2 py-0.5 rounded-full">
@@ -309,7 +310,7 @@ export default function ImposterBoard() {
                       {/* Status / Suspect Button */}
                       {isTurn && (
                         <div className="text-center bg-yellow-300 border-2 border-black rounded py-1 text-[10px] font-black uppercase text-black animate-pulse">
-                          👉 Giving Clue...
+                          Giving Clue...
                         </div>
                       )}
                       {gameState.roundPhase === 'voting' && !isMe && (
@@ -321,7 +322,7 @@ export default function ImposterBoard() {
                               : 'bg-white text-black hover:bg-red-200'
                           }`}
                         >
-                          {isSelectedForVote ? '🎯 Selected Suspect' : '👉 Suspect as Imposter'}
+                          {isSelectedForVote ? 'Selected Suspect' : 'Suspect as Imposter'}
                         </button>
                       )}
                     </div>
@@ -333,7 +334,7 @@ export default function ImposterBoard() {
               {isMyClueTurn && (
                 <div className="mt-4 bg-yellow-50 border-[3px] border-black p-4 rounded-xl shadow-[4px_4px_0px_#000]">
                   <label className="block text-xs sm:text-sm font-black uppercase text-black mb-2">
-                    💡 Your Turn: Enter 1-Word Clue (Round {gameState.clueRound}):
+                    Your Turn: Enter 1-Word Clue (Round {gameState.clueRound}):
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -349,7 +350,7 @@ export default function ImposterBoard() {
                       disabled={!clueInput.trim() || actionLoading}
                       className="sketch-button bg-green-400 hover:bg-green-300 text-black px-6 py-2 uppercase font-black text-sm"
                     >
-                      Submit Clue 🚀
+                      Submit Clue
                     </button>
                   </div>
                 </div>
@@ -360,7 +361,7 @@ export default function ImposterBoard() {
             {gameState.roundPhase === 'voting' && (
               <div className="bg-white border-[4px] border-black rounded-xl p-5 shadow-[6px_6px_0px_#000] text-center">
                 <h3 className="text-lg sm:text-xl font-black uppercase text-black mb-1">
-                  🗳️ Vote for the Imposter!
+                  Vote for the Imposter!
                 </h3>
                 <p className="text-xs font-bold text-gray-600 mb-4">
                   Both clue rounds are complete! Tap a player card above to select your suspect.
@@ -372,11 +373,11 @@ export default function ImposterBoard() {
                     disabled={!selectedVoteTarget || actionLoading}
                     className="sketch-button bg-red-400 hover:bg-red-500 disabled:opacity-50 text-black font-black uppercase px-8 py-3 text-sm sm:text-base"
                   >
-                    🔒 Lock Vote: {room.players.find(p => p.id === selectedVoteTarget)?.name || 'Select Player Above'}
+                    Lock Vote: {room.players.find(p => p.id === selectedVoteTarget)?.name || 'Select Player Above'}
                   </button>
                 ) : (
                   <div className="text-xs sm:text-sm font-black text-green-800 bg-green-100 border-2 border-green-500 rounded-lg py-2 px-4 inline-block">
-                    ✅ Your vote is locked! Waiting for other players... ({Object.keys(gameState.votes || {}).length}/{room.players.length})
+                    Your vote is locked! Waiting for other players... ({Object.keys(gameState.votes || {}).length}/{room.players.length})
                   </div>
                 )}
               </div>
@@ -399,10 +400,10 @@ export default function ImposterBoard() {
                     CONFIDENTIAL MISSION REVEAL
                   </span>
                   <div className="text-xl sm:text-2xl font-black text-red-600 uppercase mb-1">
-                    🎭 Imposter: <span className="underline text-black">{imposterPlayer?.name || 'Undercover Player'}</span>
+                    Imposter: <span className="underline text-black">{imposterPlayer?.name || 'Undercover Player'}</span>
                   </div>
                   <div className="text-base sm:text-lg font-black text-emerald-700 uppercase">
-                    🎯 Secret Word: <span className="text-black">{gameState.secretWord}</span>
+                    Secret Word: <span className="text-black">{gameState.secretWord}</span>
                   </div>
                 </div>
 
@@ -411,7 +412,7 @@ export default function ImposterBoard() {
                     onClick={handleStart}
                     className="sketch-button bg-[#facc15] hover:bg-yellow-300 text-black font-black uppercase px-8 py-3.5 text-base shadow-[4px_4px_0px_#000] hover:scale-105 transition-all"
                   >
-                    🔄 Play Another Game
+                    Play Another Game
                   </button>
                 )}
               </div>

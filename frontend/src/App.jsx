@@ -1,11 +1,11 @@
-import { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
-import { initAnalytics, trackPageView } from './lib/analytics.js';
 
 
 const MainLanding = lazy(() => import('./components/MainLanding.jsx'));
-const ComingSoon = lazy(() => import('./components/ComingSoon.jsx'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'));
+const LocalGamePage = lazy(() => import('./pages/LocalGamePage.jsx'));
 const GameSeoPage = lazy(() => import('./pages/GameSeoPage.jsx'));
 const TrustPage = lazy(() => import('./pages/TrustPage.jsx'));
 const BlogIndexPage = lazy(() => import('./pages/BlogIndexPage.jsx'));
@@ -57,24 +57,9 @@ function RouteFallback() {
   );
 }
 
-function PageAnalytics() {
-  const location = useLocation();
-
-  useEffect(() => {
-    initAnalytics();
-  }, []);
-
-  useEffect(() => {
-    trackPageView(location.pathname + location.search);
-  }, [location.pathname, location.search]);
-
-  return null;
-}
-
 export default function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
-      <PageAnalytics />
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<MainLanding />} />
@@ -92,7 +77,7 @@ export default function App() {
           <Route path=":gameId" element={<GameSeoPage />} />
 
           <Route path="games/air-hockey" element={<AirHockeyLanding />} />
-          <Route path="/games/air-hockey/room/:roomCode" element={<AirHockeyRoom />} />
+          <Route path="games/air-hockey/room/:roomCode" element={<AirHockeyRoom />} />
 
           <Route path="games/connect-four" element={<ConnectFourLanding />} />
           <Route path="games/connect-four/room/:roomCode" element={<ConnectFourBoard />} />
@@ -132,10 +117,10 @@ export default function App() {
           <Route path="single-player" element={<SinglePlayerLanding />} />
           <Route path="games/traffic-run" element={<TrafficRun />} />
 
-          <Route
-            path="*"
-            element={<ComingSoon title="Page Not Found" subtitle="This route does not exist." />}
-          />
+          <Route path="games/:gameId/local" element={<LocalGamePage mode="local" />} />
+          <Route path="games/:gameId/bot" element={<LocalGamePage mode="bot" />} />
+
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </Suspense>

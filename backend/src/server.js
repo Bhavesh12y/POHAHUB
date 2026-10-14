@@ -107,6 +107,14 @@ io.on('connection', (socket) => {
     emitRoomUpdate(result.room);
   });
 
+  socket.on('room:settings', (settings, callback) => {
+    if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
+    const result = roomManager.updateSettings(currentRoom, playerId, settings);
+    if (!result.ok) return callback?.({ ok: false, error: result.error });
+    callback?.({ ok: true });
+    emitRoomUpdate(result.room);
+  });
+
   socket.on('game:move', (payload, callback) => {
     if (!currentRoom || !playerId) return callback?.({ ok: false, error: 'Not in a room' });
     const result = roomManager.handleGameMove(currentRoom, playerId, payload);
@@ -137,10 +145,22 @@ socket.on('sendSticker', ({ roomId, sticker }) => {
   });
 
   socket.on('airHockeyMove', ({ roomId, position }) => {
-    const room = roomManager.getRoom(roomId);
-    if (room && room.gameInstance) {
+    const room = roomId && roomManager.getRoom(roomId);
+    if (room && room.gameType === 'air-hockey' && room.gameInstance) {
       room.gameInstance.handlePlayerMove(socket.id, position);
     }
+  });
+
+  socket.on('airHockeyPuck', ({ roomId, puck }) => {
+    const room = roomId && roomManager.getRoom(roomId);
+    if (room && room.gameType === 'air-hockey' && room.gameInstance) {
+      room.gameInstance.handlePuckUpdate(socket.id, puck);
+    }
+  });
+
+  // Lets real-time clients measure round-trip time.
+  socket.on('ah:ping', (clientTime, callback) => {
+    callback?.(clientTime);
   });
 
   socket.on('airHockeyRematch', (roomId) => {
@@ -298,7 +318,7 @@ socket.on('sendSticker', ({ roomId, sticker }) => {
       io.to(currentRoom).emit('chat:message', { 
         id: Date.now().toString(), 
         playerName: 'System', 
-        message: `✨ Everyone guessed it! The word was: ${room.gameState.currentWord}` 
+        message: `Everyone guessed it! The word was: ${room.gameState.currentWord}` 
       });
       endScribbleTurn(room.gameState);
       io.to(currentRoom).emit('draw:clear');
@@ -359,7 +379,7 @@ setInterval(() => {
     if (elapsed >= state.timeLimit) {
       activeScribbleRooms.delete(roomCode);
       io.to(room.code).emit('chat:message', {
-        id: Date.now().toString(), playerName: 'System', message: `🕒 Time's up! The word was: ${state.currentWord}`
+        id: Date.now().toString(), playerName: 'System', message: `Time's up! The word was: ${state.currentWord}`
       });
       endScribbleTurn(state);
       io.to(room.code).emit('draw:clear');
@@ -369,6 +389,14 @@ setInterval(() => {
     if (needsSync) emitRoomUpdate(room); 
   }
 }, 1000);
+
+httpServer.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Another Doozles server is probably running - stop it, or start this one with a different PORT.`);
+    process.exit(1);
+  }
+  throw error;
+});
 
 httpServer.listen(PORT, () => {
   console.log(`Doozles server running on http://localhost:${PORT}`);

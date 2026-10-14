@@ -1,730 +1,373 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { connectSocket, emitWithAck } from '../../lib/socket.js';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import ArcadeShell, { GameOverOverlay, useArcadeScores } from '../three/ArcadeShell.jsx';
 
-// Added 'size' metadata for fair shape generation
+const BlockScene = lazy(() => import('./BlockScene.jsx'));
+
+// 'size' keeps each hand of three pieces fair (one small, one medium/large, one random).
 const SHAPES = [
-  { id: '1x1', matrix: [[1]], color: 'bg-[#ff99c8]', size: 'small' }, 
-  { id: '2x2', matrix: [[1, 1], [1, 1]], color: 'bg-[#a9def9]', size: 'medium' }, 
-  { id: '3x3', matrix: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], color: 'bg-[#fcf6bd]', size: 'large' }, 
-  { id: 'h2', matrix: [[1, 1]], color: 'bg-[#d0f4de]', size: 'small' }, 
-  { id: 'v2', matrix: [[1], [1]], color: 'bg-[#d0f4de]', size: 'small' }, 
-  { id: 'h3', matrix: [[1, 1, 1]], color: 'bg-[#e4c1f9]', size: 'medium' }, 
-  { id: 'v3', matrix: [[1], [1], [1]], color: 'bg-[#e4c1f9]', size: 'medium' },
-  { id: 'h4', matrix: [[1, 1, 1, 1]], color: 'bg-[#ffb5a7]', size: 'large' }, 
-  { id: 'v4', matrix: [[1], [1], [1], [1]], color: 'bg-[#ffb5a7]', size: 'large' },
-  { id: 'L-right', matrix: [[1, 0], [1, 0], [1, 1]], color: 'bg-[#ffd166]', size: 'medium' }, 
-  { id: 'L-left', matrix: [[0, 1], [0, 1], [1, 1]], color: 'bg-[#06d6a0]', size: 'medium' }, 
-  { id: 'T-up', matrix: [[0, 1, 0], [1, 1, 1]], color: 'bg-[#118ab2]', size: 'medium' }, 
+  { id: '1x1', matrix: [[1]], color: 'bg-[#ff6fae]', size: 'small' },
+  { id: '2x2', matrix: [[1, 1], [1, 1]], color: 'bg-[#5cc6f5]', size: 'medium' },
+  { id: '3x3', matrix: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], color: 'bg-[#ffe14d]', size: 'large' },
+  { id: 'h2', matrix: [[1, 1]], color: 'bg-[#5fdc9c]', size: 'small' },
+  { id: 'v2', matrix: [[1], [1]], color: 'bg-[#5fdc9c]', size: 'small' },
+  { id: 'h3', matrix: [[1, 1, 1]], color: 'bg-[#bb86f7]', size: 'medium' },
+  { id: 'v3', matrix: [[1], [1], [1]], color: 'bg-[#bb86f7]', size: 'medium' },
+  { id: 'h4', matrix: [[1, 1, 1, 1]], color: 'bg-[#ff8a72]', size: 'large' },
+  { id: 'v4', matrix: [[1], [1], [1], [1]], color: 'bg-[#ff8a72]', size: 'large' },
+  { id: 'L-right', matrix: [[1, 0], [1, 0], [1, 1]], color: 'bg-[#ffbf2e]', size: 'medium' },
+  { id: 'L-left', matrix: [[0, 1], [0, 1], [1, 1]], color: 'bg-[#06d6a0]', size: 'medium' },
+  { id: 'T-up', matrix: [[0, 1, 0], [1, 1, 1]], color: 'bg-[#1a9fd0]', size: 'medium' },
 ];
-
 const GRID_SIZE = 8;
+const LINE_SCORES = { 1: 10, 2: 25, 3: 45, 4: 70, 5: 100, 6: 150 };
+const emptyBoard = () => Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+// The page is CSS-zoomed on high-DPI desktops; fixed elements inside it need
+// pointer coordinates divided by that zoom to sit under the cursor.
+function appZoom() {
+  if (typeof window === 'undefined') return 1;
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-zoom')) || 1;
+}
+
+const IDLE_DRAG = { isDragging: false, shapeIdx: null, x: 0, y: 0, hoverR: null, hoverC: null, isValidHover: false };
+
+function generateShapes() {
+  const pick = (list) => list[Math.floor(Math.random() * list.length)];
+  const smalls = SHAPES.filter((s) => s.size === 'small');
+  const mediums = SHAPES.filter((s) => s.size === 'medium');
+  const larges = SHAPES.filter((s) => s.size === 'large');
+  return [pick(smalls), Math.random() > 0.5 ? pick(mediums) : pick(larges), pick(SHAPES)].sort(() => Math.random() - 0.5);
+}
+
+function canPlaceShape(board, shape, startR, startC) {
+  if (!shape || startR === null || startC === null) return false;
+  for (let r = 0; r < shape.matrix.length; r++) {
+    for (let c = 0; c < shape.matrix[0].length; c++) {
+      if (!shape.matrix[r][c]) continue;
+      const rr = startR + r;
+      const cc = startC + c;
+      if (rr < 0 || rr >= GRID_SIZE || cc < 0 || cc >= GRID_SIZE || board[rr][cc] !== null) return false;
+    }
+  }
+  return true;
+}
+
+function checkGameOver(board, shapes) {
+  const remaining = shapes.filter(Boolean);
+  if (remaining.length === 0) return false;
+  for (const shape of remaining) {
+    for (let r = 0; r < GRID_SIZE; r++) for (let c = 0; c < GRID_SIZE; c++) if (canPlaceShape(board, shape, r, c)) return false;
+  }
+  return true;
+}
+
+function fullLines(board) {
+  const rows = [];
+  const cols = [];
+  for (let i = 0; i < GRID_SIZE; i++) if (board[i].every((cell) => cell !== null)) rows.push(i);
+  for (let j = 0; j < GRID_SIZE; j++) if (board.every((row) => row[j] !== null)) cols.push(j);
+  return { rows, cols };
+}
+
+function ShapePreview({ shape, cell = 'w-5 h-5 sm:w-6 sm:h-6' }) {
+  return (
+    <div className="flex flex-col gap-1 pointer-events-none">
+      {shape.matrix.map((row, r) => (
+        <div key={r} className="flex gap-1">
+          {row.map((val, c) => (
+            <div key={c} className={`${cell} ${val ? `${shape.color} border-[2px] border-black shadow-[2px_2px_0_0_#000]` : 'bg-transparent'}`} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function BlockBlaster() {
-  const navigate = useNavigate();
-  
-  // -- Refs for Stale-State Prevention --
-  const gridRef = useRef(null);
-  const dragNodeRef = useRef(null); // Direct DOM ref for zero-latency dragging
-  const boardRef = useRef(Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null)));
+  const pickRef = useRef(null);
+  const dragNodeRef = useRef(null);
+  const boardRef = useRef(emptyBoard());
   const shapesRef = useRef([]);
   const scoreRef = useRef(0);
   const comboRef = useRef(1);
   const gameOverRef = useRef(false);
+  const clearingRef = useRef(false);
+  const dragRef = useRef(IDLE_DRAG);
+  const popupId = useRef(0);
 
-  // -- React State for Rendering --
   const [board, setBoard] = useState(boardRef.current);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(1);
   const [gameOver, setGameOver] = useState(false);
-  const [availableShapes, setAvailableShapes] = useState([]);
+  const [shapes, setShapes] = useState([]);
   const [clearingCells, setClearingCells] = useState([]);
   const [isShaking, setIsShaking] = useState(false);
   const [popups, setPopups] = useState([]);
-  let popupIdCounter = useRef(0);
-  
-  // -- GLOBAL LEADERBOARD STATE --
-  const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
-  const [hasSubmittedScore, setHasSubmittedScore] = useState(false);
-  
-  const playerName = localStorage.getItem('Doozles-player-name') || 'Player';
-  const [localHighScore, setLocalHighScore] = useState(() => {
-    const saved = localStorage.getItem('blockblaster-highScore');
-    return saved !== null ? parseInt(saved, 10) : 0;
-  });
+  const [drag, setDrag] = useState(IDLE_DRAG);
+  const { highScore, leaderboard } = useArcadeScores('block-blaster', 'blockblaster-highScore', score, gameOver);
 
-  // Track personal best locally
-  useEffect(() => {
-    if (score > localHighScore) {
-      setLocalHighScore(score);
-      localStorage.setItem('blockblaster-highScore', score.toString());
-    }
-  }, [score, localHighScore]);
-
-  // -- High Performance Drag State --
-  const dragStateRef = useRef({
-    isDragging: false,
-    shapeIdx: null,
-    x: 0, 
-    y: 0,
-    hoverR: null,
-    hoverC: null,
-    isValidHover: false
-  });
-  
-  const [dragRender, setDragRender] = useState({
-    isDragging: false,
-    shapeIdx: null,
-    x: 0, 
-    y: 0,
-    hoverR: null,
-    hoverC: null,
-    isValidHover: false
-  });
-
-  // -- FETCH AND SYNC LEADERBOARD --
-  useEffect(() => {
-    const s = connectSocket();
-
-    const fetchLeaderboard = () => {
-      emitWithAck('leaderboard:get', 'block-blaster').then((res) => {
-        if (res?.ok) setGlobalLeaderboard(res.leaderboard);
-      });
-    };
-
-    const handleLeaderboardUpdate = (newLeaderboard) => {
-      setGlobalLeaderboard(newLeaderboard);
-    };
-
-    if (s.connected) {
-      fetchLeaderboard();
-    } else {
-      s.on('connect', fetchLeaderboard);
-    }
-
-    s.on('leaderboard:update:block-blaster', handleLeaderboardUpdate);
-
-    return () => {
-      s.off('leaderboard:update:block-blaster', handleLeaderboardUpdate);
-      s.off('connect', fetchLeaderboard);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = ''; 
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, []);
-
-  // -- SUBMIT SCORE ON GAME OVER --
-  useEffect(() => {
-    if (gameOver && !hasSubmittedScore && score > 0) {
-      setHasSubmittedScore(true);
-      emitWithAck('leaderboard:submit', { 
-        gameId: 'block-blaster', 
-        name: playerName, 
-        score: score 
-      });
-    }
-  }, [gameOver, hasSubmittedScore, score, playerName]);
-
-  // -- Helpers --
-  const triggerPopup = (text, type = 'normal') => {
-    const id = popupIdCounter.current++;
-    setPopups(prev => [...prev, { id, text, type }]);
-    setTimeout(() => {
-      setPopups(prev => prev.filter(p => p.id !== id));
-    }, 1000);
+  const triggerPopup = (text, type) => {
+    const id = popupId.current++;
+    setPopups((prev) => [...prev, { id, text, type }]);
+    setTimeout(() => setPopups((prev) => prev.filter((p) => p.id !== id)), 1000);
   };
 
-  const syncState = (newBoard, newShapes, newScore, newGameOver) => {
-    boardRef.current = newBoard;
-    shapesRef.current = newShapes;
-    scoreRef.current = newScore;
-    gameOverRef.current = newGameOver;
-    
-    setBoard(newBoard);
-    setAvailableShapes(newShapes);
-    setScore(newScore);
-    setGameOver(newGameOver);
+  const sync = (nextBoard, nextShapes, nextScore, over) => {
+    boardRef.current = nextBoard;
+    shapesRef.current = nextShapes;
+    scoreRef.current = nextScore;
+    gameOverRef.current = over;
+    setBoard(nextBoard);
+    setShapes(nextShapes);
+    setScore(nextScore);
+    setGameOver(over);
   };
-
-  const generateShapes = useCallback(() => {
-    const smalls = SHAPES.filter(s => s.size === 'small');
-    const mediums = SHAPES.filter(s => s.size === 'medium');
-    const larges = SHAPES.filter(s => s.size === 'large');
-
-    let newShapes = [];
-    newShapes.push(smalls[Math.floor(Math.random() * smalls.length)]);
-    newShapes.push(Math.random() > 0.5 ? mediums[Math.floor(Math.random() * mediums.length)] : larges[Math.floor(Math.random() * larges.length)]);
-    newShapes.push(SHAPES[Math.floor(Math.random() * SHAPES.length)]);
-    
-    newShapes = newShapes.sort(() => Math.random() - 0.5);
-    
-    return newShapes; 
-  }, []);
 
   const startNewGame = useCallback(() => {
-    const emptyBoard = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
     comboRef.current = 1;
     setCombo(1);
-    setHasSubmittedScore(false); 
-    
-    const initialShapes = generateShapes();
-    syncState(emptyBoard, initialShapes, 0, false);
-  }, [generateShapes]);
-
-  useEffect(() => { 
-    startNewGame(); 
-  }, [startNewGame]);
-
-  // -- Game Logic --
-  const canPlaceShape = (currentBoard, shape, startR, startC) => {
-    if (startR === null || startC === null) return false;
-    for (let r = 0; r < shape.matrix.length; r++) {
-      for (let c = 0; c < shape.matrix[0].length; c++) {
-        if (shape.matrix[r][c] === 1) {
-          if (startR + r < 0 || startR + r >= GRID_SIZE || startC + c < 0 || startC + c >= GRID_SIZE) return false;
-          if (currentBoard[startR + r][startC + c] !== null) return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  const checkGameOver = useCallback((currentBoard, currentShapes) => {
-    const remainingShapes = currentShapes.filter(s => s !== null);
-    if (remainingShapes.length === 0) return false;
-
-    for (let shape of remainingShapes) {
-      for (let r = 0; r < GRID_SIZE; r++) {
-        for (let c = 0; c < GRID_SIZE; c++) {
-          if (canPlaceShape(currentBoard, shape, r, c)) return false; 
-        }
-      }
-    }
-    return true; 
+    sync(emptyBoard(), generateShapes(), 0, false);
   }, []);
+
+  useEffect(() => {
+    startNewGame();
+  }, [startNewGame]);
 
   const placeShape = useCallback((r, c, shapeIndex) => {
     const shape = shapesRef.current[shapeIndex];
     if (!canPlaceShape(boardRef.current, shape, r, c)) return;
 
-    let newBoard = boardRef.current.map(row => [...row]);
-    let blocksPlaced = 0;
-    
-    for (let sr = 0; sr < shape.matrix.length; sr++) {
-      for (let sc = 0; sc < shape.matrix[0].length; sc++) {
-        if (shape.matrix[sr][sc] === 1) {
-          newBoard[r + sr][c + sc] = shape.color;
-          blocksPlaced++;
+    const placed = boardRef.current.map((row) => [...row]);
+    let blocks = 0;
+    shape.matrix.forEach((row, sr) =>
+      row.forEach((val, sc) => {
+        if (val) {
+          placed[r + sr][c + sc] = shape.color;
+          blocks += 1;
         }
-      }
-    }
+      }),
+    );
 
-    let rowsToClear = [];
-    let colsToClear = [];
+    let nextShapes = [...shapesRef.current];
+    nextShapes[shapeIndex] = null;
+    if (nextShapes.every((s) => s === null)) nextShapes = generateShapes();
 
-    for (let i = 0; i < GRID_SIZE; i++) {
-      if (newBoard[i].every(cell => cell !== null)) rowsToClear.push(i);
-    }
-    for (let j = 0; j < GRID_SIZE; j++) {
-      let isColFull = true;
-      for (let i = 0; i < GRID_SIZE; i++) {
-        if (newBoard[i][j] === null) isColFull = false;
-      }
-      if (isColFull) colsToClear.push(j);
-    }
+    const { rows, cols } = fullLines(placed);
+    const lines = rows.length + cols.length;
+    let nextScore = scoreRef.current + blocks;
 
-    const totalLines = rowsToClear.length + colsToClear.length;
-    let newScore = scoreRef.current + blocksPlaced; 
-
-    if (totalLines > 0) {
-      const lineScores = { 1: 10, 2: 25, 3: 45, 4: 70, 5: 100, 6: 150 };
-      const baseLineScore = lineScores[Math.min(totalLines, 6)];
-      
-      const earned = baseLineScore * comboRef.current;
-      newScore += earned;
-
-      triggerPopup(`+${earned}`, 'score');
-      if (comboRef.current > 1) triggerPopup(`${comboRef.current}x COMBO!`, 'combo');
-      if (totalLines >= 3) triggerPopup('AWESOME!', 'praise');
-
-      comboRef.current += 1;
-      setCombo(comboRef.current);
-      
-      let finalBoard = newBoard.map(row => [...row]);
-      let clearedIds = [];
-      rowsToClear.forEach(rowIndex => {
-        for (let col = 0; col < GRID_SIZE; col++) {
-          finalBoard[rowIndex][col] = null;
-          clearedIds.push(`${rowIndex}-${col}`);
-        }
-      });
-      colsToClear.forEach(colIndex => {
-        for (let row = 0; row < GRID_SIZE; row++) {
-          finalBoard[row][colIndex] = null;
-          clearedIds.push(`${row}-${colIndex}`);
-        }
-      });
-
-      let finalShapes = [...shapesRef.current];
-      finalShapes[shapeIndex] = null;
-      
-      if (finalShapes.every(s => s === null)) {
-        finalShapes = generateShapes(); 
-      }
-      
-      let isOver = checkGameOver(finalBoard, finalShapes);
-
-      shapesRef.current = finalShapes;
-      setAvailableShapes(finalShapes);
-      scoreRef.current = newScore;
-      setScore(newScore);
-      gameOverRef.current = isOver;
-      setGameOver(isOver);
-      
-      setClearingCells(clearedIds);
-      setIsShaking(true);
-      
-      setTimeout(() => {
-        boardRef.current = finalBoard;
-        setBoard(finalBoard);
-        setClearingCells([]);
-        setIsShaking(false);
-      }, 500);
-
-    } else {
+    if (lines === 0) {
       comboRef.current = 1;
       setCombo(1);
-      
-      let finalShapes = [...shapesRef.current];
-      finalShapes[shapeIndex] = null;
-      
-      if (finalShapes.every(s => s === null)) {
-        finalShapes = generateShapes();
-      }
-      
-      let isOver = checkGameOver(newBoard, finalShapes);
-      
-      syncState(newBoard, finalShapes, newScore, isOver);
+      sync(placed, nextShapes, nextScore, checkGameOver(placed, nextShapes));
+      return;
     }
-  }, [generateShapes, checkGameOver]);
+
+    const earned = LINE_SCORES[Math.min(lines, 6)] * comboRef.current;
+    nextScore += earned;
+    triggerPopup(`+${earned}`, 'score');
+    if (comboRef.current > 1) triggerPopup(`${comboRef.current}x COMBO!`, 'combo');
+    if (lines >= 3) triggerPopup('AWESOME!', 'praise');
+    comboRef.current += 1;
+    setCombo(comboRef.current);
+
+    const cleared = placed.map((row) => [...row]);
+    const ids = [];
+    rows.forEach((ri) => cleared[ri].forEach((_, ci) => ((cleared[ri][ci] = null), ids.push(`${ri}-${ci}`))));
+    cols.forEach((ci) => cleared.forEach((row, ri) => ((row[ci] = null), ids.push(`${ri}-${ci}`))));
+
+    // Show the placed piece first, let the cleared cubes fly off, then settle.
+    boardRef.current = placed;
+    setBoard(placed);
+    shapesRef.current = nextShapes;
+    setShapes(nextShapes);
+    scoreRef.current = nextScore;
+    setScore(nextScore);
+    const over = checkGameOver(cleared, nextShapes);
+    gameOverRef.current = over;
+    clearingRef.current = true;
+    setClearingCells(ids);
+    setIsShaking(true);
+    setTimeout(() => {
+      boardRef.current = cleared;
+      setBoard(cleared);
+      setClearingCells([]);
+      setIsShaking(false);
+      setGameOver(over);
+      clearingRef.current = false;
+    }, 480);
+  }, []);
 
   const handlePointerDown = (e, idx) => {
-    if (shapesRef.current[idx] === null || gameOverRef.current || isShaking) return;
-    
-    dragStateRef.current = {
-      isDragging: true,
-      shapeIdx: idx,
-      x: e.clientX,
-      y: e.clientY,
-      hoverR: null, hoverC: null,
-      isValidHover: false
-    };
-
-    setDragRender({ ...dragStateRef.current });
-    document.body.style.overflow = 'hidden'; 
+    if (!shapesRef.current[idx] || gameOverRef.current || clearingRef.current) return;
+    e.preventDefault();
+    dragRef.current = { ...IDLE_DRAG, isDragging: true, shapeIdx: idx, x: e.clientX, y: e.clientY };
+    setDrag({ ...dragRef.current });
+    document.body.style.overflow = 'hidden';
   };
 
   useEffect(() => {
-    const handlePointerMove = (e) => {
-      if (!dragStateRef.current.isDragging || !gridRef.current) return;
-      
+    const onMove = (e) => {
+      const state = dragRef.current;
+      if (!state.isDragging) return;
       const x = e.clientX;
       const y = e.clientY;
-      const state = dragStateRef.current;
-      
-      // [FAST PATH] Direct DOM update for zero-latency dragging
       if (dragNodeRef.current) {
-        dragNodeRef.current.style.left = `${x}px`;
-        dragNodeRef.current.style.top = `${y}px`;
+        const zoom = appZoom();
+        dragNodeRef.current.style.left = `${x / zoom}px`;
+        dragNodeRef.current.style.top = `${y / zoom}px`;
       }
 
-      const gridRect = gridRef.current.getBoundingClientRect();
-      const isMobile = window.innerWidth < 640;
-      const gap = isMobile ? 4 : 6;
-      const cellW = (gridRect.width + gap) / GRID_SIZE;
-      const cellH = (gridRect.height + gap) / GRID_SIZE;
-      
-      let targetX, targetY;
-
-      // 1. Fetch the exact physical bounding box rendered by the browser to avoid CSS vs Math desyncs
-      if (dragNodeRef.current) {
-        const dragRect = dragNodeRef.current.getBoundingClientRect();
-        targetX = dragRect.left;
-        targetY = dragRect.top;
-      } else {
-        // Fallback for the very first frame before ref is available
-        const shape = shapesRef.current[state.shapeIdx];
-        const visualW = shape.matrix[0].length * cellW - gap;
-        const visualH = shape.matrix.length * cellH - gap;
-        const offsetY = isMobile ? 80 : 40;
-        targetX = x - (visualW / 2);
-        targetY = y - visualH - offsetY;
-      }
-
-      // 2. We align based on the CENTER of the shape's top-left block for highly forgiving snapping
-      const blockCenterX = targetX + (cellW - gap) / 2;
-      const blockCenterY = targetY + (cellH - gap) / 2;
-
-      let c = Math.floor((blockCenterX - gridRect.left) / cellW);
-      let r = Math.floor((blockCenterY - gridRect.top) / cellH);
-
-      const margin = 2;
-      const isNearGrid = (
-        blockCenterX >= gridRect.left - (cellW * margin) && 
-        blockCenterX <= gridRect.right + (cellW * margin) && 
-        blockCenterY >= gridRect.top - (cellH * margin) && 
-        blockCenterY <= gridRect.bottom + (cellH * margin)
-      );
-
-      let isValid = false;
-      if (isNearGrid) {
-        isValid = canPlaceShape(boardRef.current, shapesRef.current[state.shapeIdx], r, c);
-      } else {
-        r = null; c = null;
-      }
-
-      // [OPTIMIZATION] Only trigger a heavy React state re-render if the grid shadow position actually jumps
-      if (state.hoverR !== r || state.hoverC !== c || state.isValidHover !== isValid) {
-        dragStateRef.current = {
-          ...state,
-          x, y, hoverR: r, hoverC: c, isValidHover: isValid
-        };
-        setDragRender({ ...dragStateRef.current });
-      } else {
-        dragStateRef.current.x = x;
-        dragStateRef.current.y = y;
-      }
-    };
-
-    const handlePointerUp = () => {
-      const state = dragStateRef.current;
-      if (state.isDragging) {
-        if (state.isValidHover && state.hoverR !== null && state.hoverC !== null) {
-          placeShape(state.hoverR, state.hoverC, state.shapeIdx);
+      // Snap using the centre of the dragged piece's top-left block, raycast into the 3D board.
+      let r = null;
+      let c = null;
+      let valid = false;
+      const node = dragNodeRef.current?.firstElementChild?.firstElementChild?.firstElementChild;
+      if (node && pickRef.current) {
+        const rect = node.getBoundingClientRect();
+        const cell = pickRef.current(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        if (cell && cell.r >= -2 && cell.r < GRID_SIZE + 2 && cell.c >= -2 && cell.c < GRID_SIZE + 2) {
+          r = cell.r;
+          c = cell.c;
+          valid = canPlaceShape(boardRef.current, shapesRef.current[state.shapeIdx], r, c);
         }
-        
-        dragStateRef.current = { isDragging: false, shapeIdx: null, x: 0, y: 0, hoverR: null, hoverC: null, isValidHover: false };
-        setDragRender({ ...dragStateRef.current });
-        document.body.style.overflow = '';
+      }
+
+      if (state.hoverR !== r || state.hoverC !== c || state.isValidHover !== valid) {
+        dragRef.current = { ...state, x, y, hoverR: r, hoverC: c, isValidHover: valid };
+        setDrag({ ...dragRef.current });
+      } else {
+        state.x = x;
+        state.y = y;
       }
     };
-
-    window.addEventListener('pointermove', handlePointerMove, { passive: false });
-    window.addEventListener('pointerup', handlePointerUp);
-    window.addEventListener('pointercancel', handlePointerUp);
-
+    const onUp = () => {
+      const state = dragRef.current;
+      if (!state.isDragging) return;
+      if (state.isValidHover) placeShape(state.hoverR, state.hoverC, state.shapeIdx);
+      dragRef.current = IDLE_DRAG;
+      setDrag(IDLE_DRAG);
+      document.body.style.overflow = '';
+    };
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-      window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       document.body.style.overflow = '';
     };
   }, [placeShape]);
- 
-  let predictedClearRows = [];
-  let predictedClearCols = [];
 
-  if (dragRender.isDragging && dragRender.isValidHover && dragRender.hoverR !== null && dragRender.hoverC !== null) {
-    const shape = availableShapes[dragRender.shapeIdx];
-    if (shape) {
-      let tempBoard = board.map(row => [...row]);
-      let canPredict = true;
-      
-      for (let sr = 0; sr < shape.matrix.length; sr++) {
-        for (let sc = 0; sc < shape.matrix[0].length; sc++) {
-          if (shape.matrix[sr][sc] === 1) {
-            let tr = dragRender.hoverR + sr;
-            let tc = dragRender.hoverC + sc;
-            if (tr >= 0 && tr < GRID_SIZE && tc >= 0 && tc < GRID_SIZE) {
-              tempBoard[tr][tc] = shape.color; 
-            } else {
-              canPredict = false;
-            }
-          }
+  // Ghost preview + which lines this drop would clear.
+  const ghostCells = [];
+  let predictedRows = [];
+  let predictedCols = [];
+  const dragShape = drag.isDragging ? shapes[drag.shapeIdx] : null;
+  if (dragShape && drag.hoverR !== null) {
+    const temp = board.map((row) => [...row]);
+    dragShape.matrix.forEach((row, sr) =>
+      row.forEach((val, sc) => {
+        const rr = drag.hoverR + sr;
+        const cc = drag.hoverC + sc;
+        if (val && rr >= 0 && rr < GRID_SIZE && cc >= 0 && cc < GRID_SIZE) {
+          ghostCells.push({ r: rr, c: cc, valid: drag.isValidHover, color: dragShape.color });
+          temp[rr][cc] = dragShape.color;
         }
-      }
-
-      if (canPredict) {
-        for (let i = 0; i < GRID_SIZE; i++) {
-          if (tempBoard[i].every(cell => cell !== null)) predictedClearRows.push(i);
-        }
-        for (let j = 0; j < GRID_SIZE; j++) {
-          let isColFull = true;
-          for (let i = 0; i < GRID_SIZE; i++) {
-            if (tempBoard[i][j] === null) isColFull = false;
-          }
-          if (isColFull) predictedClearCols.push(j);
-        }
-      }
-    }
+      }),
+    );
+    if (drag.isValidHover) ({ rows: predictedRows, cols: predictedCols } = fullLines(temp));
   }
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
+  const dock = (
+    <div className="space-y-3">
+      <div className="bg-white border-[3px] border-black shadow-[3px_3px_0_0_#000] py-1.5 text-center font-black uppercase">
+        Combo: {combo}x
+      </div>
+      <div className="flex justify-around items-center bg-[#fcf6bd] border-[3px] border-black p-2 shadow-[4px_4px_0_0_#000] min-h-[120px]">
+        {shapes.map((shape, idx) => (
+          <div key={idx} className="flex items-center justify-center w-[86px] h-[100px] touch-none">
+            {shape && (
+              <div
+                onPointerDown={(e) => handlePointerDown(e, idx)}
+                className={`transition-all duration-200 cursor-grab active:cursor-grabbing ${drag.isDragging && drag.shapeIdx === idx ? 'opacity-20 scale-90' : 'hover:scale-110'}`}
+              >
+                <ShapePreview shape={shape} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={startNewGame}
+        className="w-full bg-white border-[3px] border-black shadow-[3px_3px_0_0_#000] hover:-translate-y-0.5 transition-all font-black py-2 uppercase text-sm"
+      >
+        New Game
+      </button>
+    </div>
+  );
 
   return (
-   <div className="flex flex-col items-center min-h-screen pt-0 pb-10 sm:justify-center">
-      <style>{`
-        @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-40px) scale(1.2); opacity: 0; } }
-        @keyframes boardShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-1deg); } 75% { transform: translateX(4px) rotate(1deg); } }
-        @keyframes blockPopClear {
-          0% { transform: scale(1); filter: brightness(1); }
-          30% { transform: scale(1.15); filter: brightness(1.4); z-index: 10; box-shadow: 0 0 20px rgba(255,255,255,0.9); border-color: white; }
-          100% { transform: scale(0.5) rotate(15deg); opacity: 0; filter: brightness(2); }
-        }
-        
-        /* OVERHAULED INTENSE GLOW EFFECT */
-        @keyframes smoothGlow {
-          0% { box-shadow: inset 0 0 10px rgba(255,255,255,0.4), 0 0 10px rgba(255,255,255,0.3); filter: brightness(1.1); border-color: rgba(255,255,255,0.8); }
-          100% { box-shadow: inset 0 0 25px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8); filter: brightness(1.6) contrast(1.1); border-color: white; transform: scale(1.05); }
-        }
-        
-        @keyframes shard1 { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(-25px,-25px) rotate(-120deg) scale(0); opacity: 0; } }
-        @keyframes shard2 { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(25px,-20px) rotate(120deg) scale(0); opacity: 0; } }
-        @keyframes shard3 { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(-20px,25px) rotate(180deg) scale(0); opacity: 0; } }
-        @keyframes shard4 { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(22px,22px) rotate(-180deg) scale(0); opacity: 0; } }
-        
-        .animate-float { animation: floatUp 1s ease-out forwards; }
-        .animate-shake { animation: boardShake 0.2s ease-in-out; }
-        .animate-clear-pop { animation: blockPopClear 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-        .shard-1 { animation: shard1 0.4s ease-out forwards; }
-        .shard-2 { animation: shard2 0.4s ease-out forwards; }
-        .shard-3 { animation: shard3 0.4s ease-out forwards; }
-        .shard-4 { animation: shard4 0.4s ease-out forwards; }
-        .predictive-highlight { 
-          animation: smoothGlow 0.35s ease-in-out infinite alternate !important; 
-          z-index: 10; 
-        }
-      `}</style>
-
-
-      {dragRender.isDragging && availableShapes[dragRender.shapeIdx] && (
-        <div 
-          ref={dragNodeRef} // Fixed DOM rendering for instant cursor tracking
-          className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.4)]"
-          style={{ 
-              left: dragRender.x, 
-              top: dragRender.y,
-              transform: `translate(-50%, calc(-100% - ${window.innerWidth < 640 ? 80 : 40}px))` 
-          }}
+    <>
+      {dragShape && (
+        <div
+          ref={dragNodeRef}
+          className="fixed pointer-events-none z-50 drop-shadow-[0_15px_15px_rgba(0,0,0,0.35)]"
+          style={{ left: drag.x / appZoom(), top: drag.y / appZoom(), transform: `translate(-50%, calc(-100% - ${isMobile ? 70 : 36}px))` }}
         >
-          <div className="flex flex-col gap-1 sm:gap-1.5">
-            {availableShapes[dragRender.shapeIdx].matrix.map((row, r) => (
-              <div key={r} className="flex gap-1 sm:gap-1.5">
-                {row.map((val, c) => {
-                  if (!val) return <div key={c} className="w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 bg-transparent" />;
-                  
-                  let bgStyle = `${availableShapes[dragRender.shapeIdx].color} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]`;
-                  if (dragRender.hoverR !== null && !dragRender.isValidHover) {
-                     bgStyle = 'bg-red-500 border-[2px] sm:border-[3px] border-black opacity-80'; 
-                  }
-                  return <div key={c} className={`w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 transition-colors ${bgStyle}`} />;
-                })}
+          <div className="flex flex-col gap-1">
+            {dragShape.matrix.map((row, r) => (
+              <div key={r} className="flex gap-1">
+                {row.map((val, c) => (
+                  <div
+                    key={c}
+                    className={`w-9 h-9 sm:w-11 sm:h-11 ${val ? (drag.hoverR !== null && !drag.isValidHover ? 'bg-red-500 opacity-80' : dragShape.color) + ' border-[3px] border-black shadow-[2px_2px_0_0_#000]' : 'bg-transparent'}`}
+                  />
+                ))}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Floating Popups */}
       <div className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center">
-        {popups.map(popup => (
-          <div key={popup.id} className="absolute animate-float">
-            <span className={`font-black uppercase text-3xl drop-shadow-[2px_2px_0_#000] 
-              ${popup.type === 'combo' ? 'text-[#ffd166]' : popup.type === 'praise' ? 'text-[#06d6a0]' : 'text-[#ff99c8]'}`}>
+        <style>{`@keyframes bbFloat { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-40px) scale(1.2); opacity: 0; } } .bb-float { animation: bbFloat 1s ease-out forwards; }`}</style>
+        {popups.map((popup) => (
+          <div key={popup.id} className="absolute bb-float">
+            <span
+              className={`font-black uppercase text-3xl drop-shadow-[2px_2px_0_#000] ${popup.type === 'combo' ? 'text-[#ffbf2e]' : popup.type === 'praise' ? 'text-[#06d6a0]' : 'text-[#ff6fae]'}`}
+            >
               {popup.text}
             </span>
           </div>
         ))}
       </div>
 
-      <div className="w-full max-w-[500px] md:max-w-[640px] lg:max-w-[720px] p-2 sm:p-4 relative z-10">
-        
-        {/* Header */}
-        <div className="flex flex-row justify-between items-center mb-2 sm:mb-8 border-b-[3px] border-black pb-2 sm:pb-4 gap-2">
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-black tracking-tighter uppercase shrink-0 leading-none">
-            Block<br/>Blaster
-          </h1>
-          
-          <div className="flex gap-2 sm:gap-4 shrink-0">
-            <div className="bg-[#ff99c8] border-[3px] border-black shadow-[2px_2px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] px-2 sm:px-4 py-1 sm:py-2 text-black text-center min-w-[70px] sm:min-w-[90px]">
-              <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">Score</div>
-              <div className="text-lg sm:text-2xl font-black leading-tight">{score}</div>
-            </div>
-            <div className="bg-[#ffd166] border-[3px] border-black shadow-[2px_2px_0_0_#000] sm:shadow-[4px_4px_0_0_#000] px-2 sm:px-4 py-1 sm:py-2 text-black text-center min-w-[70px] sm:min-w-[90px]">
-              <div className="text-[10px] sm:text-sm uppercase font-bold tracking-wider">High Score</div>
-              <div className="text-lg sm:text-2xl font-black leading-tight">{localHighScore}</div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Controls */}
-        <div className="flex justify-between items-center mb-2 sm:mb-6 gap-4">
-          <button 
-            onClick={() => navigate('/single-player')} 
-            className="flex-1 bg-[#48cae4] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#000] transition-all text-black font-bold py-2 px-2 sm:px-4 text-sm sm:text-base uppercase cursor-pointer"
-          >
-            &larr; Back
-          </button>
-          
-          <div className="bg-white border-[3px] border-black shadow-[4px_4px_0_0_#000] font-bold py-2 px-4 text-sm sm:text-base uppercase text-center flex-1">
-            Combo: {combo}x
-          </div>
-        </div>
-
-        {/* Game Grid Container */}
-        <div className={`bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] sm:shadow-[8px_8px_0_0_#000] p-2 sm:p-4 md:p-6 relative mx-auto w-fit max-w-full mb-3 sm:mb-6 ${isShaking ? 'animate-shake' : ''}`}>
-          
-          {gameOver && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center border-[4px] border-black m-[-4px]">
-              <div className="bg-[#ef476f] border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 text-center transform -rotate-2">
-                <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 uppercase">Game Over!</h2>
-                <button 
-                  onClick={startNewGame}
-                  className="bg-[#06d6a0] border-[3px] border-black shadow-[4px_4px_0_0_#000] active:shadow-[0_0_0_0_#000] active:translate-y-[4px] active:translate-x-[4px] text-black font-bold py-2 px-4 sm:py-3 sm:px-6 text-lg sm:text-xl uppercase transition-all cursor-pointer"
-                >
-                  Try Again
-                </button>
-              </div>
-            </div>
-          )}
-          
-          <div ref={gridRef} className="grid grid-cols-8 gap-1 sm:gap-1.5 md:gap-2 touch-none relative">
-            {board.map((row, rIdx) => 
-              row.map((cellColor, cIdx) => {
-                let isGhostValid = false;
-                let isGhostInvalid = false;
-                let ghostColor = '';
-
-                if (dragRender.isDragging && dragRender.hoverR !== null && dragRender.hoverC !== null) {
-                  const shape = availableShapes[dragRender.shapeIdx];
-                  if (shape) {
-                    const sr = rIdx - dragRender.hoverR;
-                    const sc = cIdx - dragRender.hoverC;
-                    if (sr >= 0 && sr < shape.matrix.length && sc >= 0 && sc < shape.matrix[0].length && shape.matrix[sr][sc] === 1) {
-                      ghostColor = shape.color;
-                      if (dragRender.isValidHover) isGhostValid = true;
-                      else isGhostInvalid = true;
-                    }
-                  }
-                }
-
-                const isClearing = clearingCells.includes(`${rIdx}-${cIdx}`);
-                const isPredictedToClear = predictedClearRows.includes(rIdx) || predictedClearCols.includes(cIdx);
-
-                return (
-                  <div 
-                    key={`${rIdx}-${cIdx}`} 
-                    className={`w-[10vw] h-[10vw] max-w-[40px] max-h-[40px] sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 transition-all duration-75 ease-in-out relative overflow-visible
-                      ${cellColor 
-                        ? `${cellColor} border-[2px] sm:border-[3px] border-black shadow-[2px_2px_0_0_#000]` 
-                        : isGhostValid
-                          ? `${ghostColor} opacity-50 border-[2px] sm:border-[3px] border-black border-dashed`
-                        : isGhostInvalid
-                          ? 'bg-red-500 opacity-30 border-[2px] sm:border-[3px] border-red-900 border-dashed'
-                          : 'bg-transparent border-[2px] border-dashed border-black/10'
-                      }
-                      ${isClearing ? 'animate-clear-pop origin-center z-30' : 'scale-100 opacity-100'}
-                      ${isPredictedToClear && !isClearing ? 'predictive-highlight' : ''}
-                    `}
-                  >
-                    {isClearing && (
-                      <div className="absolute inset-0 pointer-events-none">
-                        <div className={`shard-1 absolute top-0 left-0 w-2 h-2 ${cellColor || 'bg-yellow-400'} border border-black rounded-sm shadow-sm`} />
-                        <div className={`shard-2 absolute top-0 right-0 w-2 h-2 ${cellColor || 'bg-yellow-400'} border border-black rounded-sm shadow-sm`} />
-                        <div className={`shard-3 absolute bottom-0 left-0 w-2 h-2 ${cellColor || 'bg-yellow-400'} border border-black rounded-sm shadow-sm`} />
-                        <div className={`shard-4 absolute bottom-0 right-0 w-2 h-2 ${cellColor || 'bg-yellow-400'} border border-black rounded-sm shadow-sm`} />
-                      </div>
-                    )}
-                  </div>
-
-                )
-              })
-            )}
-          </div>
-        </div>
-
-
-        {/* Block Dock */}
-        <div className="flex justify-around items-center bg-[#fcf6bd] border-[3px] border-black p-2 sm:p-4 shadow-[4px_4px_0_0_#000] h-[110px] sm:min-h-[140px] mb-8">
-          {availableShapes.map((shape, idx) => (
-            <div 
-              key={idx} 
-              className="flex items-center justify-center w-[80px] h-[80px] touch-none"
-            >
-              {shape !== null && (
-                <div 
-                  onPointerDown={(e) => handlePointerDown(e, idx)}
-                  className={`transition-all duration-200 cursor-grab active:cursor-grabbing
-                    ${dragRender.isDragging && dragRender.shapeIdx === idx ? 'opacity-20 scale-90' : 'hover:scale-110'}
-                  `}
-                >
-                  <div className="flex flex-col gap-1 sm:gap-1.5 pointer-events-none">
-                    {shape.matrix.map((row, r) => (
-                      <div key={r} className="flex gap-1 sm:gap-1.5">
-                        {row.map((val, c) => (
-                          <div 
-                            key={c} 
-                            className={`w-5 h-5 sm:w-6 sm:h-6 transition-all ${val ? `${shape.color} border-[2px] border-black shadow-[2px_2px_0_0_#000]` : 'bg-transparent'}`} 
-                          />
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* --- GLOBAL TOP 3 LEADERBOARD --- */}
-        <div className="bg-white border-[4px] border-black shadow-[6px_6px_0_0_#000] p-4 sm:p-6 w-full transform -rotate-1">
-          <h3 className="text-xl sm:text-2xl font-black uppercase text-black mb-4 flex items-center justify-between">
-            <span>Global Top 3</span>
-          </h3>
-          
-          {globalLeaderboard.length === 0 ? (
-            <div className="bg-gray-100 border-[3px] border-dashed border-gray-400 p-4 text-center">
-              <p className="font-bold text-gray-500 uppercase tracking-widest">No scores yet. Take the crown!</p>
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {globalLeaderboard.map((entry, idx) => {
-                const rankColors = ['bg-[#ffd166]', 'bg-[#d0f4de]', 'bg-[#ffb5a7]'];
-                const bgColor = rankColors[idx] || 'bg-white';
-                
-                return (
-                  <li 
-                    key={entry.id || idx} 
-                    className={`${bgColor} border-[3px] border-black p-3 sm:p-4 shadow-[4px_4px_0_0_#000] flex justify-between items-center transition-transform hover:-translate-y-1`}
-                  >
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <span className="text-lg sm:text-xl font-black bg-white border-[2px] border-black rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shadow-[2px_2px_0_0_#000]">
-                        #{idx + 1}
-                      </span>
-                      <span className="font-black uppercase text-base sm:text-lg tracking-wider">
-                        {entry.name}
-                      </span>
-                    </div>
-                    <span className="font-black text-xl sm:text-2xl">
-                      {entry.score}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-      </div>
-    </div>
+      <ArcadeShell
+        title="Block Blaster"
+        score={score}
+        highScore={highScore}
+        leaderboard={leaderboard}
+        stageClass="stage-square"
+        controls={dock}
+        hint="Drag pieces onto the 8 x 8 board. Fill a row or column to clear it; clear on consecutive moves to build a combo."
+        overlay={gameOver && <GameOverOverlay title="Game Over!" score={score} onRetry={startNewGame} />}
+      >
+        <Suspense fallback={<div className="h-full flex items-center justify-center font-black uppercase animate-pulse">Loading 3D...</div>}>
+          <BlockScene
+            board={board}
+            ghostCells={ghostCells}
+            predictedRows={predictedRows}
+            predictedCols={predictedCols}
+            clearingCells={clearingCells}
+            shaking={isShaking}
+            pickRef={pickRef}
+          />
+        </Suspense>
+      </ArcadeShell>
+    </>
   );
 }

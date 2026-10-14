@@ -1,8 +1,14 @@
-import { Suspense, lazy, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Suspense, lazy, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { absoluteUrl, defaultSeo } from '../config/seo.js';
 import { emitWithAck } from '../lib/socket.js';
+import { GAMES, gamesForMode, MODE_INFO } from '../data/games.js';
+import { BLOG_POSTS } from '../data/blogPosts.js';
+import GameCard from './GameCard.jsx';
+import Modal from './Modal.jsx';
+import ModeCards from './ModeCards.jsx';
+import useHydrated from '../lib/useHydrated.js';
 
 const Scanner = lazy(() =>
   import('@yudiel/react-qr-scanner').then((module) => ({
@@ -10,262 +16,70 @@ const Scanner = lazy(() =>
   })),
 );
 
-const GAMES = [
-  // ... (Keep your GAMES array the same)
-  {
-    id: 'connect-four',
-    title: 'Connect 4',
-    description: 'Drop discs and connect four in a row to win.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/Logo%20(1).png',
-    path: '/connect-four',
-    available: true,
-    headerColor: 'bg-[#c4b5fd]',
-    buttonColor: 'bg-[#fdba74]',
-    tilt: '-rotate-1',
-  },
-  {
-    id: 'tic-tac-toe',
-    title: 'Tic Tac Toe',
-    description: 'Outsmart your opponent in this classic 3x3 grid.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/original-c03c34a74dba4bb1c8010bec8c06e719.png',
-    path: '/tic-tac-toe',
-    available: true,
-    headerColor: 'bg-[#f9a8d4]',
-    buttonColor: 'bg-[#facc15]',
-    tilt: 'rotate-1',
-  },
-  {
-    id: 'scribble',
-    title: 'Scribble',
-    description: 'Draw, guess, and score points in real-time.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/scribble.png',
-    path: '/scribble',
-    available: true,
-    headerColor: 'bg-[#7dd3fc]',
-    buttonColor: 'bg-[#86efac]',
-    tilt: '-rotate-1',
-  },
-  {
-    id: 'snake-and-ladder',
-    title: 'Snake & Ladder',
-    description: 'Roll the dice, climb ladders, dodge snakes.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/sal.png',
-    path: '/snake-and-ladder',
-    available: true,
-    headerColor: 'bg-[#86efac]',
-    buttonColor: 'bg-[#f9a8d4]',
-    tilt: 'rotate-1',
-  },
-  {
-    id: 'tambola',
-    title: 'Tambola',
-    description: 'Mark numbers on your ticket and claim prizes.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/tambols.png',
-    path: '/tambola',
-    available: true,
-    headerColor: 'bg-[#fecaca]',
-    buttonColor: 'bg-[#7dd3fc]',
-    tilt: '-rotate-1',
-  },
-  {
-    id: 'stone-paper-scissor',
-    title: 'RockPaperScissor',
-    description: 'Outsmart your opponent in this classic game of hand signs.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/imagessc/refs/heads/main/SPS2.png',
-    path: '/stone-paper-scissor',
-    available: true,
-    headerColor: 'bg-[#fbbf24]',
-    buttonColor: 'bg-[#f87171]',
-    tilt: '-rotate-1',
-  },
-  {
-    id: 'ludo',
-    title: 'Ludo',
-    description: 'Race your tokens home in this classic board game.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/ludo.png',
-    path: '/ludo',
-    available: true,
-    headerColor: 'bg-[#facc15]',
-    buttonColor: 'bg-[#e5e7eb]',
-    tilt: 'rotate-1',
-  },
-  {
-    id: 'air-hockey',
-    title: 'Air Hockey',
-    description: 'Slide, strike, and score in fast-paced 1v1 Air Hockey!',
-    image: '/images/airhockey.svg',
-    path: '/air-hockey',
-    available: true, 
-    headerColor: 'bg-[#7dd3fc]',
-    buttonColor: 'bg-[#facc15]',
-    tilt: 'rotate-1',
-  },
-  {
-    id: 'raja-mantri',
-    title: 'Raja Mantri Chor Sipahi',
-    description: 'The 4-player royal chit game! Guess the thief across 5 rounds.',
-    image: '/images/rajamantri.svg',
-    path: '/games/raja-mantri',
-    available: true,
-    headerColor: 'bg-[#fef08a]',
-    buttonColor: 'bg-[#38bdf8]',
-    tilt: '-rotate-1',
-  },
-];
+const MODE_COPY = {
+  bot: { title: 'Challenge a bot', text: 'Classic board and table games against a computer opponent. Pick easy, medium or hard before you start.' },
+  solo: { title: 'Solo arcade', text: 'Quick 3D arcade runs with a personal best and a global top three.' },
+  online: { title: 'Online rooms', text: 'Create a private room, share the code or QR, and play with friends on their own phones.' },
+  local: { title: 'Local play', text: 'Everyone plays on this device. Pass the phone on your turn, or share the screen for air hockey.' },
+};
+const VALID_MODES = Object.keys(MODE_COPY);
 
-
-
-
-
-const SINGLE_PLAYER_GAMES = [
-  // ... (Keep your SINGLE_PLAYER_GAMES array the same)
-  {
-    id: 'block-blaster',
-    title: 'Block Blaster',
-    description: 'Clear the board by placing and matching blocks.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/block.png',
-    path: '/games/block-blaster',
-    available: true,
-    headerColor: 'bg-[#c4b5fd]',
-    buttonColor: 'bg-[#6ee7b7]',
-    tilt: 'rotate-1',
-  },
-  {
-    id: '2048',
-    title: '2048',
-    description: 'Slide tiles and merge them to reach the 2048 tile.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/2048.png',
-    path: '/games/2048',
-    available: true,
-    headerColor: 'bg-[#bef264]',
-    buttonColor: 'bg-[#fcd34d]',
-    tilt: '-rotate-1',
-  },
-  {
-    id: 'dino',
-    title: 'Dino Run',
-    description: 'Jump over cacti and dodge obstacles in this endless runner.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/dinorun.png',
-    path: '/games/dino',
-    available: true,
-    headerColor: 'bg-[#93c5fd]',
-    buttonColor: 'bg-[#fca5a5]',
-    tilt: 'rotate-1',
-  },
-  {
-
-  id: 'flappy-bird',
-    title: 'Flappy Bird',
-    description: 'Navigate through pipes in this challenging arcade game.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/flappy.jpg',
-    path: '/games/flappy-bird',
-    available: true,
-    headerColor: 'bg-[#93c5fd]',
-    buttonColor: 'bg-[#fca5a5]',
-    tilt: 'rotate-1',
-  },
-
-  {
-    id: 'traffic-run',
-    title: 'Traffic Run',
-    description: 'Dodge cars in a 3-lane dash. Speed increases as you go!',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/POHAHUB/refs/heads/main/frontend/src/images/traffic.png', // Replace with an actual thumbnail link if you have one
-    path: '/games/traffic-run',
-    available: true,
-    headerColor: 'bg-[#ffb5a7]', // Uses one of your pastel theme colors
-    buttonColor: 'bg-[#a9def9]', // Uses one of your pastel theme colors
-    tilt: '-rotate-1',
-  },
-
-   {
-
-  id: 'helix-jump',
-    title: 'Helix Jump',
-    description: 'Jump through the helix in this challenging arcade game.',
-    image: 'https://raw.githubusercontent.com/Bhavesh12y/pohahub/refs/heads/main/frontend/src/images/helix.jpg',
-    path: '/games/helix-jump',
-    available: true,
-    headerColor: 'bg-[#93c5fd]',
-    buttonColor: 'bg-[#fca5a5]',
-    tilt: 'rotate-1',
-  },
-
-];
-
-function CloseIcon() {
+function SketchStrokes({ flip = false }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round">
-      <path d="M6 6l12 12M18 6L6 18" />
+    <svg viewBox="0 0 24 32" className={`w-5 h-7 ${flip ? '-scale-x-100' : ''}`} aria-hidden="true">
+      <g stroke="#111" strokeWidth="3.5" strokeLinecap="round">
+        <path d="M16 3 L21 8" />
+        <path d="M4 16 L18 16" />
+        <path d="M16 29 L21 24" />
+      </g>
     </svg>
   );
 }
 
-// Added Pencil SVG for the edit button
-function PencilIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-    </svg>
-  );
-}
+const FEATURED_GUIDES = ['ludo', 'raja-mantri', 'tambola', 'air-hockey', 'connect-four', '2048'];
 
 export default function MainLanding() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinMode, setJoinMode] = useState('');
   const [nearbyStatus, setNearbyStatus] = useState('');
-  const [gameMode, setGameMode] = useState('multiplayer');
-  const [showNameModal, setShowNameModal] = useState(false);
-  const [playerNameInput, setPlayerNameInput] = useState('');
-  
-  // Track player name in state so it updates the UI immediately
-  const [playerName, setPlayerName] = useState(() => localStorage.getItem('Doozles-player-name') || '');
+  const hydrated = useHydrated();
+  const requested = searchParams.get('mode');
+  const playMode = hydrated && VALID_MODES.includes(requested) ? requested : 'online';
+  const displayedGames = gamesForMode(playMode);
+
+  const selectMode = (mode) => {
+    const next = new URLSearchParams(searchParams);
+    if (mode === 'online') next.delete('mode');
+    else next.set('mode', mode);
+    setSearchParams(next, { replace: true, preventScrollReset: true });
+  };
 
   const handleScan = (result) => {
     if (result && result[0]) {
       try {
         const urlObj = new URL(result[0].rawValue);
-        setShowJoinModal(false);
-        setJoinMode('');
+        closeMenu();
         navigate(urlObj.pathname + urlObj.search);
-      } catch (e) {
-        setNearbyStatus('INVALID QR CODE SCANNED');
+      } catch {
+        setNearbyStatus('Invalid QR code scanned');
       }
-    }
-  };
-
-
-  const handleSinglePlayerClick = () => {
-    if (playerName) {
-      navigate('/single-player');
-    } else {
-      setShowNameModal(true);
-    }
-  };
-
-  const handleSaveName = (e) => {
-    e.preventDefault();
-    if (playerNameInput.trim()) {
-      const newName = playerNameInput.trim();
-      localStorage.setItem('Doozles-player-name', newName);
-      setPlayerName(newName); 
-      setShowNameModal(false);
-      navigate('/single-player'); // Navigate instead of setting state
     }
   };
 
   const handleFindNearby = () => {
     setJoinMode('nearby');
-    setNearbyStatus('REQUESTING GPS COORDINATES...');
+    setNearbyStatus('Requesting your location...');
 
     if (!navigator.geolocation) {
-      setNearbyStatus('GEOLOCATION NOT SUPPORTED BY BROWSER');
+      setNearbyStatus('Location is not supported in this browser');
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        setNearbyStatus('SCANNING RADAR FOR MATCHES...');
+        setNearbyStatus('Scanning for nearby rooms...');
         try {
           const res = await emitWithAck('room:find_nearby', {
             lat: position.coords.latitude,
@@ -273,42 +87,38 @@ export default function MainLanding() {
           });
 
           if (res.ok && res.roomUrl) {
-            setNearbyStatus('MATCH FOUND! JOINING...');
+            setNearbyStatus('Match found! Joining...');
             const urlObj = new URL(res.roomUrl);
             setTimeout(() => {
-              setShowJoinModal(false);
-              setJoinMode('');
+              closeMenu();
               navigate(urlObj.pathname + urlObj.search);
             }, 1000);
           } else {
-            setNearbyStatus(res.error || 'NO NEARBY ROOMS FOUND.');
+            setNearbyStatus(res.error || 'No nearby rooms found.');
           }
-        } catch (err) {
-          setNearbyStatus('ERROR CONNECTING TO RADAR.');
+        } catch {
+          setNearbyStatus('Could not reach the server.');
         }
       },
-      () => {
-        setNearbyStatus('LOCATION PERMISSION DENIED.');
-      },
+      () => setNearbyStatus('Location permission denied.'),
       { enableHighAccuracy: true },
     );
   };
 
-  const closeMenu = () => {
+  function closeMenu() {
     setShowJoinModal(false);
     setJoinMode('');
     setNearbyStatus('');
-  };
+  }
 
-  const displayedGames = gameMode === 'multiplayer' ? GAMES : SINGLE_PLAYER_GAMES;
+  const latestPosts = BLOG_POSTS.slice(0, 3);
+  const featuredGuides = FEATURED_GUIDES.map((id) => GAMES.find((g) => g.id === id)).filter(Boolean);
 
   return (
     <>
       <Helmet>
-        {/* ... (Keep your SEO config the same) ... */}
         <title>{defaultSeo.title}</title>
         <meta name="description" content={defaultSeo.description} />
-        <meta name="keywords" content={defaultSeo.keywords} />
         <link rel="canonical" href={absoluteUrl('/')} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Doozles" />
@@ -323,247 +133,190 @@ export default function MainLanding() {
       </Helmet>
 
       <div className="relative min-h-screen overflow-hidden font-sans text-black">
-        <style>{`
-          @keyframes sketch-pop {
-            0% { opacity: 0; transform: translateY(30px) rotate(-3deg) scale(0.95); }
-            100% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
-          }
-          .animate-sketch-pop {
-            animation: sketch-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            opacity: 0;
-          }
-        `}</style>
-
         <div className="relative max-w-7xl mx-auto px-5 py-24 sm:py-28 z-10 w-full">
-          <section className="mb-10 sm:mb-14 animate-sketch-pop text-center sm:text-left">
+          <section className="mb-10 sm:mb-14 animate-sketch-pop text-center flex flex-col items-center">
             <div className="inline-block bg-[#facc15] border-[3px] border-black shadow-[4px_4px_0px_#000] px-4 py-2 mb-6 -rotate-1">
               <span className="text-sm sm:text-base font-black uppercase tracking-widest text-black">
                 Rooms, rivalries, and ridiculous comebacks
               </span>
             </div>
 
-            <h2 className="max-w-5xl text-[clamp(3rem,8vw,6rem)] font-black uppercase leading-[0.9] tracking-normal">
+            <h1 className="max-w-5xl mx-auto text-[clamp(3rem,8vw,6rem)] font-black uppercase leading-[0.9] tracking-normal">
               Pick a game.
               <span className="block text-pink-400">Start the room.</span>
-            </h2>
+            </h1>
 
-            <p className="mt-6 max-w-2xl text-[clamp(1rem,2vw,1.4rem)] font-bold text-gray-700 leading-relaxed uppercase tracking-wider mb-8">
-              A bright notebook arcade for quick multiplayer matches with friends.
+            <p className="mt-6 max-w-2xl mx-auto text-[clamp(1rem,2vw,1.4rem)] font-bold text-gray-700 leading-relaxed uppercase tracking-wider">
+              A bright notebook arcade for quick matches with friends, family, or a bot.
             </p>
-
-            <button
-              onClick={() => setShowJoinModal(true)}
-              className="inline-block bg-sky-300 text-black border-[4px] border-black px-8 py-4 font-black uppercase tracking-widest text-lg shadow-[6px_6px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all rotate-1"
-            >
-              JOIN EXISTING ROOM
-            </button>
           </section>
 
-          <div className="flex justify-center sm:justify-start gap-4 mb-8 sm:mb-12 animate-sketch-pop">
-            <button
-              onClick={() => setGameMode('multiplayer')}
-              className={`border-[4px] border-black px-6 py-3 font-black uppercase tracking-widest text-sm sm:text-base transition-all ${
-                gameMode === 'multiplayer'
-                  ? 'bg-pink-400 text-black shadow-[6px_6px_0px_#000] -rotate-1 scale-105'
-                  : 'bg-white text-gray-600 shadow-[2px_2px_0px_#000] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] cursor-pointer'
-              }`}
-            >
-              Multiplayer
-            </button>
-            <button
-                onClick={handleSinglePlayerClick}
-                className={`border-[4px] border-black px-6 py-3 font-black uppercase tracking-widest text-sm sm:text-base transition-all ${
-                  gameMode === 'singleplayer'
-                    ? 'bg-lime-400 text-black shadow-[6px_6px_0px_#000] rotate-1 scale-105'
-                    : 'bg-white text-gray-600 shadow-[2px_2px_0px_#000] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_#000] cursor-pointer'
-                }`}
-              >
-                Single Player
-              </button>
+          <section className="animate-sketch-pop" aria-label="Play modes">
+            <ModeCards value={playMode} onChange={selectMode} />
+          </section>
+
+          <div className="mt-14 mb-10 sm:mb-12">
+            <div className="h-[4px] bg-black max-w-4xl mx-auto rounded-full" />
+            <div className="mt-8 flex flex-col items-center text-center gap-3">
+              <h2 className="flex items-center gap-4 text-2xl sm:text-3xl font-black uppercase tracking-widest">
+                <SketchStrokes />
+                {MODE_COPY[playMode].title}
+                <SketchStrokes flip />
+              </h2>
+              <p className="font-body text-base font-semibold text-gray-700 max-w-2xl">{MODE_COPY[playMode].text}</p>
+              {playMode === 'online' && (
+                <button
+                  onClick={() => setShowJoinModal(true)}
+                  className="mt-2 inline-block bg-sky-300 text-black border-[4px] border-black px-6 py-3 font-black uppercase tracking-widest shadow-[5px_5px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all rotate-1"
+                >
+                  Join Existing Room
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* New Personal Greeting Header for Single Player */}
-          {gameMode === 'singleplayer' && playerName && (
-            <div className="flex justify-center sm:justify-start items-center gap-3 mb-6 animate-sketch-pop">
-              <h3 className="text-2xl sm:text-3xl font-black uppercase tracking-normal text-black bg-[#a9def9] border-[3px] border-black px-4 py-1 shadow-[4px_4px_0px_#000] -rotate-1">
-                hi.. {playerName}
-              </h3>
-              <button
-                onClick={() => {
-                  setPlayerNameInput(playerName); // Pre-fill their existing name
-                  setShowNameModal(true); // Open the modal
-                }}
-                className="bg-[#facc15] text-black border-[3px] border-black p-2 shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] transition-all rotate-2"
-                aria-label="Edit Name"
-              >
-                <PencilIcon />
-              </button>
-            </div>
-          )}
-
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
-            {displayedGames.map((game, index) => {
-              const CardWrapper = game.available ? Link : 'div';
-              const delay = `${(index + 1) * 100}ms`;
+            {displayedGames.map((game, index) => (
+              <GameCard
+                key={`${playMode}-${game.id}`}
+                game={game}
+                index={index}
+                to={MODE_INFO[playMode].path(game)}
+                badge={playMode === 'local' ? 'Same device' : playMode === 'bot' ? 'vs Bot' : null}
+                cta={playMode === 'bot' ? 'Challenge' : 'Play Now'}
+              />
+            ))}
+          </section>
 
-              return (
-                <CardWrapper
-                  key={game.id}
-                  to={game.available ? game.path : undefined}
-                  style={{ animationDelay: delay }}
-                  className={`group animate-sketch-pop flex min-h-full flex-col bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] transition-all duration-200 ${game.tilt} ${
-                    game.available
-                      ? 'cursor-pointer hover:-translate-y-2 hover:rotate-0 hover:shadow-[12px_12px_0px_#000]'
-                      : 'cursor-not-allowed opacity-80'
-                  }`}
-                >
-                  <div className={`${game.headerColor} border-b-[4px] border-black px-5 py-4 flex items-center justify-between`}>
-                    <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-widest text-black leading-none">
-                      {game.title}
-                    </h3>
-                  </div>
+          {/* About + discovery section: real text for players and for search engines. */}
+          <section className="mt-24 grid gap-8 lg:grid-cols-5">
+            <div className="lg:col-span-3 paper-panel bg-white p-6 sm:p-10">
+              <h2 className="text-3xl sm:text-4xl font-black uppercase mb-5">What is Doozles?</h2>
+              <div className="sketch-prose">
+                <p>
+                  Doozles is a free browser arcade for the games people actually play together: Ludo on a Sunday
+                  afternoon, Raja Mantri Chor Sipahi with cousins, Tambola at a family party, or a quick round of Tic
+                  Tac Toe while waiting for food. Nothing to install and no account to make. Open a link and play.
+                </p>
+                <p>There are four ways to play:</p>
+                <ul>
+                  <li>
+                    <strong>Online rooms.</strong> Create a private room and invite friends with a six-letter code, a
+                    link, or a QR code. Every move is checked by our game server, so both screens always agree.
+                  </li>
+                  <li>
+                    <strong>Local play.</strong> Everyone shares one phone or tablet. Turn-based games hand the device
+                    to the next player, and Air Hockey splits the screen so two people can play face to face.
+                  </li>
+                  <li>
+                    <strong>Versus bot.</strong> Practice against computer opponents with easy, medium and hard
+                    settings. It works offline once the page has loaded.
+                  </li>
+                  <li>
+                    <strong>Solo arcade.</strong> Short single-player games like 2048, Block Blaster and Helix Jump,
+                    with a personal best and a global top three.
+                  </li>
+                </ul>
+                <p>
+                  Every game has a full guide covering the rules, the history behind it and strategies that actually
+                  win. If you are new to a game, start there.
+                </p>
+              </div>
+            </div>
 
-                  <div className="m-5 mb-0 border-[3px] border-black bg-white shadow-[inset_2px_2px_0px_rgba(0,0,0,0.1)]">
-                    <img
-                      src={game.image}
-                      alt={`${game.title} preview`}
-                      loading="lazy"
-                      className={`aspect-video w-full object-contain bg-white p-2 transition-transform duration-300 ${
-                        game.available ? 'group-hover:scale-[1.05]' : 'grayscale'
-                      }`}
-                    />
-                  </div>
+            <div className="lg:col-span-2 flex flex-col gap-8">
+              <div className="bg-[#fef9c3] border-[4px] border-black shadow-[6px_6px_0px_#000] p-6 rotate-1">
+                <h2 className="text-2xl font-black uppercase mb-4">Popular guides</h2>
+                <ul className="grid grid-cols-2 gap-3">
+                  {featuredGuides.map((game) => (
+                    <li key={game.id}>
+                      <Link
+                        to={game.guidePath}
+                        className="block bg-white border-[3px] border-black px-3 py-2 font-black uppercase text-sm shadow-[3px_3px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#000] transition-all"
+                      >
+                        {game.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-                  <div className="p-5 flex flex-col flex-1">
-                    <p className="text-sm lg:text-base font-bold text-gray-700 leading-relaxed flex-1 uppercase tracking-wide">
-                      {game.description}
-                    </p>
-
-                    {game.available ? (
-                      <span className={`${game.buttonColor} text-black border-[3px] border-black shadow-[4px_4px_0px_#000] group-hover:translate-y-[2px] group-hover:translate-x-[2px] group-hover:shadow-[2px_2px_0px_#000] transition-all mt-5 inline-flex justify-center px-5 py-3 text-sm lg:text-base font-black uppercase tracking-widest rounded`}>
-                        Play Now
-                      </span>
-                    ) : (
-                      <span className="bg-gray-200 text-gray-500 border-[3px] border-gray-400 mt-5 inline-flex justify-center px-5 py-3 text-sm lg:text-base font-black uppercase tracking-widest rounded">
-                        Coming Soon
-                      </span>
-                    )}
-                  </div>
-                </CardWrapper>
-              );
-            })}
+              <div className="bg-white border-[4px] border-black shadow-[6px_6px_0px_#000] p-6 -rotate-1">
+                <div className="flex items-center justify-between mb-4 gap-3">
+                  <h2 className="text-2xl font-black uppercase">From the blog</h2>
+                  <Link to="/blog" className="text-sm font-black uppercase underline decoration-[3px] decoration-pink-400 underline-offset-4">
+                    All posts
+                  </Link>
+                </div>
+                <ul className="space-y-4">
+                  {latestPosts.map((post) => (
+                    <li key={post.slug} className="border-t-[2px] border-dashed border-black pt-3 first:border-0 first:pt-0">
+                      <Link to={`/blog/${post.slug}`} className="group block">
+                        <span className="text-[11px] font-black uppercase tracking-widest text-gray-500">{post.category}</span>
+                        <span className="block font-body font-extrabold text-base leading-snug group-hover:underline decoration-[2px]">
+                          {post.title}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </section>
         </div>
 
-        {/* --- MODALS BELOW --- */}
-        {showJoinModal && (
-
-          <div className="fixed inset-0 z-[100] overflow-y-auto pointer-events-none">
-            <div className="flex min-h-full items-start justify-center p-4 pt-20 sm:pt-24 pb-12">
-              <div className="bg-white border-[4px] border-black shadow-[8px_8px_0px_#000] p-6 sm:p-8 max-w-sm w-full relative -rotate-1 pointer-events-auto">
-                <button
-                  onClick={closeMenu}
-                  className="absolute top-4 right-4 bg-red-400 text-black border-[3px] border-black w-10 h-10 flex items-center justify-center font-black text-lg shadow-[3px_3px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[1px_1px_0px_#000] z-10 transition-all"
-                  aria-label="Close"
-                >
-                  <CloseIcon />
-                </button>
-
-                <h2 className="text-2xl sm:text-3xl font-black uppercase mb-8 tracking-normal text-left pr-12">
-                  Join Match
-                </h2>
-
-                {!joinMode && (
-                  <div className="flex flex-col gap-4">
-                    <button
-                      onClick={() => setJoinMode('scan')}
-                      className="bg-sky-300 border-[3px] border-black p-4 text-lg font-black uppercase shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all text-left flex justify-between items-center"
-                    >
-                      Scan QR Code
-                    </button>
-                    <button
-                      onClick={handleFindNearby}
-                      className="bg-purple-300 border-[3px] border-black p-4 text-lg font-black uppercase shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all text-left flex justify-between items-center"
-                    >
-                      Find Nearby
-                    </button>
-                  </div>
-                )}
-
-                {joinMode === 'scan' && (
-                  <div className="flex flex-col items-center animate-sketch-pop">
-                    <div className="w-full aspect-square border-[4px] border-black shadow-[6px_6px_0px_#000] overflow-hidden mb-6 bg-gray-200 rotate-1">
-                      <Suspense
-                        fallback={
-                          <div className="flex h-full w-full items-center justify-center bg-gray-100 px-4 text-center text-sm font-black uppercase tracking-widest">
-                            Loading camera...
-                          </div>
-                        }
-                      >
-                        <Scanner onScan={handleScan} />
-                      </Suspense>
-                    </div>
-                    <p className="font-bold text-gray-500 uppercase tracking-widest text-sm mb-2 text-center">
-                      Point Camera at Host
-                    </p>
-                    {nearbyStatus && (
-                      <p className="text-red-500 font-black uppercase text-center mt-2">
-                        {nearbyStatus}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {joinMode === 'nearby' && (
-                  <div className="text-center py-8 animate-sketch-pop">
-                    <div className="inline-block w-16 h-16 border-[6px] border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6" />
-                    <p className="font-black text-base sm:text-lg uppercase tracking-widest text-purple-600 px-4 leading-relaxed">
-                      {nearbyStatus}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* --- NAME PROMPT MODAL --- */}
-        {showNameModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-[#a9def9] border-[4px] border-black shadow-[8px_8px_0px_#000] p-6 sm:p-8 max-w-sm w-full relative rotate-1 animate-sketch-pop pointer-events-auto">
+        <Modal open={showJoinModal} onClose={closeMenu} title="Join Match">
+          {!joinMode && (
+            <div className="flex flex-col gap-4">
               <button
-                onClick={() => setShowNameModal(false)}
-                className="absolute top-4 right-4 bg-white text-black border-[3px] border-black w-8 h-8 flex items-center justify-center font-black text-lg shadow-[2px_2px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[0px_0px_0px_#000] transition-all"
+                onClick={() => setJoinMode('scan')}
+                className="bg-sky-300 border-[3px] border-black p-4 text-lg font-black uppercase shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all text-left"
               >
-                X
+                Scan QR Code
               </button>
-              <h2 className="text-2xl font-black uppercase mb-4 tracking-normal text-left">
-                Who's Playing?
-              </h2>
-              <p className="font-bold text-black mb-6 text-sm uppercase tracking-wide">
-                Enter your name to compete on the global leaderboard!
+              <button
+                onClick={handleFindNearby}
+                className="bg-purple-300 border-[3px] border-black p-4 text-lg font-black uppercase shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all text-left"
+              >
+                Find Nearby
+              </button>
+              <p className="font-body text-sm font-semibold text-gray-600">
+                Have a room code? Open the game from the list and enter it under &quot;Join existing&quot;.
               </p>
-              <form onSubmit={handleSaveName} className="flex flex-col gap-4">
-                <input
-                  type="text"
-                  placeholder="ENTER NAME..."
-                  maxLength={12}
-                  value={playerNameInput}
-                  onChange={(e) => setPlayerNameInput(e.target.value)}
-                  className="w-full border-[3px] border-black px-4 py-3 font-black uppercase text-lg focus:outline-none focus:shadow-[4px_4px_0_0_#000] transition-shadow"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  disabled={!playerNameInput.trim()}
-                  className="bg-[#facc15] disabled:opacity-50 disabled:cursor-not-allowed text-black border-[3px] border-black px-6 py-3 font-black uppercase tracking-widest text-lg shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] transition-all"
-                >
-                  Let's Go!
-                </button>
-              </form>
             </div>
-          </div>
-        )}
+          )}
+
+          {joinMode === 'scan' && (
+            <div className="flex flex-col items-center">
+              <div className="w-full aspect-square border-[4px] border-black shadow-[6px_6px_0px_#000] overflow-hidden mb-6 bg-gray-200 rotate-1">
+                <Suspense
+                  fallback={
+                    <div className="flex h-full w-full items-center justify-center bg-gray-100 px-4 text-center text-sm font-black uppercase tracking-widest">
+                      Loading camera...
+                    </div>
+                  }
+                >
+                  <Scanner onScan={handleScan} />
+                </Suspense>
+              </div>
+              <p className="font-bold text-gray-500 uppercase tracking-widest text-sm mb-2 text-center">
+                Point the camera at the host&apos;s QR code
+              </p>
+              {nearbyStatus && <p className="text-red-500 font-black uppercase text-center mt-2">{nearbyStatus}</p>}
+            </div>
+          )}
+
+          {joinMode === 'nearby' && (
+            <div className="text-center py-8">
+              <div className="inline-block w-16 h-16 border-[6px] border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6" />
+              <p className="font-black text-base sm:text-lg uppercase tracking-widest text-purple-600 px-4 leading-relaxed">
+                {nearbyStatus}
+              </p>
+            </div>
+          )}
+        </Modal>
+
+
       </div>
     </>
   );

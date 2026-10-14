@@ -2,7 +2,7 @@ import { useState } from 'react';
 import QRCode from 'react-qr-code';
 import { emitWithAck } from '../lib/socket.js';
 
-export default function WaitingLobby({ roomCode, isHost, playerCount, players = [], onStart }) {
+export default function WaitingLobby({ roomCode, isHost, playerCount, players = [], onStart, children }) {
   const [copied, setCopied] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
   const [locationStatus, setLocationStatus] = useState('');
@@ -135,7 +135,7 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
         {/* Players List */}
         <div className="w-full max-w-md mb-8">
           <h3 className="text-sm text-gray-800 uppercase tracking-wider mb-4 font-black flex items-center justify-center gap-2">
-            <span>🎮 Players in Lobby</span>
+            <span>Players in Lobby</span>
             <span className="bg-[#facc15] border-[2px] border-black px-2 py-0.5 rounded text-xs">
               {players.length || playerCount}
             </span>
@@ -156,7 +156,7 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
                     <span>{player.name || `Player ${idx + 1}`}</span>
                     {isPlayerHost && (
                       <span className="text-[10px] bg-yellow-400 border border-black px-1.5 py-0.5 rounded font-black tracking-widest text-black">
-                        HOST 👑
+                        HOST
                       </span>
                     )}
                   </div>
@@ -171,10 +171,13 @@ export default function WaitingLobby({ roomCode, isHost, playerCount, players = 
         </div>
 
 
+        {/* Game-specific lobby options (e.g. Tambola prizes) */}
+        {children && <div className="w-full mb-8">{children}</div>}
+
         {/* Host Controls */}
         {isHost ? (
           <button className="sketch-button bg-yellow-300 w-full sm:w-auto px-10 py-3 uppercase hover:scale-105 transition-all shadow-[4px_4px_0px_#000]" onClick={onStart}>
-            START GAME 🚀
+            START GAME
           </button>
         ) : (
           <p className="text-gray-800 uppercase tracking-wide text-sm sm:text-base font-black">
