@@ -5,7 +5,39 @@
 /* global.css or index.css */
 .perspective { perspective: 1200px; }
 .backface-hidden { backface-visibility: hidden; transform-style: preserve-3d; }
-.relative { transform-style: preserve-3d; }
+.preserve-3d { transform-style: preserve-3d; }
+
+/* Arcade game stages: as large as the visible screen allows (compensating for
+   the desktop zoom), never wider than the column. */
+:root { --app-zoom: 1; }
+.stage-portrait {
+  width: min(100%, calc(560px / var(--app-zoom)), calc((100vh / var(--app-zoom) - 250px) * 2 / 3));
+  aspect-ratio: 2 / 3;
+}
+.stage-square {
+  width: min(100%, calc(620px / var(--app-zoom)), calc(100vh / var(--app-zoom) - 300px));
+  aspect-ratio: 1 / 1;
+}
+.stage-landscape {
+  width: min(100%, calc(1100px / var(--app-zoom)), calc((100vh / var(--app-zoom) - 300px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+}
+@media (max-width: 640px) {
+  .stage-portrait { width: min(100%, calc((100svh - 190px) * 2 / 3)); }
+  .stage-square { width: 100%; }
+  .stage-landscape { width: 100%; aspect-ratio: 4 / 3; }
+}
+
+@keyframes sketch-pop {
+  0% { opacity: 0; transform: translateY(30px) rotate(-3deg) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+}
+.animate-sketch-pop {
+  animation: sketch-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-sketch-pop { animation: none; }
+}
 
 @keyframes floatUp {
   0% { 
@@ -194,4 +226,86 @@
     border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
     box-shadow: 6px 6px 0 0 #000000;
   }
+
+  /* ---------- Long-form reading (guides, blog, legal pages) ---------- */
+  .font-body {
+    font-family: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  .sketch-prose {
+    font-family: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 1.125rem;
+    line-height: 1.75;
+    color: #1f2937;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .sketch-prose > * + * { margin-top: 1.1em; }
+  .sketch-prose p { font-weight: 500; }
+  .sketch-prose strong { font-weight: 800; color: #111111; }
+  .sketch-prose em { font-style: italic; }
+  .sketch-prose a {
+    font-weight: 700;
+    color: #111111;
+    text-decoration: underline;
+    text-decoration-color: #f472b6;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 3px;
+  }
+  .sketch-prose a:hover { background: #fde047; }
+  .sketch-prose .sketch-h2,
+  .sketch-prose .sketch-h3,
+  .sketch-prose .sketch-h4 {
+    font-family: 'Architects Daughter', cursive;
+    color: #111111;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+  }
+  .sketch-prose .sketch-h2 {
+    font-size: 1.75rem;
+    margin-top: 2.2em;
+    padding-bottom: 0.35rem;
+    border-bottom: 3px solid #111111;
+  }
+  .sketch-prose .sketch-h3 { font-size: 1.35rem; margin-top: 1.8em; }
+  .sketch-prose .sketch-h4 { font-size: 1.15rem; margin-top: 1.5em; }
+  .sketch-prose > .sketch-h2:first-child { margin-top: 0; }
+  .sketch-prose ul,
+  .sketch-prose ol { padding-left: 1.4rem; }
+  .sketch-prose ul { list-style: disc; }
+  .sketch-prose ol { list-style: decimal; }
+  .sketch-prose li { padding-left: 0.25rem; font-weight: 500; }
+  .sketch-prose li + li { margin-top: 0.4em; }
+  .sketch-prose li::marker { color: #111111; font-weight: 800; }
+  .sketch-prose blockquote {
+    background: #fef9c3;
+    border: 3px solid #111111;
+    box-shadow: 4px 4px 0 0 #111111;
+    padding: 0.9rem 1.1rem;
+    font-weight: 600;
+  }
+  .sketch-prose blockquote > * + * { margin-top: 0.6em; }
+  .sketch-prose hr { border: 0; border-top: 3px dashed #111111; margin: 2.2em 0; }
+  .sketch-prose code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    background: #f3f4f6;
+    border: 1.5px solid #111111;
+    padding: 0.05rem 0.3rem;
+  }
+  .sketch-prose .sketch-table-wrap {
+    overflow-x: auto;
+    border: 3px solid #111111;
+    box-shadow: 4px 4px 0 0 #111111;
+    background: #ffffff;
+  }
+  .sketch-prose table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .sketch-prose th {
+    background: #fde047;
+    font-weight: 800;
+    text-align: left;
+    padding: 0.55rem 0.8rem;
+    border-bottom: 3px solid #111111;
+  }
+  .sketch-prose td { padding: 0.5rem 0.8rem; border-top: 1.5px solid #d1d5db; vertical-align: top; }
 }

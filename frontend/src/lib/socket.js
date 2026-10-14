@@ -4,8 +4,16 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 const ACK_TIMEOUT_MS = 25000;
 
 let socket = null;
+// Local and vs-bot games swap in an in-browser transport with the same API
+// (on/off/emit/timeout), so the multiplayer boards work unchanged.
+let socketOverride = null;
+
+export function setSocketOverride(fakeSocket) {
+  socketOverride = fakeSocket;
+}
 
 export function getSocket() {
+  if (socketOverride) return socketOverride;
   if (!socket) {
     socket = io(SERVER_URL, {
       autoConnect: false,
@@ -27,6 +35,7 @@ export function connectSocket() {
 }
 
 export function disconnectSocket() {
+  if (socketOverride) return;
   if (socket?.connected) {
     socket.disconnect();
   }

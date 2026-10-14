@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import QrScannerModal from '../../components/QrScannerModal.jsx';
+import { getPlayerName, setPlayerName } from '../../lib/playerName.js';
+import { CameraIcon } from '../../components/Icons.jsx';
 
 export default function TambolaLanding() {
   const navigate = useNavigate();
@@ -13,7 +15,7 @@ export default function TambolaLanding() {
   const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
-    const savedUsername = localStorage.getItem('pohahub_username');
+    const savedUsername = getPlayerName();
     if (savedUsername) {
       setUsername(savedUsername);
     }
@@ -34,7 +36,7 @@ export default function TambolaLanding() {
     setLoading(false);
     if (!result.ok) return setError(result.error || 'Failed to create room');
     
-    localStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     // Use the playerId from result if your backend provides it, otherwise fallback
     const pId = result.room.players.find(p => p.name === username.trim())?.id;
     if (pId) sessionStorage.setItem('playerId', pId);
@@ -58,7 +60,7 @@ export default function TambolaLanding() {
     setLoading(false);
     if (!result.ok) return setError(result.error || 'Failed to join room');
     
-    localStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     const pId = result.room.players.find(p => p.name === username.trim())?.id;
     if (pId) sessionStorage.setItem('playerId', pId);
 
@@ -156,7 +158,7 @@ export default function TambolaLanding() {
                 className="px-4 py-2 bg-purple-300 border-[3px] border-black rounded font-black text-xs uppercase flex items-center gap-1.5 shadow-[3px_3px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 shrink-0"
                 title="Scan Room QR Code"
               >
-                <span>📷</span>
+                <CameraIcon />
                 <span>Scan QR</span>
               </button>
             </div>
@@ -183,4 +185,4 @@ export default function TambolaLanding() {
       </div>
     </div>
   );
-}
+}

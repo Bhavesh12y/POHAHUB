@@ -1,19 +1,27 @@
 {
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    { "source": "/tictactoe", "destination": "/tic-tac-toe", "permanent": true },
+    { "source": "/connect-4", "destination": "/connect-four", "permanent": true },
+    { "source": "/rock-paper-scissor", "destination": "/stone-paper-scissor", "permanent": true },
+    { "source": "/rock-paper-scissors", "destination": "/stone-paper-scissor", "permanent": true },
+    { "source": "/raja-mantri-chor-sipahi", "destination": "/raja-mantri", "permanent": true },
+    { "source": "/word-imposter", "destination": "/imposter", "permanent": true },
+    { "source": "/games/tictactoe", "destination": "/games/tic-tac-toe", "permanent": true },
+    { "source": "/games/tictactoe/:path*", "destination": "/games/tic-tac-toe/:path*", "permanent": true }
+  ],
   "headers": [
     {
-      "source": "/games/:game/room/:roomCode",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
+      "source": "/games/:path*",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ],
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/games/:path*", "destination": "/spa.html" }
   ]
 }

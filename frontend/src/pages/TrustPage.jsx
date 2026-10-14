@@ -100,19 +100,24 @@ const pages = {
     sections: [
 
       {
+        title: 'Who Builds Doozles',
+        body:
+          'Doozles is an independent project created and maintained by developer Bhavesh Gupta. It started as a way to play the games we grew up with, such as Ludo, Raja Mantri Chor Sipahi and Tambola, with friends and family who live in different cities, without asking anyone to install an app. Every game is play-tested before release, and player feedback decides what we fix and build next.',
+      },
+      {
         title: 'Our Mission',
         body:
           'Doozles was founded with a singular objective: to eliminate the friction from casual gaming. We believe that playing games with friends and family should not require app store installations, device permissions, or intrusive tracking. With modern web technologies, any mobile or desktop browser can host rich, responsive multiplayer sessions in seconds.',
       },
       {
-        title: 'Platform Catalog',
+        title: 'Four Ways to Play',
         body:
-          'Our diverse catalog spans traditional heritage games (Ludo, Raja Mantri Chor Sipahi, Tambola/Housie), modern social deduction experiences (Word Imposter), fast-paced arcade challenges (Air Hockey, Traffic Run, Dino Dash, Flappy Bird, Helix Jump), and cognitive brain-teasers (2048, Block Blaster, Connect Four, Tic Tac Toe).',
+          'Every game supports at least one of four modes: private online rooms for friends on different devices, local play where everyone shares one phone or tablet, versus-bot play with easy, medium and hard opponents, and solo arcade games with personal bests and a global top three. The catalogue covers traditional games (Ludo, Raja Mantri Chor Sipahi, Tambola, Snake and Ladder), party games (Scribble, Word Imposter), classic duels (Connect Four, Tic Tac Toe, Rock Paper Scissors, Air Hockey) and arcade puzzles (2048, Block Blaster, Dino Run, Flappy Bird, Traffic Run, Helix Jump).',
       },
       {
-        title: 'Editorial Standards & Educational Content',
+        title: 'How We Write Our Guides',
         body:
-          'Our articles, strategy guides, and game histories are written and reviewed by experienced game developers and enthusiasts. We prioritize historical accuracy, game-theoretic analysis, and clear rules to help players of all skill levels improve their strategy and appreciate the cultural roots of world games.',
+          'Each game guide describes the exact rules used in the Doozles version, including house rules such as the three-sixes rule in Ludo, so players know what to expect before they start. Strategy sections come from playing the games ourselves and from well-known published analysis. When we change a rule in a game, we update its guide. If you spot a mistake, write to editorial@doozles.xyz and we will correct it.',
       },
       {
         title: 'Technology & Open Web Philosophy',
@@ -174,7 +179,7 @@ export default function TrustPage({ page }) {
           <h1 className="text-[clamp(2.25rem,6vw,4rem)] font-black uppercase leading-none tracking-normal">
             {content.heading}
           </h1>
-          <p className="mt-5 text-lg font-bold text-gray-800 leading-relaxed">
+          <p className="mt-5 font-body text-lg font-semibold text-gray-800 leading-relaxed">
             {content.description}
           </p>
         </header>
@@ -182,8 +187,8 @@ export default function TrustPage({ page }) {
         <div className="paper-panel bg-white p-6 sm:p-8 space-y-6">
           {content.sections.map((section) => (
             <section key={section.title}>
-              <h2 className="text-xl font-black uppercase mb-2">{section.title}</h2>
-              <p className="font-bold text-gray-800 leading-relaxed">{section.body}</p>
+              <h2 className="text-2xl font-black mb-2">{section.title}</h2>
+              <p className="font-body text-base sm:text-lg font-medium text-gray-800 leading-relaxed">{section.body}</p>
             </section>
           ))}
         </div>

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import QrScannerModal from '../../components/QrScannerModal.jsx';
+import { getPlayerName, setPlayerName } from '../../lib/playerName.js';
+import { CameraIcon } from '../../components/Icons.jsx';
 
 export default function TicTacToeLanding() {
   const navigate = useNavigate();
@@ -14,7 +16,7 @@ export default function TicTacToeLanding() {
 
   // Load username from localStorage on mount
   useEffect(() => {
-    const savedUsername = localStorage.getItem('pohahub_username');
+    const savedUsername = getPlayerName();
     if (savedUsername) {
       setUsername(savedUsername);
     }
@@ -39,7 +41,7 @@ export default function TicTacToeLanding() {
       setError(result.error || 'Failed to create room');
       return;
     }
-    localStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     navigate(`/games/tic-tac-toe/room/${result.room.code}`, { state: { room: result.room } });
   };
 
@@ -66,7 +68,7 @@ export default function TicTacToeLanding() {
       setError(result.error || 'Failed to join room');
       return;
     }
-    localStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     navigate(`/games/tic-tac-toe/room/${result.room.code}`, { state: { room: result.room } });
   };
 
@@ -171,7 +173,7 @@ export default function TicTacToeLanding() {
               className="px-4 py-2 bg-purple-300 border-[3px] border-black rounded font-black text-xs uppercase flex items-center gap-1.5 shadow-[3px_3px_0px_#000] hover:translate-x-0.5 hover:translate-y-0.5 shrink-0"
               title="Scan Room QR Code"
             >
-              <span>📷</span>
+              <CameraIcon />
               <span>Scan QR</span>
             </button>
           </div>
@@ -197,4 +199,4 @@ export default function TicTacToeLanding() {
       </div>
     </div>
   );
-}
+}

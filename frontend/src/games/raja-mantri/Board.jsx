@@ -6,6 +6,7 @@ import VoiceChat from '../../components/VoiceChat.jsx';
 import ChatPanel from '../../components/ChatPanel.jsx';
 import RoleCard from './RoleCard.jsx';
 import confetti from 'canvas-confetti';
+import { getPlayerName } from '../../lib/playerName.js';
 
 export default function RajaMantriBoard() {
   const { roomCode } = useParams();
@@ -21,7 +22,7 @@ export default function RajaMantriBoard() {
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username') || sessionStorage.getItem('pohahub_username');
+    const username = getPlayerName();
     if (!username) {
       navigate(`/games/raja-mantri?join=${roomCode}`);
       return;
@@ -308,7 +309,7 @@ export default function RajaMantriBoard() {
                       #{idx + 1}
                     </span>
                     <span className="text-xs sm:text-sm uppercase text-black font-black">
-                      {player.name} {isMe && '(You)'} {isWinner && '🏆'}
+                      {player.name} {isMe && '(You)'} {isWinner && '(Winner)'}
                     </span>
                   </div>
                   <span className="text-sm sm:text-base font-black text-black">

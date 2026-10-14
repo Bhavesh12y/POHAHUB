@@ -8,6 +8,9 @@ import rockImg from '../../images/rock.png';
 import paperImg from '../../images/paper1.png';
 import scissorImg from '../../images/scissor.png';
 import VoiceChat from '../../components/VoiceChat';
+import { getPlayerName } from '../../lib/playerName.js';
+import { useGameSession } from '../../lib/gameSession.js';
+import { useResultReveal, ViewBoardButton, ShowResultChip } from '../../components/ResultReveal.jsx';
 
 const ICONS = {
   stone: (
@@ -123,7 +126,9 @@ export function ChatPanel({ messages = [], onSend, disabled }) {
 }
 
 export default function Board() {
-  const { roomCode } = useParams();
+  const { roomCode: routeRoomCode } = useParams();
+  const session = useGameSession();
+  const roomCode = session?.roomCode ?? routeRoomCode;
   const navigate = useNavigate();
   const location = useLocation();
   const [room, setRoom] = useState(location.state?.room ?? null);
@@ -139,7 +144,7 @@ export default function Board() {
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username');
+    const username = session ? session.playerName : getPlayerName();
     if (!username) return navigate(`/games/stone-paper-scissor?join=${roomCode}`);
 
     const syncRoom = async () => {
@@ -184,7 +189,8 @@ export default function Board() {
   useEffect(() => {
     const gs = room?.gameState;
     if (!gs) return;
-    if (gs.status === 'round-result') {
+    // The deciding round goes straight to won/draw, so animate that one too.
+    if (gs.status === 'round-result' || gs.status === 'won' || gs.status === 'draw') {
       if (lastRoundRef.current !== gs.currentRound) {
         lastRoundRef.current = gs.currentRound;
         setRevealStage('approaching');
@@ -210,11 +216,14 @@ export default function Board() {
     duration: 0.65 + Math.random() * 0.35,
   })), [room?.gameState?.currentRound]);
 
+  const spsOver = room?.gameState?.status === 'won' || room?.gameState?.status === 'draw';
+  const reveal = useResultReveal(spsOver, 2600);
+
   if (!room) return <div className="text-center py-24 text-black font-black uppercase text-xl animate-pulse">Connecting...</div>;
 
   const gameState = room.gameState;
   const myPlayerId = room.viewerId;
-  const isHost = room.hostId === myPlayerId;
+  const isHost = session ? true : room.hostId === myPlayerId;
   const me = gameState?.players?.find(p => p.id === myPlayerId);
   const opponent = gameState?.players?.find(p => p.id !== myPlayerId);
 
@@ -283,7 +292,7 @@ export default function Board() {
           onClick={scrollToChat}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3b82f6] border-[3px] border-black text-white px-4 py-3 rounded shadow-[6px_6px_0px_#000] z-50 flex items-center gap-3 cursor-pointer w-11/12 max-w-sm lg:hidden animate-[popIn_0.3s_ease-out] -rotate-1"
         >
-          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black">💬</span>
+          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black"><svg aria-hidden="true" viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"><path d="M4 5h16v11H9l-5 4V5z" /></svg></span>
           <div className="flex flex-col flex-1 truncate">
             <span className="text-xs font-black uppercase text-[#facc15]">{chatToast.playerName}</span>
             <span className="text-sm font-bold truncate">{chatToast.message}</span>
@@ -313,7 +322,7 @@ export default function Board() {
               </AnimatePresence>
             </div>
 
-            <VoiceChat roomCode={room.code} />
+            {!session && <VoiceChat roomCode={room.code} />}
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-2">
                 <Avatar name={me?.name} size={30} />
@@ -327,8 +336,9 @@ export default function Board() {
             </div>
           </div>
 
+          {spsOver && !reveal.visible && <ShowResultChip onClick={reveal.show} />}
           <AnimatePresence>
-            {(gameState.status === 'won' || gameState.status === 'draw') ? (
+            {spsOver && reveal.visible ? (
               <motion.div
                 key="result"
                 initial={{ opacity: 0, y: 30, scale: 0.9 }}
@@ -337,7 +347,7 @@ export default function Board() {
                 transition={{ type: 'spring', stiffness: 220, damping: 18 }}
                 className="bg-gradient-to-br from-yellow-300 to-amber-400 border-[4px] border-black shadow-[12px_12px_0px_#000] p-8 sm:p-10 text-center rounded-xl rotate-1"
               >
-                <div className="text-6xl mb-2">{gameState.status === 'draw' ? '🤝' : '🏆'}</div>
+                <div className="text-6xl mb-2">{gameState.status === 'draw' ? 'DRAW' : 'WIN'}</div>
                 <h2 className="text-4xl sm:text-5xl font-black mb-2 uppercase">
                   {gameState.status === 'draw' ? "It's a Draw!" : `${gameState.winner.name} Wins!`}
                 </h2>
@@ -348,7 +358,8 @@ export default function Board() {
                   {isHost && (
                     <button onClick={resetGame} className="bg-green-400 text-black font-black uppercase border-[3px] border-black py-3 px-8 rounded shadow-[4px_4px_0px_#000] transition-transform hover:translate-y-[2px] hover:translate-x-[2px]">Play Again</button>
                   )}
-                  <Link to="/" className="bg-white text-black font-black uppercase border-[3px] border-black py-3 px-8 rounded shadow-[4px_4px_0px_#000] transition-transform hover:translate-y-[2px] hover:translate-x-[2px]">Exit</Link>
+                  <button type="button" onClick={reveal.hide} className="bg-white text-black font-black uppercase border-[3px] border-black py-3 px-8 rounded shadow-[4px_4px_0px_#000] transition-transform hover:translate-y-[2px] hover:translate-x-[2px]">View Round</button>
+                  <Link to={session?.exitPath ?? '/'} className="bg-white text-black font-black uppercase border-[3px] border-black py-3 px-8 rounded shadow-[4px_4px_0px_#000] transition-transform hover:translate-y-[2px] hover:translate-x-[2px]">Exit</Link>
                 </div>
               </motion.div>
             ) : (
@@ -379,7 +390,7 @@ export default function Board() {
                       <IconBox choice={revealStage === 'idle' ? 'hidden' : (opponent?.currentChoice || 'hidden')} />
                       {revealStage === 'idle' && (
                         <p className="font-bold text-gray-500 uppercase mt-3 text-[10px] sm:text-sm">
-                          {opponent?.currentChoice ? '🔒 Locked In' : 'Thinking…'}
+                          {opponent?.currentChoice ? 'Locked In' : 'Thinking…'}
                         </p>
                       )}
                     </motion.div>
@@ -526,7 +537,7 @@ export default function Board() {
         </div>
 
         {/* RIGHT COLUMN: CHAT PANEL */}
-        <div ref={chatRef} className="w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0 scroll-mt-24">
+        <div ref={chatRef} className={`w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0 scroll-mt-24${session ? ' hidden' : ''}`}>
           <ChatPanel
             messages={room.chat ?? []}
             onSend={handleChat}

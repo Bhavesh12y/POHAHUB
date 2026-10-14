@@ -151,7 +151,7 @@ export const moveLudoToken = (state, playerId, tokenId) => {
     if (currentPlayer.finishedCount === 4) {
       state.status = 'won';
       state.winner = currentPlayer;
-      state.message = `${currentPlayer.name} has won the game! 🎉`;
+      state.message = `${currentPlayer.name} has won the game!`;
       return { ok: true, state };
     }
   }

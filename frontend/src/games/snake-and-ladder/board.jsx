@@ -3,6 +3,9 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
+import { getPlayerName } from '../../lib/playerName.js';
+import { useGameSession } from '../../lib/gameSession.js';
+import { useResultReveal, ViewBoardButton, ShowResultChip } from '../../components/ResultReveal.jsx';
 
 // --- CHAT PANEL (With Scrollbar Fix & Crash Protection) ---
 function ChatPanel({ messages = [], onSend }) {
@@ -114,7 +117,9 @@ const SnakeGraphic = ({ start, end }) => {
 
 // --- MAIN BOARD ---
 export default function SnakeAndLadderBoard() {
-  const { roomCode } = useParams();
+  const { roomCode: routeRoomCode } = useParams();
+  const session = useGameSession();
+  const roomCode = session?.roomCode ?? routeRoomCode;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -136,7 +141,7 @@ export default function SnakeAndLadderBoard() {
   // Socket Connection
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username') || sessionStorage.getItem('pohahub_username');
+    const username = session ? session.playerName : getPlayerName();
     if (!username) {
       navigate(`/games/snake-and-ladder?join=${roomCode}`);
       return;
@@ -168,7 +173,9 @@ export default function SnakeAndLadderBoard() {
 
   const gameState = room?.gameState;
   const myPlayerId = room?.viewerId;
-  const isHost = room?.hostId === myPlayerId;
+  const isHost = session ? true : room?.hostId === myPlayerId;
+  const isOver = room?.gameState?.status === 'won';
+  const reveal = useResultReveal(isOver, 2200);
   const isMyTurn = gameState?.players[gameState?.currentPlayerIndex]?.id === myPlayerId;
   const processedRollKeyRef = useRef(null);
 
@@ -328,7 +335,7 @@ export default function SnakeAndLadderBoard() {
           onClick={scrollToChat}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3b82f6] border-[3px] border-black text-white px-4 py-3 rounded shadow-[6px_6px_0px_#000] z-50 flex items-center gap-3 cursor-pointer w-11/12 max-w-sm lg:hidden animate-[popIn_0.3s_ease-out] -rotate-1"
         >
-          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black">💬</span>
+          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black"><svg aria-hidden="true" viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"><path d="M4 5h16v11H9l-5 4V5z" /></svg></span>
           <div className="flex flex-col flex-1 truncate">
             <span className="text-xs font-black uppercase text-[#facc15]">{chatToast.playerName}</span>
             <span className="text-sm font-bold truncate">{chatToast.message}</span>
@@ -337,7 +344,8 @@ export default function SnakeAndLadderBoard() {
         </div>
       )}
 
-      {(gameState?.status === 'won') && (
+      {isOver && !reveal.visible && <ShowResultChip onClick={reveal.show} />}
+      {isOver && reveal.visible && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-10 text-center animate-pop-in rounded-xl -rotate-2">
@@ -345,10 +353,11 @@ export default function SnakeAndLadderBoard() {
             <h2 className="text-5xl font-black mb-2 text-[#ef4444] tracking-tighter uppercase" style={{ WebkitTextStroke: '2px black' }}>
                 {gameState.winner?.name}
             </h2>
-            <h3 className="text-xl font-bold text-black mb-8 uppercase">reached 100 first! 🏆</h3>
+            <h3 className="text-xl font-bold text-black mb-8 uppercase">reached 100 first!</h3>
             <div className="w-full h-[3px] bg-black mb-6" />
+            <div className="mb-3"><ViewBoardButton onClick={reveal.hide} /></div>
             <Link 
-              to="/games/snake-and-ladder" 
+              to={session?.exitPath ?? '/games/snake-and-ladder'} 
               className="bg-[#facc15] w-full block py-4 text-sm font-black tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black transition-all duration-150 rounded"
             >
               Return to Hub
@@ -364,11 +373,11 @@ export default function SnakeAndLadderBoard() {
          
           <p className="text-xs font-black tracking-widest uppercase text-gray-500 mb-1">Turn Status</p>
           <p className={`text-xl font-black uppercase ${isMyTurn ? 'text-[#3b82f6]' : 'text-black'}`}>
-            {room.status === 'waiting' ? 'Waiting for host...' : isMyTurn ? "🎲 Your Turn!" : `${gameState.players[gameState.currentPlayerIndex]?.name}'s Turn`}
+            {room.status === 'waiting' ? 'Waiting for host...' : isMyTurn && session?.mode !== 'local' ? "Your Turn!" : `${gameState.players[gameState.currentPlayerIndex]?.name}'s Turn`}
           </p>
         </div>
 
-         <VoiceChat roomCode={room.code} />
+         {!session && <VoiceChat roomCode={room.code} />}
         
         {gameState?.lastRoll && (
           <div className="text-center animate-pop-in bg-gray-100 px-6 py-2 rounded border-[2px] border-black shadow-[2px_2px_0px_#000] rotate-1">
@@ -481,7 +490,7 @@ export default function SnakeAndLadderBoard() {
         </div>
 
         {/* LOBBY CHAT */}
-        <div ref={chatRef} className="w-full lg:w-80 shrink-0 mt-4 lg:mt-0 scroll-mt-24">
+        <div ref={chatRef} className={`w-full lg:w-80 shrink-0 mt-4 lg:mt-0 scroll-mt-24${session ? ' hidden' : ''}`}>
             <ChatPanel messages={room.chat ?? []} onSend={handleChat} />
         </div>
       </div>

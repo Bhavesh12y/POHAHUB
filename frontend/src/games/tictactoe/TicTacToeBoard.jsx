@@ -3,6 +3,9 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
+import { getPlayerName } from '../../lib/playerName.js';
+import { useGameSession } from '../../lib/gameSession.js';
+import { useResultReveal, ViewBoardButton, ShowResultChip } from '../../components/ResultReveal.jsx';
 
 // Reusable Chat Panel (With Scrollbar Fix & Crash Protection)
 function ChatPanel({ messages = [], onSend, disabled }) {
@@ -68,7 +71,9 @@ function ChatPanel({ messages = [], onSend, disabled }) {
 }
 
 export default function TicTacToeBoard() {
-  const { roomCode } = useParams();
+  const { roomCode: routeRoomCode } = useParams();
+  const session = useGameSession();
+  const roomCode = session?.roomCode ?? routeRoomCode;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -82,14 +87,16 @@ export default function TicTacToeBoard() {
   const isPlaying = room?.status === 'playing';
   const isMyTurn = gameState?.currentPlayerId === myPlayerId;
   const mySymbol = gameState?.players?.find((p) => p.id === myPlayerId)?.symbol; // 'X' or 'O'
-  const isHost = room?.hostId === myPlayerId;
+  const isHost = session ? true : room?.hostId === myPlayerId;
 
   // Assume backend sends winningCells as an array of indices: e.g., [0, 1, 2]
   const winningSet = new Set(gameState?.winningCells ?? []);
+  const isOver = gameState?.status === 'won' || gameState?.status === 'draw';
+  const reveal = useResultReveal(isOver);
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username');
+    const username = session ? session.playerName : getPlayerName();
 
     if (!username) {
       navigate(`/games/tic-tac-toe?join=${roomCode}`);
@@ -213,7 +220,7 @@ export default function TicTacToeBoard() {
     if (room.status === 'waiting') return `Waiting for players (${room.players.length}/${room.maxPlayers})`;
     if (gameState?.status === 'won') return `${gameState.winner?.name ?? 'Someone'} wins!`;
     if (gameState?.status === 'draw') return "It's a draw!";
-    if (isMyTurn) return 'Your turn — make a move';
+    if (isMyTurn && session?.mode !== 'local') return 'Your turn — make a move';
     const current = gameState?.players?.find((p) => p.id === gameState.currentPlayerId);
     return `${current?.name ?? 'Opponent'}'s turn`;
   })();
@@ -231,7 +238,8 @@ export default function TicTacToeBoard() {
       `}</style>
 
       {/* PREMIUM CELEBRATION POPUP */}
-      {(gameState?.status === 'won' || gameState?.status === 'draw') && (
+      {isOver && !reveal.visible && <ShowResultChip onClick={reveal.show} />}
+      {isOver && reveal.visible && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300" />
           <div className="relative w-full max-w-md bg-white border-[4px] border-black shadow-[12px_12px_0px_#000] p-10 text-center animate-pop-in rounded-xl -rotate-2">
@@ -252,8 +260,14 @@ export default function TicTacToeBoard() {
                 </>
               )}
               
-              <div className="w-full h-[3px] bg-black mb-8" />
-              
+              <div className="w-full h-[3px] bg-black mb-6" />
+              <div className="grid grid-cols-3 gap-1 w-32 mx-auto mb-6" aria-label="Final board">
+                {gameState.board.map((v, i) => (
+                  <div key={i} className={`aspect-square border-[2px] border-black flex items-center justify-center font-black text-xl ${winningSet.has(i) ? 'bg-[#facc15]' : 'bg-white'}`}>
+                    <span className={v === 'X' ? 'text-[#3b82f6]' : 'text-[#ef4444]'}>{v}</span>
+                  </div>
+                ))}
+              </div>
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={handlePlayAgain}
@@ -261,8 +275,9 @@ export default function TicTacToeBoard() {
                 >
                   Play Again
                 </button>
+                <ViewBoardButton onClick={reveal.hide} />
                 <Link 
-                  to="/games/tic-tac-toe" 
+                  to={session?.exitPath ?? '/games/tic-tac-toe'} 
                   className="bg-gray-200 w-full block py-4 text-sm font-bold tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black text-center transition-all duration-150 rounded"
                 >
                   Return to Hub
@@ -283,11 +298,11 @@ export default function TicTacToeBoard() {
             {/* Header Info */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b-[3px] border-black pb-6">
               <div>
-                <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">Room Code</p>
-                <p className="text-[clamp(1.5rem,4vw,2.25rem)] font-black tracking-widest text-white uppercase">{room.code}</p>
+                <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">{session ? 'Mode' : 'Room Code'}</p>
+                <p className="text-[clamp(1.5rem,4vw,2.25rem)] font-black tracking-widest text-white uppercase">{session ? session.label : room.code}</p>
               </div>
               {/* INJECT VOICE CONTROLS HERE */}
-              <VoiceChat roomCode={room.code} />
+              {!session && <VoiceChat roomCode={room.code} />}
               <div className="text-right">
                 <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">Status</p>
                 <p className="font-black text-[#facc15] text-[clamp(0.8rem,2vw,1rem)] uppercase">{statusMessage}</p>
@@ -363,7 +378,7 @@ export default function TicTacToeBoard() {
         </div>
 
         {/* RIGHT COLUMN: CHAT PANEL */}
-        <div className="w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0">
+        <div className={`w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0${session ? ' hidden' : ''}`}>
           <ChatPanel messages={room.chat ?? []} onSend={handleChat} disabled={!connected} />
         </div>
       </div>

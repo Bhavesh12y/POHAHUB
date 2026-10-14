@@ -20,7 +20,7 @@ export default function ChatPanel({ messages = [], onSend, disabled = false, cla
   return (
     <div className={`flex flex-col w-full bg-white border-[4px] border-black rounded-xl shadow-[6px_6px_0px_#000] text-black font-sans overflow-hidden ${className || 'h-[420px] lg:h-[540px]'}`}>
       <div className="px-4 py-3 border-b-[3px] border-black font-black tracking-widest text-xs uppercase text-black bg-[#ffd166] flex justify-between items-center shrink-0">
-        <span>💬 Room Chat</span>
+        <span>Room Chat</span>
         <span className="flex items-center gap-1.5 text-[10px] font-black uppercase">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           Live

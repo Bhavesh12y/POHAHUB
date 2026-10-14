@@ -1,201 +1,127 @@
+import { MULTIPLAYER_GUIDES } from '../data/guides/multiplayer.js';
+import { SOLO_GUIDES } from '../data/guides/solo.js';
+
 const configuredSiteUrl = import.meta.env.VITE_SITE_URL || 'https://doozles.xyz';
 
+// Page titles and meta descriptions per game guide. Keys match the ids in
+// data/games.js; `route` is the one canonical URL for the guide.
 export const SEO_CONFIG = {
   siteName: 'Doozles',
   baseUrl: configuredSiteUrl.replace(/\/$/, ''),
-  defaultTitle: 'Doozles - Play Free Multiplayer Browser Games Online',
+  defaultTitle: 'Doozles - Free Multiplayer, Local and Bot Games in Your Browser',
   defaultDescription:
-    'Play free multiplayer games online on Doozles. Create private rooms, invite friends, and enjoy browser games without downloading an app.',
-  defaultKeywords:
-    'play free multiplayer games online, browser games without downloading, free online games with friends, multiplayer browser games, private room games, casual games online, Doozles games',
+    'Play Ludo, Tambola, Raja Mantri Chor Sipahi, Connect 4, Air Hockey and more on Doozles. Private online rooms, same-device local play, bots and solo arcade games. No download needed.',
   games: {
     ludo: {
       name: 'Ludo',
-      route: '/ludo',
-      playPath: '/games/ludo',
-      playMode: 'MultiPlayer',
-      title: 'Play Ludo Online Free With Friends | Doozles',
+      title: 'Play Ludo Online Free: Rules, Strategy and Bots | Doozles',
       description:
-        'Play Ludo online free with friends on Doozles. Create a private room, roll dice, race tokens home, and enjoy a browser game without downloading.',
-      keywords:
-        'play ludo online free, ludo game with friends, online ludo multiplayer, play free multiplayer games online, browser games without downloading, private room ludo, ludo browser game',
+        'Play Ludo online with friends, on one phone, or against bots. Learn the full rules, safe squares, capture tactics and endgame strategy.',
     },
-    tictactoe: {
+    'tic-tac-toe': {
       name: 'Tic Tac Toe',
-      route: '/tictactoe',
-      playPath: '/games/tic-tac-toe',
-      playMode: 'MultiPlayer',
-      title: 'Play Tic Tac Toe Online With Friends | Doozles',
+      title: 'Tic Tac Toe Online: Play vs Friends or Bot, Plus Strategy | Doozles',
       description:
-        'Play Tic Tac Toe online with friends for free. Start a private 1v1 room on Doozles and play instantly in your browser without downloading.',
-      keywords:
-        'tic tac toe online, play tic tac toe with friends, free tic tac toe multiplayer, play free multiplayer games online, browser games without downloading, noughts and crosses online',
+        'Play Tic Tac Toe online, on one device or against an unbeatable bot. Learn the best openings, forks and why perfect play ends in a draw.',
     },
     'air-hockey': {
       name: 'Air Hockey',
-      route: '/air-hockey',
-      playPath: '/games/air-hockey',
-      playMode: 'MultiPlayer',
-      title: 'Play Air Hockey Online Free | Doozles',
+      title: 'Air Hockey Online: 1v1, Split Screen and Bot | Doozles',
       description:
-        'Play Air Hockey online free on Doozles. Create a fast 1v1 browser room, strike the puck, and challenge a friend without downloading anything.',
-      keywords:
-        'play air hockey online, air hockey game online free, multiplayer air hockey browser game, play free multiplayer games online, browser games without downloading, 1v1 online games',
+        'Play Air Hockey in your browser against a friend online, on one shared screen, or against a bot. Rules, bank shots and defence tips.',
     },
     'connect-four': {
       name: 'Connect Four',
-      route: '/connect-four',
-      playPath: '/games/connect-four',
-      playMode: 'MultiPlayer',
-      title: 'Play Connect Four Online With Friends | Doozles',
+      title: 'Connect Four Online: Play Friends or Bot, Rules and Strategy | Doozles',
       description:
-        'Play Connect Four online with friends on Doozles. Drop discs, connect four in a row, and enjoy a free multiplayer browser game.',
-      keywords:
-        'connect four online, play connect 4 with friends, connect four multiplayer, free connect four game, play free multiplayer games online, browser games without downloading',
+        'Play Connect 4 online, locally or against a bot with three difficulty levels. Learn centre control, threats and the odd-even row strategy.',
     },
     scribble: {
       name: 'Scribble',
-      route: '/scribble',
-      playPath: '/games/scribble',
-      playMode: 'MultiPlayer',
-      title: 'Play Scribble Online With Friends | Doozles',
+      title: 'Scribble: Free Draw and Guess Game With Friends | Doozles',
       description:
-        'Play Scribble online with friends on Doozles. Draw, guess, chat, and score points in a free browser drawing game without downloading.',
-      keywords:
-        'scribble online game, draw and guess online, drawing game with friends, skribbl alternative, play free multiplayer games online, browser games without downloading',
+        'Play Scribble, a free draw-and-guess party game for up to 8 players in private rooms. How scoring and hints work, plus drawing and guessing tips.',
     },
     'snake-and-ladder': {
       name: 'Snake and Ladder',
-      route: '/snake-and-ladder',
-      playPath: '/games/snake-and-ladder',
-      playMode: 'MultiPlayer',
-      title: 'Play Snake and Ladder Online | Doozles',
+      title: 'Snake and Ladder Online: Rules, Board and History | Doozles',
       description:
-        'Play Snake and Ladder online with friends. Roll dice, climb ladders, avoid snakes, and race to the finish in a free browser game.',
-      keywords:
-        'snake and ladder online, play snakes and ladders with friends, snake ladder multiplayer, free board games online, play free multiplayer games online, browser games without    downloading   ',
+        'Play Snake and Ladder online, on one device or with bots. See every snake and ladder on the board, the exact-roll rule and the game\'s Indian origins.',
     },
     'stone-paper-scissor': {
-      name: 'Stone Paper Scissor',
-      route: '/stone-paper-scissor',
-      playPath: '/games/stone-paper-scissor',
-      playMode: 'MultiPlayer',
-      title: 'Play Stone Paper Scissor Online | Doozles',
+      name: 'Rock Paper Scissors',
+      title: 'Rock Paper Scissors (Stone Paper Scissor) Online | Doozles',
       description:
-        'Play Stone Paper Scissor online with a friend on Doozles. Choose your move, win quick rounds, and play instantly in the browser.',
-      keywords:
-        'stone paper scissor online, rock paper scissors online, play rock paper scissors with friends, quick 1v1 browser games, play   free multiplayer games    online, browser games without downloading',
+        'Play Stone Paper Scissor best-of-five online, on one phone or against a pattern-reading bot. Learn the psychology that wins more rounds.',
     },
     tambola: {
       name: 'Tambola',
-      route: '/tambola',
-      playPath: '/games/tambola',
-      playMode: 'MultiPlayer',
-      title: 'Play Tambola Online With Friends | Doozles',
+      title: 'Tambola (Housie) Online for Up to 50 Players: Rules and Prizes | Doozles',
       description:
-        'Play Tambola online with friends on Doozles. Create a private room, mark tickets, call numbers, and enjoy a social browser game.',
-      keywords:
-        'tambola online, play tambola with friends, housie online game, online tambola tickets, play free multiplayer games online, browser games without downloading',
+        'Host Tambola online for family and friends. Every prize pattern explained: Early Five, lines, corners, Ladoo and Full House, plus hosting tips.',
     },
     '2048': {
       name: '2048',
-      route: '/2048',
-      playPath: '/games/2048',
-      playMode: 'SinglePlayer',
-      title: 'Play 2048 Online Free | Doozles',
+      title: 'Play 2048 Online Free: Rules and Corner Strategy | Doozles',
       description:
-        'Play 2048 online free on Doozles. Slide tiles, merge numbers, chase a high score, and enjoy a browser puzzle game without downloading.',
-      keywords:
-        'play 2048 online, 2048 game free, 2048 puzzle browser game, free online puzzle games, browser games without downloading, single player browser games',
+        'Play 2048 free in your browser with swipe or keyboard controls. Learn the corner strategy and snake pattern that reliably reach 2048.',
     },
     'block-blaster': {
       name: 'Block Blaster',
-      route: '/block-blaster',
-      playPath: '/games/block-blaster',
-      playMode: 'SinglePlayer',
-      title: 'Play Block Blaster Online Free | Doozles',
+      title: 'Block Blaster: Free 8x8 Block Puzzle Online | Doozles',
       description:
-        'Play Block Blaster online free on Doozles. Place blocks, clear lines, plan combos, and enjoy an instant browser puzzle game.',
-      keywords:
-        'block blaster online, block puzzle game free, play block games online, free puzzle browser games, browser games without downloading, single player games online',
+        'Play Block Blaster, a relaxing 8x8 block puzzle. Learn how combos work and the space-planning tricks that keep the board open.',
     },
     dino: {
       name: 'Dino Run',
-      route: '/dino',
-      playPath: '/games/dino',
-      playMode: 'SinglePlayer',
-      title: 'Play Dino Run Online Free | Doozles',
+      title: 'Dino Run: Play the Dinosaur Runner Game Online | Doozles',
       description:
-        'Play Dino Run online free on Doozles. Jump obstacles, dodge hazards, and chase your best score in an endless browser runner.',
-      keywords:
-        'dino run online, dinosaur game online, chrome dino style game, endless runner browser game, browser games without downloading, free single player games online',
+        'Play Dino Run, an endless runner inspired by the offline dinosaur game. Controls, timing tips and a global top-three leaderboard.',
     },
     'flappy-bird': {
       name: 'Flappy Bird',
-      route: '/flappy-bird',
-      playPath: '/games/flappy-bird',
-      playMode: 'SinglePlayer',
-      title: 'Play Flappy Bird Online Free | Doozles',
+      title: 'Play Flappy Bird Online Free: Tips for a Higher Score | Doozles',
       description:
-        'Play Flappy Bird online for free on Doozles. Fly through pipes, beat your high score, and enjoy this classic endless arcade game directly in your browser.',
-      keywords:
-        'flappy bird online, play flappy bird free, flappy bird browser game, endless runner, arcade game online, single player browser game',
+        'Play Flappy Bird free in your browser. The history of the one-tap phenomenon and practical tips for a higher score.',
     },
     'helix-jump': {
       name: 'Helix Jump',
-      route: '/helix-jump',
-      playPath: '/games/helix-jump',
-      playMode: 'SinglePlayer',
-      title: 'Play Helix Jump Online Free | Doozles',
+      title: 'Helix Jump 3D Online: Play Free in Your Browser | Doozles',
       description:
-        'Play Helix Jump online for free on Doozles. Guide the bouncing ball through rotating helix towers and achieve the highest score in your browser.',
-      keywords:
-        'helix jump online, play helix jump free, helix jump browser game, bouncing ball game, arcade game online, single player browser game',
+        'Play Helix Jump in real 3D in your browser. Spin the tower, drop through the gaps, avoid red and chain floors for a smash.',
     },
     'raja-mantri': {
       name: 'Raja Mantri Chor Sipahi',
-      route: '/raja-mantri',
-      playPath: '/games/raja-mantri',
-      playMode: 'MultiPlayer',
-      title: 'Play Raja Mantri Chor Sipahi Online Free | Doozles',
+      title: 'Raja Mantri Chor Sipahi Online: Rules, Points and Tips | Doozles',
       description:
-        'Play Raja Mantri Chor Sipahi online with friends for free. The legendary 4-player royal chit game with secret identities, deduction, and live scoreboard across 5 rounds.',
-      keywords:
-        'raja mantri chor sipahi online, play raja mantri with friends, royal chit game online, indian party games online, deduction browser game, play free multiplayer games online',
+        'Play Raja Mantri Chor Sipahi online with friends or bots. Roles, point table, how the Mantri\'s guess works and how to bluff as the Chor.',
     },
     imposter: {
       name: 'Word Imposter',
-      route: '/imposter',
-      playPath: '/games/imposter',
-      playMode: 'MultiPlayer',
-      title: 'Play Word Imposter Online With Friends | Doozles',
+      title: 'Word Imposter: Social Deduction Word Game Online | Doozles',
       description:
-        'Play Word Imposter online with friends for free on Doozles. Give 1-word clues across 2 rounds, discuss, vote, or steal the win in this social deduction party game.',
-      keywords:
-        'word imposter online, play imposter game online, word mafia game, chameleon game online, social deduction browser game, play free multiplayer games online',
+        'Play Word Imposter online. Everyone knows the secret word except the imposter. Rules, scoring and clue strategy for detectives and imposters.',
     },
     'traffic-run': {
       name: 'Traffic Run',
-      route: '/traffic-run',
-      playPath: '/games/traffic-run',
-      playMode: 'SinglePlayer',
-      title: 'Play Traffic Run Online Free | Doozles',
+      title: 'Traffic Run: Free 3-Lane Car Dodging Game | Doozles',
       description:
-        'Play Traffic Run online free on Doozles. Dodge high-speed traffic across 3 lanes with swiping and tap controls, level up speeds, and beat top global scores.',
-      keywords:
-        'traffic run online, traffic racer browser game, dodge traffic game free, single player browser games, highway runner game online',
+        'Play Traffic Run free in your browser. Swipe, tap or use the keyboard to dodge traffic across three lanes as the speed climbs.',
     },
   },
 };
 
+const GUIDES = { ...MULTIPLAYER_GUIDES, ...SOLO_GUIDES };
+
+// Old or alternative URLs that should resolve to the canonical guide.
 export const GAME_SEO_ALIASES = {
+  tictactoe: 'tic-tac-toe',
   'connect-4': 'connect-four',
-  'tic-tac-toe': 'tictactoe',
   'rock-paper-scissor': 'stone-paper-scissor',
+  'rock-paper-scissors': 'stone-paper-scissor',
   'raja-mantri-chor-sipahi': 'raja-mantri',
   'word-imposter': 'imposter',
 };
-
 
 export function normalizeGameId(gameId = '') {
   return GAME_SEO_ALIASES[gameId] || gameId;
@@ -210,622 +136,19 @@ export function absoluteUrl(path = '/') {
 export const defaultSeo = {
   title: SEO_CONFIG.defaultTitle,
   description: SEO_CONFIG.defaultDescription,
-  keywords: SEO_CONFIG.defaultKeywords,
   image: absoluteUrl('/og-image.svg'),
 };
 
-const guideDetails = {
-  ludo: {
-    related: ['tictactoe', 'connect-four', 'snake-and-ladder'],
-    intro:
-      'Ludo is a classic race game where players roll dice, move tokens around the board, and try to bring every token home first.',
-    rules: [
-      'Players roll the die on their turn and move one eligible token.',
-      'A token must leave base before it can travel around the board.',
-      'Landing on an opponent token can send that token back to base.',
-      'The first player to bring every token home wins.',
-    ],
-    howToPlay: [
-      'Choose Ludo from the Doozles lobby.',
-      'Create a room and share the invite link with friends.',
-      'Wait for players to join, then start the match.',
-      'Roll, move tokens, and race to the home area.',
-    ],
-    strategies: [
-      'Move multiple tokens instead of relying on only one runner.',
-      'Use safe spaces when available to reduce captures.',
-      'Capture opponent tokens when it does not expose your own progress.',
-      'Balance aggressive captures with steady movement toward home.',
-    ],
-    faq: [
-      {
-        question: 'Can I play Ludo online with friends?',
-        answer: 'Yes. Create a private Ludo room on Doozles and invite friends with a room link.',
-      },
-      {
-        question: 'Is Ludo free on Doozles?',
-        answer: 'Yes. You can play the current Doozles Ludo experience in your browser for free.',
-      },
-      {
-        question: 'Do I need to download an app?',
-        answer: 'No. Doozles runs directly in the browser.',
-      },
-    ],
-  },
-  tictactoe: {
-    related: ['connect-four', 'stone-paper-scissor', 'ludo'],
-    intro:
-      'Tic Tac Toe is a quick two-player game where X and O compete to claim three spaces in a row on a 3x3 grid.',
-    rules: [
-      'Players take turns placing their symbol in an empty square.',
-      'The first player to place three symbols in a row wins.',
-      'Winning rows can be horizontal, vertical, or diagonal.',
-      'If every square fills without a winner, the game ends in a draw.',
-    ],
-    howToPlay: [
-      'Open the Tic Tac Toe lobby on Doozles.',
-      'Enter your name and create a room.',
-      'Invite a friend with the room link or room code.',
-      'Take turns until one player wins or the grid is full.',
-    ],
-    strategies: [
-      'Start in the center or a corner to maximize future threats.',
-      'Block your opponent immediately when they have two in a row.',
-      'Create forks that force your opponent to defend two lines.',
-      'With perfect play from both sides, expect a draw.',
-    ],
-    faq: [
-      {
-        question: 'Is Tic Tac Toe multiplayer on Doozles?',
-        answer: 'Yes. Tic Tac Toe runs in a private online room you can share with a friend.',
-      },
-      {
-        question: 'Can Tic Tac Toe end in a draw?',
-        answer: 'Yes. Careful play from both players often ends in a draw.',
-      },
-      {
-        question: 'Can I play on mobile?',
-        answer: 'Yes. Doozles games are browser-based and work on mobile screens.',
-      },
-    ],
-  },
-  'air-hockey': {
-    related: ['stone-paper-scissor', 'connect-four', 'tictactoe'],
-    intro:
-      'Air Hockey is a fast 1v1 arcade game where players strike a puck, defend their goal, and race to outscore an opponent.',
-    rules: [
-      'Each player controls a striker on their side of the table.',
-      'Hit the puck into the opponent goal to score.',
-      'Defend your own goal while keeping the puck in play.',
-      'The player with the target score or highest score wins.',
-    ],
-    howToPlay: [
-      'Open Air Hockey from the Doozles lobby.',
-      'Create a private room and share it with a friend.',
-      'Start the match once both players are ready.',
-      'Move your striker, hit the puck, and protect your goal.',
-    ],
-    strategies: [
-      'Stay between the puck and your goal after each shot.',
-      'Use angled shots to make rebounds harder to defend.',
-      'Avoid overcommitting when the puck is near your goal.',
-      'Mix direct shots with bank shots to stay unpredictable.',
-    ],
-    faq: [
-      {
-        question: 'Can I play Air Hockey online with a friend?',
-        answer: 'Yes. Doozles supports private Air Hockey rooms for quick 1v1 matches.',
-      },
-      {
-        question: 'Is Air Hockey browser-based?',
-        answer: 'Yes. You can play from a browser without installing an app.',
-      },
-      {
-        question: 'How many players can join Air Hockey?',
-        answer: 'Air Hockey is designed for two players.',
-      },
-    ],
-  },
-  'connect-four': {
-    related: ['tictactoe', 'ludo', 'stone-paper-scissor'],
-    intro:
-      'Connect Four is a two-player strategy game where players drop discs into a vertical grid and race to connect four in a row.',
-    rules: [
-      'Players take turns dropping one disc into any available column.',
-      'A disc falls to the lowest open space in that column.',
-      'The first player to connect four discs horizontally, vertically, or diagonally wins.',
-      'If the board fills without four connected discs, the game is a draw.',
-    ],
-    howToPlay: [
-      'Choose Connect Four from the Doozles game lobby.',
-      'Enter your name and create a private room.',
-      'Share the room link or room code with a friend.',
-      'Start the match and take turns dropping discs.',
-    ],
-    strategies: [
-      'Control the center columns because they create more winning lines.',
-      'Block immediate threats before building your own longer setup.',
-      'Create fork threats where one move gives you multiple ways to win.',
-      'Avoid filling columns that give your opponent a direct winning move.',
-    ],
-    faq: [
-      {
-        question: 'Can I play Connect Four online with a friend?',
-        answer: 'Yes. Create a room on Doozles and share the invite link with your friend.',
-      },
-      {
-        question: 'How many players can join Connect Four?',
-        answer: 'Connect Four is built for two players.',
-      },
-      {
-        question: 'Do I need an account?',
-        answer: 'No. You can enter a display name and start a private room instantly.',
-      },
-    ],
-  },
-  scribble: {
-    related: ['tambola', 'tictactoe', 'connect-four'],
-    intro:
-      'Scribble is a real-time drawing and guessing game where one player sketches a hidden word while everyone else races to guess it.',
-    rules: [
-      'One player draws the selected word while the others guess in chat.',
-      'Correct guesses score points for the guesser and reward the drawer.',
-      'The drawer should not write or reveal the answer directly.',
-      'Players rotate through drawing turns until the match ends.',
-    ],
-    howToPlay: [
-      'Open the Scribble lobby on Doozles.',
-      'Create a room and invite friends with the room link or code.',
-      'Start the match once players join.',
-      'Draw clearly, guess quickly, and use hints when they appear.',
-    ],
-    strategies: [
-      'Start with broad shapes before adding small details.',
-      'Use simple visual clues instead of complicated scenes.',
-      'Watch word length and hints to narrow down guesses.',
-      'Guess common related words early before the timer runs out.',
-    ],
-    faq: [
-      {
-        question: 'How many players can join Scribble?',
-        answer: 'The current Scribble room supports group play with friends.',
-      },
-      {
-        question: 'Does Scribble include chat?',
-        answer: 'Yes. Players use chat to guess the word during each drawing turn.',
-      },
-      {
-        question: 'Can I invite friends with a link?',
-        answer: 'Yes. The room lobby includes link and room code sharing.',
-      },
-    ],
-  },
-  'snake-and-ladder': {
-    related: ['ludo', 'tambola', 'connect-four'],
-    intro:
-      'Snake and Ladder is a classic dice game where players race across the board, climb helpful ladders, and slide down snakes.',
-    rules: [
-      'Players take turns rolling the die.',
-      'Move forward by the number shown on the die.',
-      'Landing at the bottom of a ladder moves you upward.',
-      'Landing on a snake head sends you down to its tail.',
-    ],
-    howToPlay: [
-      'Choose Snake and Ladder from the Doozles hub.',
-      'Enter a username and create a room.',
-      'Share the room code or invite link with friends.',
-      'Take turns rolling until someone reaches the final square.',
-    ],
-    strategies: [
-      'The game is luck-heavy, so focus on quick turns and room flow.',
-      'Stay patient when snakes reset your position.',
-      'Use the lobby invite tools to keep everyone in the correct match.',
-      'Keep turns moving so the game stays lively.',
-    ],
-    faq: [
-      {
-        question: 'Is Snake and Ladder multiplayer?',
-        answer: 'Yes. Doozles runs Snake and Ladder in a shared online room.',
-      },
-      {
-        question: 'Do I control the dice?',
-        answer: 'Players roll on their turn and the game updates the board for everyone.',
-      },
-      {
-        question: 'Can I play without downloading?',
-        answer: 'Yes. Doozles runs in the browser.',
-      },
-    ],
-  },
-  'stone-paper-scissor': {
-    related: ['tictactoe', 'air-hockey', 'connect-four'],
-    intro:
-      'Stone Paper Scissor is a quick two-player decision game where stone beats scissor, scissor beats paper, and paper beats stone.',
-    rules: [
-      'Each player secretly chooses stone, paper, or scissor.',
-      'Stone beats scissor, scissor beats paper, and paper beats stone.',
-      'Matching choices result in a tie.',
-      'The game can be played across multiple rounds.',
-    ],
-    howToPlay: [
-      'Open the Stone Paper Scissor lobby on Doozles.',
-      'Create a private room and invite a friend.',
-      'Start the match from the lobby.',
-      'Choose your move each round and watch the result update in real time.',
-    ],
-    strategies: [
-      'Avoid repeating the same choice too often.',
-      'Notice your opponent patterns between rounds.',
-      'Mix random choices with simple prediction.',
-      'Stay unpredictable after winning a round.',
-    ],
-    faq: [
-      {
-        question: 'Is Stone Paper Scissor a two-player game?',
-        answer: 'Yes. The current Doozles room is designed for two players.',
-      },
-      {
-        question: 'Can I share a room code?',
-        answer: 'Yes. The lobby supports room code and invite link sharing.',
-      },
-      {
-        question: 'Is it real-time?',
-        answer: 'Yes. Moves and results sync through the multiplayer backend.',
-      },
-    ],
-  },
-  tambola: {
-    related: ['scribble', 'ludo', 'snake-and-ladder'],
-    intro:
-      'Tambola is a social number-calling game where players mark tickets and claim patterns as numbers are drawn.',
-    rules: [
-      'The host draws numbers during the game.',
-      'Players mark matching numbers on their tickets.',
-      'Players claim valid patterns when their ticket matches the requirement.',
-      'The host and room state keep everyone synchronized.',
-    ],
-    howToPlay: [
-      'Open the Tambola lobby on Doozles.',
-      'Create a room and invite players.',
-      'Start the game and draw numbers as the host.',
-      'Mark tickets and claim patterns when eligible.',
-    ],
-    strategies: [
-      'Keep your ticket visible and scan rows after every draw.',
-      'Claim quickly once a pattern is complete.',
-      'Hosts should call numbers at a steady pace.',
-      'Use clear room sharing so every player joins the correct match.',
-    ],
-    faq: [
-      {
-        question: 'Can I play Tambola online?',
-        answer: 'Yes. Create a Tambola room on Doozles and invite friends.',
-      },
-      {
-        question: 'Who draws the numbers?',
-        answer: 'The host controls number drawing in the Tambola room.',
-      },
-      {
-        question: 'Can I play Tambola without installing an app?',
-        answer: 'Yes. Doozles runs in the browser.',
-      },
-    ],
-  },
-  '2048': {
-    related: ['block-blaster', 'dino', 'tictactoe'],
-    intro:
-      '2048 is a sliding tile puzzle where matching numbers merge into larger tiles until you reach 2048 or run out of moves.',
-    rules: [
-      'Swipe or drag to move all tiles in one direction.',
-      'Tiles with the same number merge when they collide.',
-      'A new tile appears after each successful move.',
-      'The game ends when no moves remain.',
-    ],
-    howToPlay: [
-      'Open 2048 from the Doozles single-player section.',
-      'Swipe or drag up, down, left, or right.',
-      'Merge matching tiles to build larger numbers.',
-      'Keep space open so the board does not lock up.',
-    ],
-    strategies: [
-      'Keep your largest tile in one corner.',
-      'Build rows in descending order around that corner.',
-      'Avoid random swipes that break your structure.',
-      'Think one move ahead before filling the last open spaces.',
-    ],
-    faq: [
-      {
-        question: 'Is 2048 multiplayer?',
-        answer: 'No. The current 2048 game on Doozles is single-player.',
-      },
-      {
-        question: 'Can I play 2048 on mobile?',
-        answer: 'Yes. The 2048 board supports browser-based play on mobile screens.',
-      },
-      {
-        question: 'What is the goal of 2048?',
-        answer: 'The goal is to merge tiles until you create the 2048 tile and keep going for a higher score.',
-      },
-    ],
-  },
-  'block-blaster': {
-    related: ['2048', 'dino', 'tictactoe'],
-    intro:
-      'Block Blaster is a block puzzle game where players place shapes, clear lines, and keep the board open for the next move.',
-    rules: [
-      'Place each available block shape onto the board.',
-      'Complete rows or columns to clear space.',
-      'Plan ahead because blocks cannot overlap.',
-      'The game ends when no available shape can fit.',
-    ],
-    howToPlay: [
-      'Open Block Blaster from the Doozles single-player section.',
-      'Drag or place blocks onto open board spaces.',
-      'Clear rows and columns to score points.',
-      'Keep enough space for large shapes.',
-    ],
-    strategies: [
-      'Avoid creating isolated empty pockets.',
-      'Keep the center flexible for larger shapes.',
-      'Clear multiple lines when a combo is possible.',
-      'Save open space near corners for awkward pieces.',
-    ],
-    faq: [
-      {
-        question: 'Is Block Blaster free to play?',
-        answer: 'Yes. Block Blaster is available as a browser game on Doozles.',
-      },
-      {
-        question: 'Do I need to download Block Blaster?',
-        answer: 'No. You can play directly in the browser.',
-      },
-      {
-        question: 'Is Block Blaster single-player?',
-        answer: 'Yes. The current Block Blaster experience is single-player.',
-      },
-    ],
-  },
-  dino: {
-    related: ['2048', 'block-blaster', 'air-hockey'],
-    intro:
-      'Dino Run is an endless runner where the dinosaur jumps hazards, dodges obstacles, and chases a higher score.',
-    rules: [
-      'Jump over obstacles before they reach the dinosaur.',
-      'Avoid hazards to keep the run alive.',
-      'The score increases as the run continues.',
-      'The game ends when the dinosaur hits an obstacle.',
-    ],
-    howToPlay: [
-      'Open Dino Run from the Doozles single-player section.',
-      'Use the game controls to jump at the right time.',
-      'Watch obstacle spacing and react quickly.',
-      'Keep running as long as possible to raise your score.',
-    ],
-    strategies: [
-      'Jump only when an obstacle is close enough.',
-      'Stay calm as the pace increases.',
-      'Focus on rhythm instead of tapping constantly.',
-      'Use short reactions for close obstacles.',
-    ],
-    faq: [
-      {
-        question: 'Can I play Dino Run online?',
-        answer: 'Yes. Dino Run is available on Doozles as a browser game.',
-      },
-      {
-        question: 'Is Dino Run single-player?',
-        answer: 'Yes. The current Dino Run experience is single-player.',
-      },
-      {
-        question: 'Does Dino Run require a download?',
-        answer: 'No. It runs directly in your browser.',
-      },
-    ],
-  },
-  'flappy-bird': {
-    related: ['dino', 'helix-jump', '2048'],
-    intro:
-      'Flappy Bird is a simple yet challenging arcade game where you tap to keep the bird flying while avoiding pipes.',
-    rules: [
-      'Tap to flap upward.',
-      'Avoid hitting pipes or the ground.',
-      'Each pipe passed earns one point.',
-      'The game ends after a collision.',
-    ],
-    howToPlay: [
-      'Open Flappy Bird on Doozles.',
-      'Tap or click to keep the bird airborne.',
-      'Pass through pipe gaps.',
-      'Beat your highest score.',
-    ],
-    strategies: [
-      'Tap lightly instead of repeatedly.',
-      'Stay near the center of each gap.',
-      'Maintain a steady rhythm.',
-      'Avoid overcorrecting after each flap.',
-    ],
-    faq: [
-      {
-        question: 'Can I play Flappy Bird online?',
-        answer: 'Yes. Flappy Bird is available for free in your browser on Doozles.',
-      },
-      {
-        question: 'Is Flappy Bird free?',
-        answer: 'Yes. No download or installation is required.',
-      },
-      {
-        question: 'Can I play on mobile?',
-        answer: 'Yes. Flappy Bird works on desktop and mobile browsers.',
-      },
-    ],
-  },
-  'helix-jump': {
-    related: ['flappy-bird', '2048', 'block-blaster'],
-    intro:
-      'Helix Jump is a fast-paced arcade game where you rotate platforms to guide a bouncing ball safely downward.',
-    rules: [
-      'Rotate the tower to create a path.',
-      'Avoid dangerous colored sections.',
-      'Reach the bottom to complete the level.',
-      'Missing safe platforms ends the run.',
-    ],
-    howToPlay: [
-      'Open Helix Jump on Doozles.',
-      'Drag left or right to rotate the tower.',
-      'Guide the ball through open spaces.',
-      'Avoid red platforms.',
-    ],
-    strategies: [
-      'Plan several platforms ahead.',
-      'Use long drops when safe.',
-      'Avoid rushing difficult sections.',
-      'Stay focused near the bottom.',
-    ],
-    faq: [
-      {
-        question: 'Can I play Helix Jump online?',
-        answer: 'Yes. Helix Jump runs directly in your browser.',
-      },
-      {
-        question: 'Is Helix Jump free?',
-        answer: 'Yes. You can play without downloading anything.',
-      },
-      {
-        question: 'Does Helix Jump work on mobile?',
-        answer: 'Yes. It supports mobile browsers.',
-      },
-    ],
-  },
-  'raja-mantri': {
-    related: ['ludo', 'tambola', 'imposter'],
-    intro:
-      'Raja Mantri Chor Sipahi is the classic 4-player Indian social deduction game where players receive secret roles and test their intuition over 5 rounds.',
-    rules: [
-      'Four players secretly receive one role each: Raja (King), Mantri (Minister), Sipahi (Soldier), or Chor (Thief).',
-      'The Raja proclaims "Mera Mantri Kaun?" and the Mantri identifies themselves.',
-      'The Mantri must interrogate and guess which of the other two players is the Chor.',
-      'If the Mantri guesses correctly: Raja gets 1000 pts, Mantri gets 800 pts, Sipahi gets 500 pts, and Chor gets 0 pts.',
-      'If the Mantri is wrong: The Chor steals the Mantri points (Chor gets 800 pts, Mantri gets 0 pts).',
-      'Cumulative scores over 5 rounds determine the ultimate winner.',
-    ],
-    howToPlay: [
-      'Create a 4-player room on Doozles or join with a room code.',
-      'Privately unfold your digital chit to see your secret role.',
-      'Follow royal prompts as the King or Minister during the investigation.',
-      'Lock in your verdict and watch the dramatic score reveal.',
-    ],
-    strategies: [
-      'Watch the suspects body language and hesitation in chat or voice.',
-      'As the Chor, mimic the calm confidence of the innocent Soldier.',
-      'Keep track of overall leaderboard points to anticipate opponent risk tolerance.',
-    ],
-    faq: [
-      {
-        question: 'How many players are needed for Raja Mantri Chor Sipahi?',
-        answer: 'Exactly 4 players. If playing with fewer friends, Doozles provides AI companion bots.',
-      },
-      {
-        question: 'How many points is each role worth?',
-        answer: 'Raja: 1000 pts, Mantri: 800 pts, Sipahi: 500 pts, Chor: 0 pts (or 800 if unmasked wrongly).',
-      },
-    ],
-  },
-  imposter: {
-    related: ['raja-mantri', 'scribble', 'tictactoe'],
-    intro:
-      'Word Imposter is a social deduction party game where everyone knows the secret word except for one sneaky Imposter.',
-    rules: [
-      'Everyone receives the Secret Word and Category, while the Imposter receives ONLY the Category.',
-      'Players take turns giving exactly 1-word clues across 2 complete clue rounds.',
-      'After 2 rounds, all players discuss and vote for the suspected Imposter.',
-      'If the majority catches the Imposter, the Imposter loses.',
-      'The Imposter has 3 live guess attempts anytime during the match to guess the secret word and win instantly!',
-    ],
-    howToPlay: [
-      'Create a room for 3 to 8 players on Doozles.',
-      'Read your secret card carefully.',
-      'Submit subtle 1-word clues when it is your turn.',
-      'Discuss, vote, or trigger the instant word guess steal.',
-    ],
-    strategies: [
-      'Give clues that connect to the word in two distinct ways to confuse the Imposter.',
-      'As the Imposter, use flexible adjectives like "Classic" or "Popular".',
-      'Use guess attempts when detectives clues give away the exact word.',
-    ],
-    faq: [
-      {
-        question: 'Can the Imposter guess the secret word anytime?',
-        answer: 'Yes! The Imposter has 3 attempts to guess the secret word anytime during the game for an instant win.',
-      },
-      {
-        question: 'How many players can play Word Imposter?',
-        answer: 'Word Imposter supports 3 to 8 players online on any device.',
-      },
-    ],
-  },
-  'traffic-run': {
-    related: ['dino', 'flappy-bird', 'helix-jump'],
-    intro:
-      'Traffic Run is an endless 3-lane highway arcade runner where you dodge high-speed traffic with swiping and tap-on-lane controls.',
-    rules: [
-      'Navigate your car across 3 lanes of moving traffic.',
-      'Avoid colliding with cars, trucks, and road hazards.',
-      'Speed levels increase as your score climbs.',
-      'A single collision ends the run.',
-    ],
-    howToPlay: [
-      'Tap on the left, middle, or right lane directly to switch lanes.',
-      'Alternatively, swipe horizontally or use arrow keys / A & D.',
-      'Dodge incoming vehicles and survive as long as possible.',
-    ],
-    strategies: [
-      'Look two steps ahead to anticipate lane openings.',
-      'Stay in the center lane when in doubt for equal escape options.',
-      'Use tap-to-lane for ultra-fast reaction times at higher speed levels.',
-    ],
-    faq: [
-      {
-        question: 'Does Traffic Run support tap controls?',
-        answer: 'Yes! You can tap directly on any of the 3 lanes or swipe horizontally to change lanes.',
-      },
-      {
-        question: 'Is Traffic Run free to play?',
-        answer: 'Yes, Traffic Run is free to play directly in your web browser.',
-      },
-    ],
-  },
-};
-
-
-function buildGameSeo(id) {
-  const seo = SEO_CONFIG.games[id];
-  return {
-    id,
-    ...seo,
-    path: seo.route,
-    ...guideDetails[id],
-  };
-}
-
 export const gamesSeo = Object.fromEntries(
-  Object.keys(SEO_CONFIG.games).map((id) => [id, buildGameSeo(id)]),
+  Object.entries(SEO_CONFIG.games).map(([id, meta]) => [
+    id,
+    {
+      id,
+      catalogId: id,
+      path: `/${id}`,
+      playPath: `/games/${id}`,
+      ...meta,
+      ...GUIDES[id],
+    },
+  ]),
 );
-
-Object.assign(gamesSeo, {
-  'connect-4': {
-    ...gamesSeo['connect-four'],
-    id: 'connect-4',
-    path: '/connect-4',
-  },
-  'tic-tac-toe': {
-    ...gamesSeo.tictactoe,
-    id: 'tic-tac-toe',
-    path: '/tic-tac-toe',
-  },
-  'rock-paper-scissor': {
-    ...gamesSeo['stone-paper-scissor'],
-    id: 'rock-paper-scissor',
-    name: 'Rock Paper Scissor',
-    path: '/rock-paper-scissor',
-  },
-});

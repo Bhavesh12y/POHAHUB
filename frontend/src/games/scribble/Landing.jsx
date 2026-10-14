@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import QrScannerModal from '../../components/QrScannerModal.jsx';
+import { setPlayerName } from '../../lib/playerName.js';
+import { CameraIcon } from '../../components/Icons.jsx';
 
 export default function ScribbleLanding() {
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ export default function ScribbleLanding() {
     const result = await emitWithAck('room:create', { gameType: 'scribble', playerName: username.trim() });
     setLoading(false);
     if (!result.ok) return setError(result.error || 'Failed to create room');
-    sessionStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     navigate(`/games/scribble/room/${result.room.code}`, { state: { room: result.room } });
   };
 
@@ -36,7 +38,7 @@ export default function ScribbleLanding() {
     });
     setLoading(false);
     if (!result.ok) return setError(result.error || 'Failed to join');
-    sessionStorage.setItem('pohahub_username', username.trim());
+    setPlayerName(username.trim());
     navigate(`/games/scribble/room/${result.room.code}`, { state: { room: result.room } });
   };
 
@@ -111,7 +113,7 @@ export default function ScribbleLanding() {
               className="sketch-button bg-purple-300 px-3.5 py-2 text-xs font-black uppercase flex items-center gap-1.5 shrink-0"
               title="Scan Room QR Code"
             >
-              <span>📷</span>
+              <CameraIcon />
               <span>Scan QR</span>
             </button>
           </div>

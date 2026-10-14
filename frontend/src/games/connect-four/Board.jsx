@@ -3,6 +3,9 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import WaitingLobby from '../../components/WaitingLobby';
 import VoiceChat from '../../components/VoiceChat';
+import { getPlayerName } from '../../lib/playerName.js';
+import { useGameSession } from '../../lib/gameSession.js';
+import { useResultReveal, ViewBoardButton, ShowResultChip } from '../../components/ResultReveal.jsx';
 
 const COLS = 7;
 const ROWS = 6;
@@ -86,7 +89,9 @@ export function ChatPanel({ messages = [], onSend, disabled }) {
 }
 
 export default function ConnectFourBoard() {
-  const { roomCode } = useParams();
+  const { roomCode: routeRoomCode } = useParams();
+  const session = useGameSession();
+  const roomCode = session?.roomCode ?? routeRoomCode;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -106,7 +111,7 @@ export default function ConnectFourBoard() {
   const isPlaying = room?.status === 'playing';
   const isMyTurn = gameState?.currentPlayerId === myPlayerId;
   const myColor = gameState?.players?.find((p) => p.id === myPlayerId)?.color;
-  const isHost = room?.hostId === myPlayerId;
+  const isHost = session ? true : room?.hostId === myPlayerId;
 
   const [hoveredCol, setHoveredCol] = useState(null);
   const canDrop = isPlaying && isMyTurn && pendingColumn === null && gameState?.status === 'playing';
@@ -114,11 +119,13 @@ export default function ConnectFourBoard() {
   const winningSet = new Set(
     (gameState?.winningCells ?? []).map(([r, c]) => `${r}-${c}`),
   );
+  const isOver = gameState?.status === 'won' || gameState?.status === 'draw';
+  const reveal = useResultReveal(isOver);
 
 
   useEffect(() => {
     const socket = connectSocket();
-    const username = localStorage.getItem('pohahub_username');
+    const username = session ? session.playerName : getPlayerName();
 
     if (!username) {
       navigate(`/games/connect-four?join=${roomCode}`);
@@ -262,7 +269,7 @@ export default function ConnectFourBoard() {
     if (gameState?.status === 'draw') {
       return "It's a draw!";
     }
-    if (isMyTurn) {
+    if (isMyTurn && session?.mode !== 'local') {
       return 'Your turn — pick a column';
     }
     const current = gameState?.players?.find((p) => p.id === gameState.currentPlayerId);
@@ -289,7 +296,7 @@ export default function ConnectFourBoard() {
           onClick={scrollToChat}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#3b82f6] border-[3px] border-black text-white px-4 py-3 rounded shadow-[6px_6px_0px_#000] z-50 flex items-center gap-3 cursor-pointer w-11/12 max-w-sm lg:hidden animate-[popIn_0.3s_ease-out] -rotate-1"
         >
-          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black">💬</span>
+          <span className="bg-[#facc15] border-[2px] border-black p-2 rounded-full leading-none text-black"><svg aria-hidden="true" viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"><path d="M4 5h16v11H9l-5 4V5z" /></svg></span>
           <div className="flex flex-col flex-1 truncate">
             <span className="text-xs font-black uppercase text-[#facc15]">{chatToast.playerName}</span>
             <span className="text-sm font-bold truncate">{chatToast.message}</span>
@@ -299,7 +306,8 @@ export default function ConnectFourBoard() {
       )}
 
       {/* PREMIUM CELEBRATION POPUP - Neo-Brutalist Version */}
-      {(gameState?.status === 'won' || gameState?.status === 'draw') && (
+      {isOver && !reveal.visible && <ShowResultChip onClick={reveal.show} />}
+      {isOver && reveal.visible && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300" />
@@ -331,7 +339,17 @@ export default function ConnectFourBoard() {
                 </>
               )}
               
-              <div className="w-full h-[3px] bg-black mb-8" />
+              <div className="w-full h-[3px] bg-black mb-6" />
+              <div className="mx-auto mb-6 w-fit bg-[#3b82f6] border-[3px] border-black p-1.5 grid grid-cols-7 gap-1" aria-label="Final board">
+                {gameState.board.flatMap((row, r) =>
+                  row.map((cell, c) => (
+                    <span
+                      key={`${r}-${c}`}
+                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-[2px] border-black ${cell === 'red' ? 'bg-[#ef4444]' : cell === 'yellow' ? 'bg-[#facc15]' : 'bg-white'} ${winningSet.has(`${r}-${c}`) ? 'ring-[3px] ring-black scale-110' : ''}`}
+                    />
+                  )),
+                )}
+              </div>
               <div className="flex flex-col gap-3">
                 <button
                   type="button"
@@ -340,8 +358,9 @@ export default function ConnectFourBoard() {
                 >
                   Play Again
                 </button>
+                <ViewBoardButton onClick={reveal.hide} />
                 <Link 
-                  to="/games/connect-four" 
+                  to={session?.exitPath ?? '/games/connect-four'} 
                   className="bg-gray-200 w-full block py-4 text-sm font-bold tracking-widest uppercase border-[3px] border-black shadow-[4px_4px_0px_#000] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_#000] text-black text-center transition-all duration-150 rounded"
                 >
                   Return to Hub
@@ -362,13 +381,13 @@ export default function ConnectFourBoard() {
             {/* Header Info */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border-b-[3px] border-black pb-6">
               <div>
-                <p className="text-xs font-bold uppercase text-gray-400 mb-1">Room Code</p>
+                <p className="text-xs font-bold uppercase text-gray-400 mb-1">{session ? 'Mode' : 'Room Code'}</p>
                 <p className="text-[clamp(1.5rem,4vw,2.25rem)] font-bold tracking-widest text-white">
-                  {room.code}
+                  {session ? session.label : room.code}
                 </p>
               </div>
               {/* INJECT VOICE CONTROLS HERE */}
-               <VoiceChat roomCode={room.code} />
+               {!session && <VoiceChat roomCode={room.code} />}
               <div className="text-right">
                 <p className="text-xs font-bold uppercase text-gray-400 mb-1">Status</p>
                 <p className="font-bold text-[#facc15] text-[clamp(0.8rem,2vw,1rem)] uppercase">{statusMessage}</p>
@@ -500,7 +519,7 @@ export default function ConnectFourBoard() {
         </div>
 
         {/* RIGHT COLUMN: CHAT PANEL */}
-        <div ref={chatRef} className="w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0 scroll-mt-24">
+        <div ref={chatRef} className={`w-full lg:w-80 2xl:w-96 flex flex-col shrink-0 mt-4 lg:mt-0 scroll-mt-24${session ? ' hidden' : ''}`}>
           <ChatPanel
             messages={room.chat ?? []}
             onSend={handleChat}

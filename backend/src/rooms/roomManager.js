@@ -3,7 +3,9 @@ import { createTicTacToeState, playMove, serializeTicTacToeState } from '../game
 import { createScribbleState, serializeScribbleState } from '../games/scribble.js';
 import { createSnakeAndLadderState, rollDice, serializeSnakeAndLadderState } from '../games/snakeAndLadder.js';
 import { createTambolaState, drawNumber, claimPattern, serializeTambolaState } from '../games/tambola.js';
+import { DEFAULT_CLAIMS, sanitizeClaimIds } from '../games/tambolaClaims.js';
 import { createStonePaperScissorState, playSpsMove, nextSpsRound, serializeSpsState } from '../games/stonePaperScissor.js';
+import { createLudoState, rollLudoDice, moveLudoToken, serializeLudoState } from '../games/ludo.js';
 import { createRajaMantriState, startNewRound, applyRajaMantriAction, checkAndExecuteRajaMantriBotTurn } from '../games/rajaMantri.js';
 import { createImposterState, applyImposterAction, checkAndExecuteImposterBotTurn } from '../games/imposter.js';
 
@@ -90,6 +92,7 @@ class RoomManager {
       gameType, hostId, maxPlayers: limit,
       players: [host], spectators: [], chat: [],
       status: 'waiting', gameState: null, createdAt: Date.now(),
+      settings: gameType === 'tambola' ? { tambolaClaims: [...DEFAULT_CLAIMS] } : {},
     };
     this.rooms.set(room.code, room);
     return room;
@@ -142,7 +145,7 @@ class RoomManager {
       id: `${Date.now()}-join-${playerId}`,
       playerId: 'SYSTEM',
       playerName: 'System',
-      message: `👋 ${playerName} joined the room!`,
+      message: `${playerName} joined the room!`,
       timestamp: Date.now()
     };
     room.chat.push(joinMessage);
@@ -199,9 +202,9 @@ class RoomManager {
 
       if (isMatch) {
         if (isDrawer) {
-          finalMessage = "🤐 I tried to give away the word!";
+          finalMessage = "I tried to give away the word!";
         } else if (hasGuessed) {
-          finalMessage = "🤐 I tried to spoil the word!";
+          finalMessage = "I tried to spoil the word!";
         } else {
           isCorrectGuess = true;
           state.guessedPlayers.push(playerId);
@@ -220,7 +223,7 @@ class RoomManager {
             drawer.score += drawerBonus; 
           }
 
-          finalMessage = `🎉 Guessed the word! (+${score} pts)`;
+          finalMessage = `Guessed the word! (+${score} pts)`;
           if (state.guessedPlayers.length >= state.players.length - 1) turnEndedEarly = true;
         }
       }
@@ -269,14 +272,15 @@ class RoomManager {
 
       room.gameState = createTambolaState(
         room.players.map((p) => ({ id: p.id, name: p.name })),
-        room.hostId
+        room.hostId,
+        room.settings?.tambolaClaims
       );
     } else if (room.gameType === 'stone-paper-scissor') {
       room.gameState = createStonePaperScissorState(room.players.map((p) => ({ id: p.id, name: p.name }))); 
     } else if (room.gameType === 'ludo') {
       room.gameState = createLudoState(room.players.map((p) => ({ id: p.id, name: p.name })));
     } else if (room.gameType === 'raja-mantri') {
-      const BOT_NAMES = ['Birbal 🤖', 'Tenali 🤖', 'Chanakya 🤖'];
+      const BOT_NAMES = ['Birbal (Bot)', 'Tenali (Bot)', 'Chanakya (Bot)'];
       let bIdx = 0;
       while (room.players.length < 4) {
         room.players.push({
@@ -292,7 +296,7 @@ class RoomManager {
       startNewRound(room.gameState, room.players);
       checkAndExecuteRajaMantriBotTurn(room.gameState, room.players);
     } else if (room.gameType === 'imposter') {
-      const BOT_NAMES = ['Sherlock 🤖', 'Watson 🤖', 'Poirot 🤖'];
+      const BOT_NAMES = ['Sherlock (Bot)', 'Watson (Bot)', 'Poirot (Bot)'];
       let bIdx = 0;
       while (room.players.length < 3) {
         room.players.push({
@@ -368,6 +372,18 @@ class RoomManager {
     return { ok: false, error: 'Unsupported game type' };
   }
 
+  // Host-only room options, editable while the room is still in the lobby.
+  updateSettings(roomCode, playerId, settings = {}) {
+    const room = this.getRoom(roomCode);
+    if (!room) return { ok: false, error: 'Room not found' };
+    if (room.hostId !== playerId) return { ok: false, error: 'Only the host can change settings' };
+    if (room.status !== 'waiting') return { ok: false, error: 'Game already started' };
+    if (room.gameType === 'tambola' && settings.tambolaClaims) {
+      room.settings = { ...room.settings, tambolaClaims: sanitizeClaimIds(settings.tambolaClaims) };
+    }
+    return { ok: true, room };
+  }
+
   resetGame(roomCode) {
     return this.startGame(roomCode, this.getRoom(roomCode)?.hostId);
   }
@@ -376,6 +392,7 @@ class RoomManager {
     const payload = {
       code: room.code, gameType: room.gameType, hostId: room.hostId, maxPlayers: room.maxPlayers,
       players: room.players.map(({ id, name }) => ({ id, name })), status: room.status, chat: room.chat, viewerId,
+      settings: room.settings || {},
     };
 
     if (room.gameState && room.gameType === 'connect-four') payload.gameState = serializeConnectFourState(room.gameState);

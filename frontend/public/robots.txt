@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /games/*/room/
 
 Sitemap: https://doozles.xyz/sitemap.xml
-Sitemap: https://doozles.xyz/s2.xml

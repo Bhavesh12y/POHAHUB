@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { connectSocket, emitWithAck } from '../../lib/socket.js';
 import QrScannerModal from '../../components/QrScannerModal.jsx';
+import { getPlayerName, setPlayerName as savePlayerName } from '../../lib/playerName.js';
+import { CameraIcon } from '../../components/Icons.jsx';
 
 export default function SnakeAndLadderLanding() {
   const [searchParams] = useSearchParams();
-  const [playerName, setPlayerName] = useState(sessionStorage.getItem('pohahub_username') || '');
+  const [playerName, setPlayerName] = useState(getPlayerName() || '');
   const [roomCode, setRoomCode] = useState(searchParams.get('join')?.toUpperCase() || '');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -17,7 +19,7 @@ export default function SnakeAndLadderLanding() {
     if (!playerName.trim()) return setError('Please enter your name');
 
     setIsLoading(true);
-    sessionStorage.setItem('pohahub_username', playerName.trim());
+    savePlayerName(playerName.trim());
 
     const socket = connectSocket();
     if (!socket.connected) socket.connect();
@@ -42,7 +44,7 @@ export default function SnakeAndLadderLanding() {
     if (!roomCode.trim()) return setError('Please enter a room code');
 
     setIsLoading(true);
-    sessionStorage.setItem('pohahub_username', playerName.trim());
+    savePlayerName(playerName.trim());
 
     const socket = connectSocket();
     if (!socket.connected) socket.connect();
@@ -122,7 +124,7 @@ export default function SnakeAndLadderLanding() {
               className="sketch-button bg-purple-300 px-3.5 py-2 text-xs font-black uppercase flex items-center gap-1.5 shrink-0"
               title="Scan Room QR Code"
             >
-              <span>📷</span>
+              <CameraIcon />
               <span>Scan QR</span>
             </button>
           </div>

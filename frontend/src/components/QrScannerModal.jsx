@@ -42,7 +42,7 @@ export default function QrScannerModal({ isOpen, onClose, onScan }) {
         {/* Header */}
         <div className="flex justify-between items-center mb-4 border-b-[3px] border-black pb-2">
           <div className="flex items-center gap-2">
-            <span className="text-xl">📷</span>
+            
             <h3 className="text-lg font-black uppercase tracking-wider">Scan Room QR</h3>
           </div>
           <button

@@ -3,35 +3,34 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import ReactGA from 'react-ga4';
+import { GAMES, SOLO_PLAY_PATHS } from '../data/games.js';
 
+// Desktop-only zoom that the layout was designed around. Canvas games convert
+// pointer positions with getBoundingClientRect ratios, so they stay accurate under zoom.
 export function useDesktopScalingFix() {
   useEffect(() => {
+    const targetElement = document.getElementById('root') || document.body;
+
     const applyReverseZoom = () => {
-      // Ignore Mobile/Tablets
       if (window.innerWidth < 1024) {
-        document.body.style.removeProperty('zoom');
+        targetElement.style.removeProperty('zoom');
+        document.documentElement.style.setProperty('--app-zoom', '1');
         return;
       }
 
-      const EXTRA_ZOOM_OUT = 0.90; 
+      const EXTRA_ZOOM_OUT = 0.9;
       const pixelRatio = window.devicePixelRatio || 1;
-
       let targetZoom = EXTRA_ZOOM_OUT;
-
       if (pixelRatio > 1 && pixelRatio <= 2.5) {
-        // Use decimals (e.g., 0.6) instead of percentages for better browser support
         targetZoom = (1 / pixelRatio) * EXTRA_ZOOM_OUT;
       }
-
-      const targetElement = document.getElementById('root') || document.body;
-
-      targetElement.style.zoom = targetZoom; 
+      targetElement.style.zoom = targetZoom;
+      // Game stages divide viewport units by this so they fill the real screen.
+      document.documentElement.style.setProperty('--app-zoom', String(targetZoom));
     };
 
     applyReverseZoom();
     window.addEventListener('resize', applyReverseZoom);
-    
-    // Cleanup on unmount
     return () => window.removeEventListener('resize', applyReverseZoom);
   }, []);
 }
@@ -44,20 +43,21 @@ export default function Layout() {
   const isHome = location.pathname === '/';
   const isInGameRoom = location.pathname.includes('/room/');
   
-  // --- Single Player Routing Logic ---
-  const singlePlayerGames = [
-    '/games/2048', 
-    '/games/block-blaster', 
-    '/games/dino', 
-    '/games/flappy-bird', 
-    '/games/helix-jump', 
-    '/games/traffic-run'
-  ];
-  const isSinglePlayerGame = singlePlayerGames.some(path => location.pathname.startsWith(path));
-  
-  // Set the dynamic target and text
-  const backTarget = isSinglePlayerGame ? '/single-player' : '/';
-  const backText = isSinglePlayerGame ? 'Back to Solo' : 'Back to Hub';
+  const isSinglePlayerGame = SOLO_PLAY_PATHS.some((path) => location.pathname.startsWith(path));
+  const isBotGame = location.pathname.endsWith('/bot');
+  const isLocalGame = location.pathname.endsWith('/local');
+
+  let backTarget = '/';
+  let backText = 'Back to Hub';
+  if (isSinglePlayerGame) {
+    backTarget = '/?mode=solo';
+    backText = 'Back to Solo';
+  } else if (isBotGame) {
+    backTarget = '/?mode=bot';
+    backText = 'Back to Bots';
+  } else if (isLocalGame) {
+    backTarget = '/?mode=local';
+  }
 
   // --- NEW: Crash-Proof Google Analytics Page Tracking ---
   useEffect(() => {
@@ -117,9 +117,9 @@ export default function Layout() {
             </div>
 
             <div className="flex flex-col justify-center min-w-0">
-              <h1 className="text-[clamp(1.25rem,3vw,2.25rem)] font-black uppercase tracking-widest leading-none text-black">
+              <span className="text-[clamp(1.25rem,3vw,2.25rem)] font-black uppercase tracking-widest leading-none text-black">
                 Doozles
-              </h1>
+              </span>
               <p className="text-[clamp(0.55rem,1.1vw,0.7rem)] font-black uppercase text-gray-600 tracking-wider mt-1">
                 Multiplayer notebook arcade
               </p>
@@ -132,7 +132,7 @@ export default function Layout() {
               to="/blog"
               className="bg-[#fef08a] text-black font-black tracking-wider uppercase border-[3px] border-black shadow-[3px_3px_0px_#000] hover:translate-y-[1px] hover:translate-x-[1px] hover:shadow-[1px_1px_0px_#000] px-3.5 py-1.5 text-xs sm:text-sm transition-all rounded-sm -rotate-1"
             >
-              📖 Blog
+              Blog
             </Link>
 
             {!isHome && (
@@ -193,46 +193,16 @@ export default function Layout() {
             </div>
 
 
-            <nav aria-label="Game guides" className="flex flex-wrap gap-4 sm:gap-6 text-xs">
-              <Link to="/ludo" className="hover:underline decoration-[3px] underline-offset-4">
-                Ludo Guide
-              </Link>
-              <Link to="/tic-tac-toe" className="hover:underline decoration-[3px] underline-offset-4">
-                Tic Tac Toe Guide
-              </Link>
-              <Link to="/air-hockey" className="hover:underline decoration-[3px] underline-offset-4">
-                Air Hockey Guide
-              </Link>
-              <Link to="/connect-4" className="hover:underline decoration-[3px] underline-offset-4">
-                Connect 4 Guide
-              </Link>
-              <Link to="/scribble" className="hover:underline decoration-[3px] underline-offset-4">
-                Scribble Guide
-              </Link>
-              <Link to="/snake-and-ladder" className="hover:underline decoration-[3px] underline-offset-4">
-                Snake & Ladder Guide
-              </Link>
-              <Link to="/rock-paper-scissor" className="hover:underline decoration-[3px] underline-offset-4">
-                Rock Paper Scissor Guide
-              </Link>
-              <Link to="/tambola" className="hover:underline decoration-[3px] underline-offset-4">
-                Tambola Guide
-              </Link>
-              <Link to="/2048" className="hover:underline decoration-[3px] underline-offset-4">
-                2048 Guide
-              </Link>
-              <Link to="/block-blaster" className="hover:underline decoration-[3px] underline-offset-4">
-                Block Blaster Guide
-              </Link>
-              <Link to="/dino" className="hover:underline decoration-[3px] underline-offset-4">
-                Dino Run Guide
-              </Link>
-              <Link to="/flappy-bird" className="hover:underline decoration-[3px] underline-offset-4">
-                Flappy Bird Guide
-              </Link>
-              <Link to="/helix-jump" className="hover:underline decoration-[3px] underline-offset-4">
-                Helix Jump Guide
-              </Link>
+            <nav aria-label="Game guides" className="flex flex-wrap gap-x-5 gap-y-3 text-xs">
+              {GAMES.filter((game) => !game.hidden).map((game) => (
+                <Link
+                  key={game.id}
+                  to={game.guidePath}
+                  className="hover:underline decoration-[3px] underline-offset-4"
+                >
+                  {game.title} Guide
+                </Link>
+              ))}
             </nav>
           </div>
         </footer>
